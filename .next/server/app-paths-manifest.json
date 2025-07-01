@@ -1,0 +1,8 @@
+{
+  "/dashboard/planning/page": "app/dashboard/planning/page.js",
+  "/dashboard/workforce-control/page": "app/dashboard/workforce-control/page.js",
+  "/dashboard/employees/page": "app/dashboard/employees/page.js",
+  "/dashboard/transfers/page": "app/dashboard/transfers/page.js",
+  "/dashboard/safety/page": "app/dashboard/safety/page.js",
+  "/dashboard/page": "app/dashboard/page.js"
+}
