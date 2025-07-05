@@ -24,6 +24,12 @@ export interface User {
   assignedContracts?: string[]
   isActive: boolean
   avatar?: string
+  createdAt?: Date
+  /**
+   * URL ou base64 da logo da empresa associada ao usuário.
+   * Usado para personalização de exportação e identidade visual.
+   */
+  companyLogo?: string
 }
 
 export const getUserPermissions = (user: User): UserPermissions => {
@@ -107,7 +113,8 @@ export const getCurrentUser = (): User => {
     name: 'Admin Geral',
     email: 'admin@demo-company.com',
     role: UserRole.TENANT_ADMIN,
-    isActive: true
+    isActive: true,
+    companyLogo: '/logo-demo-company.png' // Exemplo: caminho relativo ou base64
   }
 }
 

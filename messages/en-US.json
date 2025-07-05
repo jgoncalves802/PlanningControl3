@@ -30,5 +30,51 @@
     "settings": "Settings",
     "company": "Demo Company",
     "version": "Version 3.0.0"
+  },
+  "employees": {
+    "form": {
+      "title": "Add Employee",
+      "close": "Close",
+      "name": "Full Name",
+      "cpf": "CPF",
+      "matricula": "Registration",
+      "cidade": "City",
+      "phone": "Phone/Cell",
+      "cargo": "Role",
+      "centroCusto": "Cost Center",
+      "turno": "Shift",
+      "obra": "Project",
+      "contract": "Contract No.",
+      "select_contract": "Select a contract",
+      "data_entrada": "Entry Date",
+      "primeira_experiencia": "First Experience",
+      "segunda_experiencia": "Second Experience",
+      "previsao_obra": "Project Forecast",
+      "status": "Status",
+      "status_active": "Active",
+      "status_on_leave": "On Leave",
+      "status_transferred": "Transferred",
+      "status_dismissed": "Dismissed",
+      "prev": "Previous",
+      "next": "Next",
+      "submit": "Add Employee",
+      "success": "Employee successfully registered!",
+      "steps": {
+        "0": "Personal Data",
+        "endereco": "Address",
+        "1": "Contract Data",
+        "2": "Experiences",
+        "3": "Forecast/Status"
+      },
+      "error": {
+        "name_required": "Name is required",
+        "cpf_required": "CPF is required",
+        "cpf_invalid": "Invalid CPF",
+        "cargo_required": "Role is required",
+        "contract_required": "Contract is required",
+        "data_entrada_required": "Entry date is required",
+        "status_required": "Status is required"
+      }
+    }
   }
 } 

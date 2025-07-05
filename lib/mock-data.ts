@@ -65,12 +65,44 @@ export interface Employee {
   currentContract?: string
   currentFunction?: string
   admissionDate: Date
+  /** Data de demissão do funcionário (opcional) */
   dismissalDate?: Date
   isActive: boolean
   status: 'active' | 'on_leave' | 'transferred' | 'dismissed'
+  /** URL da foto/avatar do colaborador (opcional) */
   avatar?: string
   email?: string
   phone?: string
+  // Campos adicionais para cadastro completo
+  matricula?: string
+  cargo?: string
+  cidade?: string
+  centroCusto?: string
+  turno?: string
+  obra?: string
+  primeiraExperiencia?: string
+  segundaExperiencia?: string
+  previsaoObra?: string
+  dataEntrada?: string // para binding do input de data
+  endereco?: {
+    cep: string
+    logradouro: string
+    numero: string
+    complemento?: string
+    bairro: string
+    cidade: string
+    uf: string
+  }
+  // Novos campos para aderência à tabela de funcionários
+  mo?: string // Tipo de Mão de Obra (Própria, Terceirizada, etc)
+  horasNormaisTrabalhadas?: number // Horas Normais Trabalhadas
+  horasExtrasTrabalhadas?: number // Horas Extras Trabalhadas
+  horasNoturnasTrabalhadas?: number // Horas Noturnas Trabalhadas
+  localAlojado?: string // Local/Alojamento
+  bairro?: string // Bairro (endereçamento rápido)
+  pontoReferencia?: string // Ponto de Referência
+  statusBancodoc?: string // Status Bancário/Documental
+  efetivoRDO?: boolean // Efetivo Apontado em RDO
 }
 
 export interface TransferRequest {
