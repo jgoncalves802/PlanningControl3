@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest, { params }) {
     'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory',
     'cnh', 'cnhCategory', 'cnhValidity', 'motherName', 'fatherName', 
     'dependents', 'notes', 'employmentHistory', 'isActive', 'nfcCardId',
-    'currentContractId', 'currentFunctionId'
+    'currentContractId', 'currentFunctionId', 'avatar'
   ];
   
   const filteredUpdates = {};

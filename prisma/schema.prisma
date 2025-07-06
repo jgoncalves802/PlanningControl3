@@ -154,6 +154,7 @@ model Employee {
   dependents        Json?     // Lista de dependentes (nome, parentesco, nascimento)
   notes             String?   // Observações
   employmentHistory Json?     // Histórico de vínculos/admissões/demissões
+  avatar            String?   // URL ou base64 da foto do funcionário
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

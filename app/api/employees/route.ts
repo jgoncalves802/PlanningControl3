@@ -138,6 +138,14 @@ export async function POST(req: NextRequest) {
     'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory', 'cnh', 'cnhCategory',
     'motherName', 'fatherName', 'dependents', 'isActive', 'createdAt', 'updatedAt'
   ];
+  
+  // Campos opcionais que podem ser enviados como null
+  const optionalFields = ['avatar'];
+  optionalFields.forEach(field => {
+    if (data.hasOwnProperty(field)) {
+      // Manter o valor enviado (incluindo null)
+    }
+  });
   prismaRequiredFields.forEach(field => {
     if (typeof data[field] === 'undefined' || data[field] === null) {
       if (field === 'dependents') data[field] = [];

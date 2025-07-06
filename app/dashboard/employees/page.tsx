@@ -373,7 +373,8 @@ export default function EmployeesPage() {
       ctpsUf: newEmployee.ctpsUf || "",
       motherName: newEmployee.motherName || "",
       dependents: Array.isArray(newEmployee.dependents) ? newEmployee.dependents : [],
-      notes: newEmployee.notes || ""
+      notes: newEmployee.notes || "",
+      avatar: newEmployee.avatar || null
     };
     console.log('[CADASTRO FUNCIONÁRIO] Payload enviado:', JSON.stringify(employeePayload, null, 2));
     createEmployeeMutation.mutate(employeePayload, {
