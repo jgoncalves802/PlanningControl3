@@ -3,7 +3,7 @@ id: plan-001
 title: Transição de Mock para Banco de Dados Real
 createdAt: 2025-07-06
 author: Junior Silva
-status: draft
+status: in-progress
 ---
 
 ## 🧩 Scope
@@ -47,16 +47,44 @@ Atualizar toda a aplicação para consumir dados reais do banco de dados (Postgr
 
 1. Mapear todos os pontos da aplicação que usam dados mock (ex: `mock-data.ts`, `mockEmployees`, etc). ✅
 2. Refatorar os services/hooks para consumir dados do banco via Prisma Client/Supabase Client.
-   - [ ] Refatorar `lib/employeeService.ts` para usar Prisma Client (listar funcionários)
-   - [ ] Refatorar `lib/employeeService.ts` para criar funcionário
-   - [ ] Refatorar `lib/employeeService.ts` para editar funcionário
-   - [ ] Refatorar `lib/employeeService.ts` para deletar funcionário
-   - [ ] (Opcional) Criar hooks customizados (`useEmployeesQuery`, etc) usando React Query
-   - [ ] Garantir tipagem forte e contratos
-   - [ ] Testar integração service <-> banco
-3. Atualizar componentes de UI para usar os novos hooks/services e lidar com loading/erro/empty state.
-4. Garantir que todas as operações CRUD estejam funcionando com dados reais (testar fluxo completo).
-5. Remover imports e dependências de dados mockados.
-6. Atualizar testes automatizados para usar banco de teste ou mocks de Prisma.
-7. Validar segurança (RLS, validação de entrada, tratamento de erros).
-8. Atualizar documentação interna e exemplos de uso.
+   - [x] ✅ Refatorar `lib/employeeService.ts` para usar Prisma Client (listar funcionários)
+   - [x] ✅ Refatorar `lib/employeeService.ts` para criar funcionário
+   - [x] ✅ Refatorar `lib/employeeService.ts` para editar funcionário
+   - [x] ✅ Refatorar `lib/employeeService.ts` para deletar funcionário
+   - [x] ✅ Hooks customizados (`useEmployeesQuery`, `useCreateEmployee`) usando React Query já implementados
+   - [x] ✅ Garantir tipagem forte e contratos (TypeScript configurado)
+   - [x] ✅ Testar integração service <-> banco (funcionando com Prisma + PostgreSQL)
+3. Atualizar componentes de UI para usar os novos hooks/services e lidar com loading/erro/empty state. ✅
+4. Garantir que todas as operações CRUD estejam funcionando com dados reais (testar fluxo completo). ✅
+5. Remover imports e dependências de dados mockados. ✅
+6. [ ] Atualizar testes automatizados para usar banco de teste ou mocks de Prisma.
+7. [x] ✅ Validar segurança (RLS, validação de entrada, tratamento de erros) - Implementado
+8. [ ] Atualizar documentação interna e exemplos de uso.
+
+## 🐛 Bugs Corrigidos
+
+- [x] ✅ Corrigir tratamento de campos de data (conversão de strings vazias para null)
+- [x] ✅ Aplicar migração para tornar campos opcionais no banco de dados
+- [x] ✅ Corrigir endpoint PUT de funcionários para filtrar campos válidos
+- [x] ✅ Implementar upload de avatar para funcionários
+- [x] ✅ Corrigir tooltips na tabela (substituir DaisyUI por CSS customizado)
+- [x] ✅ Adicionar traduções faltantes para histórico de funcionários
+- [x] ✅ Configurar .gitignore para ignorar arquivos de build do Next.js
+
+## 📊 Status Atual
+
+**Status**: 🟡 Em Progresso (85% concluído)
+
+**Módulo Funcionários**: ✅ **COMPLETO**
+- ✅ CRUD completo funcionando com banco real
+- ✅ Upload de avatar implementado
+- ✅ Tooltips funcionais
+- ✅ Traduções completas
+- ✅ Validação de dados
+- ✅ Tratamento de erros
+- ✅ Interface responsiva
+
+**Próximos passos**:
+1. Implementar testes automatizados
+2. Expandir para outros módulos (Contratos, Transferências, etc.)
+3. Atualizar documentação
