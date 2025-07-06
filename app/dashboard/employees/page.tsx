@@ -131,7 +131,7 @@ export default function EmployeesPage() {
 
   // Dentro do componente EmployeesPage, após obter t:
   const defaultColumns: ColumnConfig[] = [
-    { key: 'name', label: t('form.name'), enabled: true, width: '180px' },
+    { key: 'name', label: t('form.name'), enabled: true, width: '230px' },
     { key: 'cpf', label: t('form.cpf'), enabled: true, width: '150px' },
     { key: 'matricula', label: t('form.matricula'), enabled: true, width: '90px' },
     { key: 'cargo', label: t('form.cargo'), enabled: true, width: '150px' },
@@ -488,13 +488,21 @@ export default function EmployeesPage() {
               <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{employee.name}</p>
               <div className="flex items-center gap-2 mt-1">
                 {employee.email && (
-                  <div className="tooltip" data-tip={employee.email}>
+                  <div className="group relative cursor-help">
                     <Mail className="h-3 w-3 text-gray-400 dark:text-slate-500" />
-              </div>
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                      {employee.email}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
+                    </div>
+                  </div>
                 )}
                 {employee.phone && (
-                  <div className="tooltip" data-tip={employee.phone}>
+                  <div className="group relative cursor-help">
                     <Phone className="h-3 w-3 text-gray-400 dark:text-slate-500" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                      {employee.phone}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1192,20 +1200,32 @@ export default function EmployeesPage() {
                       ))}
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
-                          <div className="tooltip" data-tip="Visualizar detalhes do funcionário">
+                          <div className="group relative">
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowViewModal(true); }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                              Visualizar detalhes
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
+                            </div>
                           </div>
-                          <div className="tooltip" data-tip={t('actions.edit') || 'Editar informações do funcionário'}>
+                          <div className="group relative">
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowEditModal(true); }}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                              Editar funcionário
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
+                            </div>
                           </div>
-                          <div className="tooltip" data-tip="Mais ações">
-                          <Button variant="ghost" size="sm" onClick={() => openHistoryModal(employee)}>
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
+                          <div className="group relative">
+                            <Button variant="ghost" size="sm" onClick={() => openHistoryModal(employee)}>
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                              Histórico de vínculos
+                              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
+                            </div>
                           </div>
                         </div>
                       </td>
