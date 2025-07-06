@@ -471,12 +471,12 @@ export default function EmployeesPage() {
       case 'name':
         return (
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-sm">
               {employee.avatar ? (
                 <img 
                   src={employee.avatar} 
                   alt={employee.name} 
-                  className="w-10 h-10 rounded-full"
+                  className="w-full h-full object-cover rounded-full"
                 />
               ) : (
                 <span className="text-white text-sm font-medium">
@@ -1688,21 +1688,21 @@ export default function EmployeesPage() {
               </Button>
             </div>
 
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
-                  {selectedEmployee.avatar ? (
-                    <img 
-                      src={selectedEmployee.avatar} 
-                      alt={selectedEmployee.name} 
-                      className="w-16 h-16 rounded-full"
-                    />
-                  ) : (
-                    <span className="text-white text-lg font-medium">
-                      {selectedEmployee.name.split(' ').map(n => n[0]).join('')}
-                    </span>
-                  )}
-                </div>
+                          <div className="space-y-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-sm">
+                    {selectedEmployee.avatar ? (
+                      <img 
+                        src={selectedEmployee.avatar} 
+                        alt={selectedEmployee.name} 
+                        className="w-full h-full object-cover rounded-full"
+                      />
+                    ) : (
+                      <span className="text-white text-lg font-medium">
+                        {selectedEmployee.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    )}
+                  </div>
                 <div>
                   <h4 className="text-xl font-semibold text-gray-900 dark:text-slate-100">{selectedEmployee.name}</h4>
                   <p className="text-gray-600 dark:text-slate-400">{selectedEmployee.currentFunction || 'Função não definida'}</p>
