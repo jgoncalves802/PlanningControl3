@@ -5,7 +5,6 @@ import { motion } from 'framer-motion'
 import { Building2, Eye, EyeOff, Lock, Mail, AlertCircle, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
 
 export default function LoginPage() {
   const [mounted, setMounted] = useState(false)
@@ -18,7 +17,6 @@ export default function LoginPage() {
   })
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const router = useRouter()
-  const t = useTranslations('Login')
 
   useEffect(() => {
     setMounted(true)
@@ -49,7 +47,7 @@ export default function LoginPage() {
       }))
       router.push('/dashboard')
     } else {
-      setErrors({ form: 'Invalid email or password' })
+      setErrors({ form: 'Email ou senha inválidos' })
     }
     
     setIsLoading(false)
@@ -77,23 +75,23 @@ export default function LoginPage() {
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-gray-200 dark:border-slate-700">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-primary rounded-2xl mb-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl mb-4">
               <Building2 className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">{t('title')}</h1>
-            <p className="text-gray-600 dark:text-slate-400">Sign in to {tenant}</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100 mb-2">Entrar no Sistema</h1>
+            <p className="text-gray-600 dark:text-slate-400">Faça login em {tenant}</p>
           </div>
 
           {/* Demo Credentials Banner */}
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6">
             <div className="flex items-center gap-2 mb-2">
               <CheckCircle className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-300">Demo Credentials</span>
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-300">Credenciais de Demonstração</span>
             </div>
-            <p className="text-xs text-blue-700 dark:text-blue-400 mb-2">Use these credentials to explore the platform:</p>
+            <p className="text-xs text-blue-700 dark:text-blue-400 mb-2">Use estas credenciais para explorar a plataforma:</p>
             <div className="text-xs text-blue-800 dark:text-blue-300 font-mono bg-white dark:bg-slate-700 rounded p-2">
               <div>Email: admin@demo-company.com</div>
-              <div>Password: demo123</div>
+              <div>Senha: demo123</div>
             </div>
           </div>
 
@@ -108,7 +106,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                {t('email')}
+                Email
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-slate-500" />
@@ -119,8 +117,8 @@ export default function LoginPage() {
                   required
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
-                  placeholder={t('emailPlaceholder')}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
+                  placeholder="Digite seu email"
                 />
               </div>
               {errors.email && (
@@ -130,7 +128,7 @@ export default function LoginPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
-                {t('password')}
+                Senha
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 dark:text-slate-500" />
@@ -141,8 +139,8 @@ export default function LoginPage() {
                   required
                   value={formData.password}
                   onChange={handleInputChange}
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
-                  placeholder={t('passwordPlaceholder')}
+                  className="w-full pl-10 pr-12 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
+                  placeholder="Digite sua senha"
                 />
                 <button
                   type="button"
@@ -159,26 +157,26 @@ export default function LoginPage() {
 
             <div className="flex items-center justify-between">
               <label className="flex items-center">
-                <input type="checkbox" className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary bg-white dark:bg-slate-700" />
-                <span className="ml-2 text-sm text-gray-600 dark:text-slate-400">Remember me</span>
+                <input type="checkbox" className="rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 bg-white dark:bg-slate-700" />
+                <span className="ml-2 text-sm text-gray-600 dark:text-slate-400">Lembrar de mim</span>
               </label>
-              <Link href="/forgot-password" className="text-sm text-primary hover:text-primary-600">
-                Forgot password?
+              <Link href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
+                Esqueceu a senha?
               </Link>
             </div>
 
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-primary text-white py-3 rounded-lg font-semibold hover:bg-primary-600 focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  {t('loginButton')}
+                  Entrando...
                 </>
               ) : (
-                t('loginButton')
+                'Entrar'
               )}
             </button>
           </form>
@@ -186,9 +184,9 @@ export default function LoginPage() {
           {/* Footer */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600 dark:text-slate-400">
-              Need access?{' '}
-              <Link href="/contact" className="text-primary hover:text-primary-600 font-medium">
-                Contact your administrator
+              Precisa de acesso?{' '}
+              <Link href="/contact" className="text-blue-600 hover:text-blue-700 font-medium">
+                Contate seu administrador
               </Link>
             </p>
           </div>
@@ -196,8 +194,8 @@ export default function LoginPage() {
 
         {/* Back to home link */}
         <div className="text-center mt-6">
-          <Link href="/" className="text-sm text-gray-600 dark:text-slate-400 hover:text-primary">
-            ← Back to PlanningControl
+          <Link href="/" className="text-sm text-gray-600 dark:text-slate-400 hover:text-blue-600">
+            ← Voltar para PlanningControl
           </Link>
         </div>
       </motion.div>

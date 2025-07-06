@@ -90,11 +90,17 @@ export async function PUT(req: NextRequest, { params }) {
     // Normalizar caracteres especiais
     const updates = normalizeTextFields(rawUpdates);
     
+    // Converter endereco para address se necessário
+    if (updates.endereco && typeof updates.endereco === 'object') {
+      updates.address = updates.endereco;
+      delete updates.endereco;
+    }
+    
     // Filtrar apenas campos válidos do modelo Employee
     const validFields = [
       'name', 'registration', 'role', 'category', 'company', 'cpf', 'rg', 
       'birthDate', 'admissionDate', 'dismissalDate', 'status', 'workplace', 
-      'shift', 'phone', 'address', 'endereco', 'nationality', 'naturalness', 'gender', 
+      'shift', 'phone', 'address', 'nationality', 'naturalness', 'gender', 
       'maritalStatus', 'educationLevel', 'pis', 'ctps', 'ctpsSeries', 'ctpsUf',
       'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory',
       'cnh', 'cnhCategory', 'cnhValidity', 'motherName', 'fatherName', 

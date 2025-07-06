@@ -560,7 +560,7 @@ export default function EmployeesPage() {
       case 'name':
         return (
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-sm">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-sm">
               {employee.avatar ? (
                 <img 
                   src={employee.avatar} 
@@ -821,6 +821,38 @@ export default function EmployeesPage() {
   }
 
   // Função para abrir o modal de histórico
+  // Função para buscar dados completos do funcionário do banco
+  const fetchCompleteEmployeeData = async (employeeId: string): Promise<Employee | null> => {
+    try {
+      const response = await fetch(`/api/employees/${employeeId}`);
+      if (!response.ok) {
+        throw new Error('Erro ao buscar dados do funcionário');
+      }
+      const employeeData = await response.json();
+      
+      // Garantir que o endereço está no formato correto para o drawer
+      if (employeeData.address && !employeeData.endereco) {
+        employeeData.endereco = employeeData.address;
+      }
+      
+      return employeeData;
+    } catch (error) {
+      console.error('Erro ao buscar funcionário:', error);
+      toast.error('Erro ao carregar dados do funcionário');
+      return null;
+    }
+  };
+
+  // Função para abrir o drawer de edição com dados completos
+  const handleOpenEditDrawer = async (employee: Employee) => {
+    // Buscar dados completos do banco de dados
+    const completeEmployee = await fetchCompleteEmployeeData(employee.id);
+    if (completeEmployee) {
+      setSelectedEmployee(completeEmployee);
+      setShowEditModal(true);
+    }
+  };
+
   const openHistoryModal = (employee: Employee) => {
     setHistoryEmployee(employee);
     setShowHistoryModal(true);
@@ -1337,7 +1369,7 @@ export default function EmployeesPage() {
                             </div>
                           </div>
                           <div className="group relative">
-                            <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowEditModal(true); }}>
+                            <Button variant="ghost" size="sm" onClick={() => handleOpenEditDrawer(employee)}>
                               <Edit className="h-4 w-4" />
                             </Button>
                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">

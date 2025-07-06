@@ -1,19 +1,24 @@
 import { getRequestConfig } from 'next-intl/server';
 
 export default getRequestConfig(async ({ locale }) => {
-  const safeLocale = locale || 'pt-BR';
+  // Sempre usar pt-BR como fallback
+  const defaultLocale = 'pt-BR';
+  const currentLocale = locale || defaultLocale;
+  
   try {
+    // Tentar carregar o arquivo de mensagens
+    const messages = await import(`../messages/${currentLocale}.json`);
     return {
-      messages: (await import(`../messages/${safeLocale}.json`)).default,
-      locale: safeLocale
+      messages: messages.default,
+      locale: currentLocale
     };
-  } catch (e) {
-    if (safeLocale !== 'pt-BR') {
-      return {
-        messages: (await import(`../messages/pt-BR.json`)).default,
-        locale: 'pt-BR'
-      };
-    }
-    throw new Error(`Could not load messages for locale: ${safeLocale}`);
+  } catch (error) {
+    console.warn(`Could not load messages for locale: ${currentLocale}, using default`);
+    // Sempre usar pt-BR como fallback
+    const fallbackMessages = await import(`../messages/${defaultLocale}.json`);
+    return {
+      messages: fallbackMessages.default,
+      locale: defaultLocale
+    };
   }
 }); 
