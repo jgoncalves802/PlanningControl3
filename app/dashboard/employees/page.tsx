@@ -103,6 +103,15 @@ export default function EmployeesPage() {
   const [filterAdmission, setFilterAdmission] = useState('')
   const [filterCity, setFilterCity] = useState('')
   const [filterDismissal, setFilterDismissal] = useState('');
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
+  const [showAdmissionForm, setShowAdmissionForm] = useState(false);
+  const [showDismissalForm, setShowDismissalForm] = useState(false);
+  const [admissionContractId, setAdmissionContractId] = useState('');
+  const [admissionDate, setAdmissionDate] = useState('');
+  const [dismissalDate, setDismissalDate] = useState('');
+  const [historyError, setHistoryError] = useState('');
+  const [historySuccess, setHistorySuccess] = useState('');
 
   // Dentro do componente EmployeesPage, após obter t:
   const defaultColumns: ColumnConfig[] = [
@@ -188,7 +197,7 @@ export default function EmployeesPage() {
 
   const filteredEmployees = employees.filter(employee => {
     const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.cpf.includes(searchTerm) ||
+                         employee.cpf.includes(searchTerm) ||
       employee.currentContract?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
@@ -275,8 +284,14 @@ export default function EmployeesPage() {
       if (!newEmployee.name) newErrors.name = t('form.error.name_required');
       if (!newEmployee.cpf) newErrors.cpf = t('form.error.cpf_required');
       else if (!validateCPF(newEmployee.cpf)) newErrors.cpf = t('form.error.cpf_invalid');
-      else if (employees.some(emp => emp.cpf.replace(/\D/g, '') === newEmployee.cpf?.replace(/\D/g, ''))) {
-        newErrors.cpf = 'CPF já cadastrado para outro funcionário';
+      else if (
+        employees.some(
+          emp =>
+            emp.cpf.replace(/\D/g, '') === newEmployee.cpf?.replace(/\D/g, '') &&
+            emp.status !== 'dismissed'
+        )
+      ) {
+        newErrors.cpf = 'CPF já cadastrado para outro funcionário ativo';
       }
     }
     if (currentStep === 1) {
@@ -320,9 +335,15 @@ export default function EmployeesPage() {
 
   const handleAddEmployee = () => {
     if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    if (employees.some(emp => emp.cpf.replace(/\D/g, '') === newEmployee.cpf?.replace(/\D/g, ''))) {
-      setErrors(prev => ({ ...prev, cpf: 'CPF já cadastrado para outro funcionário' }));
-      toast.error('Já existe um colaborador com este CPF!');
+    if (
+      employees.some(
+        emp =>
+          emp.cpf.replace(/\D/g, '') === newEmployee.cpf?.replace(/\D/g, '') &&
+          emp.status !== 'dismissed'
+      )
+    ) {
+      setErrors(prev => ({ ...prev, cpf: 'CPF já cadastrado para outro funcionário ativo' }));
+      toast.error('Já existe um colaborador ativo com este CPF!');
       return;
     }
     const employee: Employee = {
@@ -443,7 +464,7 @@ export default function EmployeesPage() {
                 {employee.email && (
                   <div className="tooltip" data-tip={employee.email}>
                     <Mail className="h-3 w-3 text-gray-400 dark:text-slate-500" />
-                  </div>
+              </div>
                 )}
                 {employee.phone && (
                   <div className="tooltip" data-tip={employee.phone}>
@@ -636,6 +657,85 @@ export default function EmployeesPage() {
     }).join(','))
     return [header, ...data].join('\n')
   }
+
+  // Função para abrir o modal de histórico
+  const openHistoryModal = (employee: Employee) => {
+    setHistoryEmployee(employee);
+    setShowHistoryModal(true);
+  };
+  const closeHistoryModal = () => {
+    setShowHistoryModal(false);
+    setHistoryEmployee(null);
+  };
+
+  const handleAddAdmission = () => {
+    setHistoryError('');
+    setHistorySuccess('');
+    if (!admissionContractId || !admissionDate) {
+      setHistoryError(t('history.admission_required', { default: 'Contrato e data são obrigatórios.' }));
+      return;
+    }
+    const contract = mockContracts.find(c => c.id === admissionContractId);
+    if (!contract) {
+      setHistoryError(t('history.contract_not_found', { default: 'Contrato não encontrado.' }));
+      return;
+    }
+    const newEntry = {
+      contractId: contract.id,
+      contractName: contract.name,
+      admissionDate: new Date(admissionDate)
+    };
+    const updatedHistory = [...(historyEmployee?.employmentHistory || []), newEntry];
+    const updatedEmployee = {
+      ...historyEmployee!,
+      employmentHistory: updatedHistory,
+      currentContractId: contract.id,
+      currentContract: contract.name,
+      admissionDate: new Date(admissionDate),
+      dismissalDate: undefined,
+      status: 'active' as Employee['status'],
+      isActive: true
+    };
+    setEmployees(prev => prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
+    setHistoryEmployee(updatedEmployee);
+    setShowAdmissionForm(false);
+    setAdmissionContractId('');
+    setAdmissionDate('');
+    setHistorySuccess(t('history.admission_success', { default: 'Nova admissão registrada com sucesso.' }));
+  };
+
+  const handleAddDismissal = () => {
+    setHistoryError('');
+    setHistorySuccess('');
+    if (!dismissalDate) {
+      setHistoryError(t('history.dismissal_required', { default: 'Data de demissão é obrigatória.' }));
+      return;
+    }
+    if (!historyEmployee?.employmentHistory || historyEmployee.employmentHistory.length === 0) {
+      setHistoryError(t('history.no_admission', { default: 'Nenhuma admissão encontrada.' }));
+      return;
+    }
+    const lastIdx = historyEmployee.employmentHistory.length - 1;
+    if (historyEmployee.employmentHistory[lastIdx].dismissalDate) {
+      setHistoryError(t('history.already_dismissed', { default: 'O último vínculo já está encerrado.' }));
+      return;
+    }
+    const updatedHistory = historyEmployee.employmentHistory.map((entry, idx) =>
+      idx === lastIdx ? { ...entry, dismissalDate: new Date(dismissalDate) } : entry
+    );
+    const updatedEmployee = {
+      ...historyEmployee!,
+      employmentHistory: updatedHistory,
+      dismissalDate: new Date(dismissalDate),
+      status: 'dismissed' as Employee['status'],
+      isActive: false
+    };
+    setEmployees(prev => prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
+    setHistoryEmployee(updatedEmployee);
+    setShowDismissalForm(false);
+    setDismissalDate('');
+    setHistorySuccess(t('history.dismissal_success', { default: 'Demissão registrada com sucesso.' }));
+  };
 
   if (!currentUser || !userPermissions) {
     return (
@@ -938,8 +1038,8 @@ export default function EmployeesPage() {
                       </th>
                     )}
                     {enabledColumns.map((column) => (
-                      <th
-                        key={column.key}
+                      <th 
+                        key={column.key} 
                         style={{ width: column.width }}
                         data-tip={
                           column.key === 'name' ? 'Nome completo do funcionário' :
@@ -988,18 +1088,18 @@ export default function EmployeesPage() {
                         <div className="flex items-center space-x-2">
                           <div className="tooltip" data-tip="Visualizar detalhes do funcionário">
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowViewModal(true); }}>
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <Eye className="h-4 w-4" />
+                          </Button>
                           </div>
                           <div className="tooltip" data-tip={t('actions.edit') || 'Editar informações do funcionário'}>
                             <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowEditModal(true); }}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
+                                <Edit className="h-4 w-4" />
+                              </Button>
                           </div>
                           <div className="tooltip" data-tip="Mais ações">
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                          <Button variant="ghost" size="sm" onClick={() => openHistoryModal(employee)}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
                           </div>
                         </div>
                       </td>
@@ -1560,6 +1660,48 @@ export default function EmployeesPage() {
           </Button>
         </div>
       </div>
+
+      {showHistoryModal && historyEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto shadow-xl border border-gray-200 dark:border-slate-700"
+            aria-modal="true"
+            role="dialog"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-100">{t('history.title', { default: 'Histórico de Contratações' })}</h3>
+              <Button variant="ghost" size="sm" onClick={closeHistoryModal} aria-label={t('form.close')}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-4">
+              {historyEmployee.employmentHistory && historyEmployee.employmentHistory.length > 0 ? (
+                <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+                  {historyEmployee.employmentHistory.map((entry, idx) => (
+                    <li key={idx} className="py-3">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <span className="block text-sm font-medium text-gray-700 dark:text-slate-200">{t('form.contract', { default: 'Contrato' })}: <span className="font-semibold">{entry.contractName}</span></span>
+                          <span className="block text-sm text-gray-600 dark:text-slate-400">{t('form.data_entrada', { default: 'Admissão' })}: {formatDate(entry.admissionDate)}</span>
+                          <span className="block text-sm text-gray-600 dark:text-slate-400">{t('form.data_demissao', { default: 'Demissão' })}: {entry.dismissalDate ? formatDate(entry.dismissalDate) : t('history.active', { default: 'Ativo' })}</span>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <div className="text-gray-500 dark:text-slate-400 text-center py-8">{t('history.empty', { default: 'Nenhum histórico encontrado.' })}</div>
+              )}
+            </div>
+            <div className="flex justify-end mt-6">
+              <Button onClick={closeHistoryModal}>{t('form.close', { default: 'Fechar' })}</Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
     </>
   )

@@ -1,14 +1,14 @@
 import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
-import { forwardRef } from "react"
+import { motion, HTMLMotionProps } from "framer-motion"
+import { forwardRef, PropsWithChildren } from "react"
 
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends HTMLMotionProps<"button"> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
 }
 
-const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(
   ({ className, variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
     const baseClasses = "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
     
@@ -26,32 +26,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: "px-6 py-3 text-base"
     }
 
-    // Separe props que não são do motion
-    const {
-      form,
-      formAction,
-      formEncType,
-      formMethod,
-      formNoValidate,
-      formTarget,
-      name,
-      value,
-      type,
-      autoFocus,
-      tabIndex,
-      onClick,
-      onFocus,
-      onBlur,
-      onChange,
-      onInput,
-      onInvalid,
-      onSubmit,
-      onDrag,
-      onDragStart,
-      onDragEnd,
-      ...motionProps
-    } = props;
-
     return (
       <motion.button
         ref={ref}
@@ -59,25 +33,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled || loading}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        {...motionProps}
-        form={form}
-        formAction={formAction}
-        formEncType={formEncType}
-        formMethod={formMethod}
-        formNoValidate={formNoValidate}
-        formTarget={formTarget}
-        name={name}
-        value={value}
-        type={type}
-        autoFocus={autoFocus}
-        tabIndex={tabIndex}
-        onClick={onClick}
-        onFocus={onFocus}
-        onBlur={onBlur}
-        onChange={onChange}
-        onInput={onInput}
-        onInvalid={onInvalid}
-        onSubmit={onSubmit}
+        {...props}
       >
         {loading && (
           <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin mr-2" />

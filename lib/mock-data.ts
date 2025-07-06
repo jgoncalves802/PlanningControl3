@@ -55,6 +55,13 @@ export interface ContractTraining {
   notes?: string
 }
 
+export interface EmploymentHistoryEntry {
+  contractId: string
+  contractName: string
+  admissionDate: Date
+  dismissalDate?: Date
+}
+
 export interface Employee {
   id: string
   name: string
@@ -103,6 +110,7 @@ export interface Employee {
   pontoReferencia?: string // Ponto de Referência
   statusBancodoc?: string // Status Bancário/Documental
   efetivoRDO?: boolean // Efetivo Apontado em RDO
+  employmentHistory?: EmploymentHistoryEntry[]
 }
 
 export interface TransferRequest {
@@ -554,7 +562,21 @@ export const mockEmployees: Employee[] = [
     status: 'active',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
     email: 'john.mitchell@example.com',
-    phone: '+1 (555) 123-4567'
+    phone: '+1 (555) 123-4567',
+    employmentHistory: [
+      {
+        contractId: '1',
+        contractName: 'Construction Project Alpha',
+        admissionDate: subDays(new Date(), 90),
+        dismissalDate: subDays(new Date(), 120)
+      },
+      {
+        contractId: '2',
+        contractName: 'Manufacturing Unit B',
+        admissionDate: subDays(new Date(), 150),
+        dismissalDate: subDays(new Date(), 180)
+      }
+    ]
   },
   {
     id: '2',
@@ -570,7 +592,15 @@ export const mockEmployees: Employee[] = [
     status: 'active',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
     email: 'sarah.johnson@example.com',
-    phone: '+1 (555) 234-5678'
+    phone: '+1 (555) 234-5678',
+    employmentHistory: [
+      {
+        contractId: '2',
+        contractName: 'Manufacturing Unit B',
+        admissionDate: subDays(new Date(), 150),
+        dismissalDate: subDays(new Date(), 180)
+      }
+    ]
   },
   {
     id: '3',
@@ -586,7 +616,15 @@ export const mockEmployees: Employee[] = [
     status: 'active',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=michael',
     email: 'michael.rodriguez@example.com',
-    phone: '+1 (555) 345-6789'
+    phone: '+1 (555) 345-6789',
+    employmentHistory: [
+      {
+        contractId: '1',
+        contractName: 'Construction Project Alpha',
+        admissionDate: subDays(new Date(), 60),
+        dismissalDate: subDays(new Date(), 90)
+      }
+    ]
   },
   {
     id: '4',
@@ -602,7 +640,15 @@ export const mockEmployees: Employee[] = [
     status: 'active',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emily',
     email: 'emily.chen@example.com',
-    phone: '+1 (555) 456-7890'
+    phone: '+1 (555) 456-7890',
+    employmentHistory: [
+      {
+        contractId: '2',
+        contractName: 'Manufacturing Unit B',
+        admissionDate: subDays(new Date(), 120),
+        dismissalDate: subDays(new Date(), 150)
+      }
+    ]
   },
   {
     id: '5',
