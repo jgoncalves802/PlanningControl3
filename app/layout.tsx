@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { NextIntlClientProvider, useMessages } from 'next-intl'
+import ReactQueryProvider from '@/lib/ReactQueryProvider'
 
 export const metadata: Metadata = {
   title: 'PlanningControl - Workforce Management Platform',
@@ -24,9 +25,11 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="antialiased min-h-screen bg-background">
-        <NextIntlClientProvider messages={messages}>
-          {children}
-        </NextIntlClientProvider>
+        <ReactQueryProvider>
+          <NextIntlClientProvider messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </ReactQueryProvider>
       </body>
     </html>
   )

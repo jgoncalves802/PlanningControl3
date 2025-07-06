@@ -45,8 +45,15 @@ Atualizar toda a aplicação para consumir dados reais do banco de dados (Postgr
 
 ## 🔢 Execution Plan
 
-1. Mapear todos os pontos da aplicação que usam dados mock (ex: `mock-data.ts`, `mockEmployees`, etc).
+1. Mapear todos os pontos da aplicação que usam dados mock (ex: `mock-data.ts`, `mockEmployees`, etc). ✅
 2. Refatorar os services/hooks para consumir dados do banco via Prisma Client/Supabase Client.
+   - [ ] Refatorar `lib/employeeService.ts` para usar Prisma Client (listar funcionários)
+   - [ ] Refatorar `lib/employeeService.ts` para criar funcionário
+   - [ ] Refatorar `lib/employeeService.ts` para editar funcionário
+   - [ ] Refatorar `lib/employeeService.ts` para deletar funcionário
+   - [ ] (Opcional) Criar hooks customizados (`useEmployeesQuery`, etc) usando React Query
+   - [ ] Garantir tipagem forte e contratos
+   - [ ] Testar integração service <-> banco
 3. Atualizar componentes de UI para usar os novos hooks/services e lidar com loading/erro/empty state.
 4. Garantir que todas as operações CRUD estejam funcionando com dados reais (testar fluxo completo).
 5. Remover imports e dependências de dados mockados.

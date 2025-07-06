@@ -51,6 +51,8 @@ import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { getEmployees } from '@/lib/employeeService'
+import { useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useAddAdmission, useAddDismissal } from '@/lib/useCreateEmployee'
+import { useEmployeesQuery } from '@/lib/useEmployeesQuery'
 
 // Configuração das colunas disponíveis
 interface ColumnConfig {
@@ -63,7 +65,6 @@ interface ColumnConfig {
 export default function EmployeesPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
-  const [employees, setEmployees] = useState<Employee[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
@@ -113,6 +114,12 @@ export default function EmployeesPage() {
   const [dismissalDate, setDismissalDate] = useState('');
   const [historyError, setHistoryError] = useState('');
   const [historySuccess, setHistorySuccess] = useState('');
+  const createEmployeeMutation = useCreateEmployee();
+  const updateEmployeeMutation = useUpdateEmployee();
+  const deleteEmployeeMutation = useDeleteEmployee();
+  const addAdmissionMutation = useAddAdmission();
+  const addDismissalMutation = useAddDismissal();
+  const { data: employees = [], isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery();
 
   // Dentro do componente EmployeesPage, após obter t:
   const defaultColumns: ColumnConfig[] = [
@@ -326,17 +333,16 @@ export default function EmployeesPage() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (validateStep(step)) {
-      handleAddEmployee();
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        setStep(0);
-      }, 1800);
+      if (step === steps.length - 1) {
+        handleAddEmployee();
+      } else {
+        setStep(s => Math.min(steps.length - 1, s + 1));
+      }
     }
   }
 
-  const handleAddEmployee = () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
+  const handleAddEmployee = async () => {
+    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return;
     if (
       employees.some(
         emp =>
@@ -345,77 +351,77 @@ export default function EmployeesPage() {
       )
     ) {
       setErrors(prev => ({ ...prev, cpf: 'CPF já cadastrado para outro funcionário ativo' }));
-      toast.error('Já existe um colaborador ativo com este CPF!');
+      toast.error(t('form.error.cpf_duplicate', { default: 'Já existe um colaborador ativo com este CPF!' }));
       return;
     }
-    const employee: Employee = {
-      id: `emp-${Date.now()}`,
-      name: newEmployee.name || '',
-      cpf: newEmployee.cpf || '',
-      matricula: newEmployee.matricula || '',
-      cargo: newEmployee.cargo || '',
-      cidade: newEmployee.cidade || address.cidade || '',
-      centroCusto: newEmployee.centroCusto || '',
-      turno: newEmployee.turno || '',
-      obra: newEmployee.obra || '',
-      primeiraExperiencia: newEmployee.primeiraExperiencia || '',
-      segundaExperiencia: newEmployee.segundaExperiencia || '',
-      previsaoObra: newEmployee.previsaoObra || '',
-      currentContractId: newEmployee.currentContractId || '',
-      currentFunctionId: newEmployee.currentFunctionId || '',
-      currentContract: mockContracts.find(c => c.id === newEmployee.currentContractId)?.name || '',
-      currentFunction: newEmployee.currentFunction || '',
-      admissionDate: newEmployee.dataEntrada ? new Date(newEmployee.dataEntrada) : new Date(),
-      isActive: true,
-      status: newEmployee.status || 'active',
-      avatar: newEmployee.avatar,
-      email: newEmployee.email,
-      phone: newEmployee.phone,
-      // Endereço
-      endereco: {
-        cep: address.cep,
-        logradouro: address.logradouro,
-        numero: address.numero,
-        complemento: address.complemento,
-        bairro: address.bairro,
-        cidade: address.cidade,
-        uf: address.uf
-      }
-    }
-    setEmployees(prev => [...prev, employee])
-    setNewEmployee({})
-    setAddress({ cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' })
-    setShowAddModal(false)
-    toast.success('Funcionário cadastrado com sucesso!')
-  }
+    // Montar payload para o backend
+    const employeePayload = {
+      ...newEmployee,
+      endereco: { ...address },
+    };
+    createEmployeeMutation.mutate(employeePayload, {
+      onSuccess: () => {
+        setShowAddModal(false);
+        setNewEmployee({ status: 'active' });
+        setAddress({ cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' });
+        setStep(0);
+        setErrors({});
+        toast.success(t('form.success', { default: 'Funcionário cadastrado com sucesso!' }));
+      },
+      onError: (error: any) => {
+        toast.error(t('form.error.generic', { default: 'Erro ao cadastrar funcionário.' }));
+      },
+    });
+  };
 
-  const handleEditEmployee = () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES') || !selectedEmployee) return
-    
-    setEmployees(prev => prev.map(emp => 
-      emp.id === selectedEmployee.id ? { ...selectedEmployee } : emp
-    ))
-    setShowEditModal(false)
-    setSelectedEmployee(null)
-    toast.success('Alterações salvas com sucesso!')
-  }
+  const handleEditEmployee = (e) => {
+    e.preventDefault();
+    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES') || !selectedEmployee) return;
+    updateEmployeeMutation.mutate(
+      { id: selectedEmployee.id, updates: selectedEmployee },
+      {
+        onSuccess: () => {
+          setShowEditModal(false);
+          setSelectedEmployee(null);
+          toast.success(t('form.edit_success', { default: 'Alterações salvas com sucesso!' }));
+        },
+        onError: () => {
+          toast.error(t('form.error.generic', { default: 'Erro ao salvar alterações.' }));
+        },
+      }
+    );
+  };
 
   const handleDeleteEmployee = (employeeId: string) => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    
+    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return;
     if (confirm('Tem certeza que deseja excluir este funcionário?')) {
-      setEmployees(prev => prev.filter(emp => emp.id !== employeeId))
+      deleteEmployeeMutation.mutate(
+        employeeId,
+        {
+          onSuccess: () => {
+            toast.success(t('form.delete_success', { default: 'Funcionário excluído com sucesso!' }));
+          },
+          onError: () => {
+            toast.error(t('form.error.generic', { default: 'Erro ao excluir funcionário.' }));
+          },
+        }
+      );
     }
-  }
+  };
 
   const handleBulkDelete = () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    
+    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return;
     if (confirm(`Tem certeza que deseja excluir ${selectedEmployees.length} funcionários selecionados?`)) {
-      setEmployees(prev => prev.filter(emp => !selectedEmployees.includes(emp.id)))
-      setSelectedEmployees([])
+      selectedEmployees.forEach((id) => {
+        deleteEmployeeMutation.mutate(id, {
+          onSuccess: () => {},
+          onError: () => {},
+        });
+      });
+      setSelectedEmployees([]);
+      toast.success(t('form.delete_success', { default: 'Funcionários excluídos com sucesso!' }));
     }
-  }
+  };
 
   const handleExport = () => {
     console.log('Exportar CSV clicado')
@@ -678,32 +684,31 @@ export default function EmployeesPage() {
       return;
     }
     const contract = mockContracts.find(c => c.id === admissionContractId);
-    if (!contract) {
+    if (!contract || !historyEmployee) {
       setHistoryError(t('history.contract_not_found', { default: 'Contrato não encontrado.' }));
       return;
     }
-    const newEntry = {
-      contractId: contract.id,
-      contractName: contract.name,
-      admissionDate: new Date(admissionDate)
-    };
-    const updatedHistory = [...(historyEmployee?.employmentHistory || []), newEntry];
-    const updatedEmployee = {
-      ...historyEmployee!,
-      employmentHistory: updatedHistory,
-      currentContractId: contract.id,
-      currentContract: contract.name,
-      admissionDate: new Date(admissionDate),
-      dismissalDate: undefined,
-      status: 'active' as Employee['status'],
-      isActive: true
-    };
-    setEmployees(prev => prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
-    setHistoryEmployee(updatedEmployee);
-    setShowAdmissionForm(false);
-    setAdmissionContractId('');
-    setAdmissionDate('');
-    setHistorySuccess(t('history.admission_success', { default: 'Nova admissão registrada com sucesso.' }));
+    addAdmissionMutation.mutate(
+      {
+        id: historyEmployee.id,
+        admission: {
+          contractId: contract.id,
+          contractName: contract.name,
+          admissionDate: admissionDate,
+        },
+      },
+      {
+        onSuccess: () => {
+          setShowAdmissionForm(false);
+          setAdmissionContractId('');
+          setAdmissionDate('');
+          setHistorySuccess(t('history.admission_success', { default: 'Nova admissão registrada com sucesso.' }));
+        },
+        onError: () => {
+          setHistoryError(t('form.error.generic', { default: 'Erro ao registrar admissão.' }));
+        },
+      }
+    );
   };
 
   const handleAddDismissal = () => {
@@ -722,27 +727,38 @@ export default function EmployeesPage() {
       setHistoryError(t('history.already_dismissed', { default: 'O último vínculo já está encerrado.' }));
       return;
     }
-    const updatedHistory = historyEmployee.employmentHistory.map((entry, idx) =>
-      idx === lastIdx ? { ...entry, dismissalDate: new Date(dismissalDate) } : entry
+    addDismissalMutation.mutate(
+      {
+        id: historyEmployee.id,
+        dismissalDate: dismissalDate,
+      },
+      {
+        onSuccess: () => {
+          setShowDismissalForm(false);
+          setDismissalDate('');
+          setHistorySuccess(t('history.dismissal_success', { default: 'Demissão registrada com sucesso.' }));
+        },
+        onError: () => {
+          setHistoryError(t('form.error.generic', { default: 'Erro ao registrar demissão.' }));
+        },
+      }
     );
-    const updatedEmployee = {
-      ...historyEmployee!,
-      employmentHistory: updatedHistory,
-      dismissalDate: new Date(dismissalDate),
-      status: 'dismissed' as Employee['status'],
-      isActive: false
-    };
-    setEmployees(prev => prev.map(emp => emp.id === updatedEmployee.id ? updatedEmployee : emp));
-    setHistoryEmployee(updatedEmployee);
-    setShowDismissalForm(false);
-    setDismissalDate('');
-    setHistorySuccess(t('history.dismissal_success', { default: 'Demissão registrada com sucesso.' }));
   };
 
-  if (!currentUser || !userPermissions) {
+  if (!currentUser || !userPermissions || isEmployeesLoading) {
     return (
-      <div>Carregando...</div>
-    )
+      <div className="flex items-center justify-center h-96">
+        <span className="loader mr-2"></span> {t('loading', { default: 'Carregando funcionários...' })}
+      </div>
+    );
+  }
+  if (isEmployeesError) {
+    return (
+      <div className="flex items-center justify-center h-96 text-red-600">
+        <X className="h-5 w-5 mr-2" /> {t('error', { default: 'Erro ao carregar funcionários.' })}
+        <Button variant="outline" size="sm" className="ml-4" onClick={() => refetch()}>{t('retry', { default: 'Tentar novamente' })}</Button>
+      </div>
+    );
   }
   return (
     <>
@@ -1168,10 +1184,10 @@ export default function EmployeesPage() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-                aria-modal="true"
-                role="dialog"
+            aria-modal="true"
+            role="dialog"
           >
             <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-100">{t('form.title')}</h3>
@@ -1352,13 +1368,24 @@ export default function EmployeesPage() {
                   )}
                   </motion.div>
                   <div className="flex justify-between mt-8">
-                    <Button type="button" variant="secondary" disabled={step === 0} onClick={handlePrev}>{t('form.prev')}</Button>
+                    <Button type="button" variant="secondary" disabled={step === 0 || createEmployeeMutation.isPending} onClick={handlePrev}>{t('form.prev')}</Button>
                     {step < steps.length - 1 ? (
-                      <Button type="button" variant="primary" onClick={handleNext}>{t('form.next')}</Button>
+                      <Button type="button" variant="primary" onClick={handleNext} disabled={createEmployeeMutation.isPending}>{t('form.next')}</Button>
                     ) : (
-                      <Button type="submit" variant="primary"><UserPlus className="h-4 w-4 mr-2" />{t('form.submit')}</Button>
+                      <Button type="submit" variant="primary" disabled={createEmployeeMutation.isPending}>
+                        {createEmployeeMutation.isPending ? (
+                          <span className="flex items-center"><span className="loader mr-2"></span>{t('form.loading', { default: 'Salvando...' })}</span>
+                        ) : (
+                          <><UserPlus className="h-4 w-4 mr-2" />{t('form.submit')}</>
+                        )}
+                      </Button>
                     )}
                   </div>
+                  {createEmployeeMutation.isError && (
+                    <div className="alert alert-error mt-6 flex items-center gap-2" role="alert">
+                      <X className="h-5 w-5 text-red-600" /> {t('form.error.generic', { default: 'Erro ao cadastrar funcionário.' })}
+                    </div>
+                  )}
                   {showSuccess && (
                     <div className="alert alert-success mt-6 flex items-center gap-2" role="status">
                       <Check className="h-5 w-5 text-green-600" /> {t('form.success')}

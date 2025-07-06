@@ -8,14 +8,13 @@
 // PARTE 1: SCHEMA DO BANCO DE DADOS PRINCIPAL (SUPER ADMIN)
 // ============================================================================
 
-generator client_super_admin {
+generator client {
   provider = "prisma-client-js"
-  output   = "../node_modules/@prisma/super-admin-client"
 }
 
-datasource db_super_admin {
+datasource db {
   provider = "postgresql"
-  url      = env("SUPER_ADMIN_DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 model Tenant {
@@ -44,16 +43,6 @@ enum PlanType {
 // ============================================================================
 // PARTE 2: SCHEMA TEMPLATE DO TENANT (Será replicado para cada cliente)
 // ============================================================================
-
-generator client_tenant {
-  provider = "prisma-client-js"
-  output   = "../node_modules/@prisma/tenant-client"
-}
-
-datasource db_tenant {
-  provider = "postgresql"
-  url      = env("TENANT_DATABASE_URL")
-}
 
 // --- Usuários e Permissões ---
 
@@ -101,7 +90,6 @@ model Contract {
   responsibles   ContractResponsible[]
   functions      ContractFunction[]
   employees      Employee[]
-  riskMappings   RiskMapping[]
   hourPlannings  HourPlanning[]
   nfcCollections NFCCollection[]
 }
@@ -141,6 +129,8 @@ model Employee {
   asos              ASO[]
   trainings         EmployeeTraining[]
   timeRecords       TimeRecord[]
+  transferRequests  TransferRequest[] @relation("EmployeeTransferRequests")
+  employmentHistory Json? // Histórico de vínculos/admissões/demissões
 }
 
 model TransferRequest {
@@ -153,7 +143,7 @@ model TransferRequest {
   status        TransferStatus @default(PENDING)
   scheduledDate DateTime
   completedAt   DateTime?
-  employee      Employee       @relation(fields: [employeeId], references: [id])
+  employee      Employee       @relation("EmployeeTransferRequests", fields: [employeeId], references: [id])
   requestedBy   User           @relation("RequestedBy", fields: [requestedById], references: [id])
   approvedBy    User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
 }
