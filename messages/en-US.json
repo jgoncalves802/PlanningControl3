@@ -78,6 +78,18 @@
         "data_entrada_required": "Entry date is required",
         "status_required": "Status is required"
       }
+    },
+    "history": {
+      "title": "Employment History",
+      "empty": "No history found.",
+      "active": "Active",
+      "admission_required": "Contract and date are required.",
+      "contract_not_found": "Contract not found.",
+      "admission_success": "New admission successfully registered.",
+      "dismissal_required": "Dismissal date is required.",
+      "no_admission": "No admission found.",
+      "already_dismissed": "The last employment is already terminated.",
+      "dismissal_success": "Dismissal successfully registered."
     }
   },
   "scripts": {

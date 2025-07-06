@@ -117,6 +117,18 @@
     },
     "actions": {
       "edit": "Editar informações do funcionário"
+    },
+    "history": {
+      "title": "Histórico de Contratações",
+      "empty": "Nenhum histórico encontrado.",
+      "active": "Ativo",
+      "admission_required": "Contrato e data são obrigatórios.",
+      "contract_not_found": "Contrato não encontrado.",
+      "admission_success": "Nova admissão registrada com sucesso.",
+      "dismissal_required": "Data de demissão é obrigatória.",
+      "no_admission": "Nenhuma admissão encontrada.",
+      "already_dismissed": "O último vínculo já está encerrado.",
+      "dismissal_success": "Demissão registrada com sucesso."
     }
   }
 } 
