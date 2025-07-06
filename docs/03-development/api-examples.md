@@ -317,6 +317,269 @@ const newPost = await callApi('/api/protected/supabase-posts', {
 
 Use a página `/api-demo` para testar interativamente todas as APIs!
 
+## Importação em Massa de Funcionários
+
+### Endpoint
+```
+POST /api/employees/import
+```
+
+### Formato de Dados
+A API aceita um array de objetos JSON com os dados dos funcionários. Os campos correspondem ao arquivo CSV de modelo.
+
+#### Campos Obrigatórios
+- `name`: Nome completo do funcionário
+- `registration`: Matrícula única por empresa
+- `company`: Nome da empresa
+- `cpf`: CPF válido (será validado pelo algoritmo oficial)
+
+#### Campos Opcionais
+- `phone`: Telefone (10 ou 11 dígitos)
+- `birthDate`: Data de nascimento (formato DD/MM/YYYY)
+- `admissionDate`: Data de admissão (formato DD/MM/YYYY)
+- `gender`: Sexo
+- `maritalStatus`: Estado civil
+- `role`: Função/cargo
+- `category`: Categoria
+- `pis`: PIS
+- `ctps`: CTPS
+- `ctpsSeries`: Série da CTPS
+- `ctpsUf`: UF da CTPS
+- `motherName`: Nome da mãe
+- `status`: Status do funcionário
+- `centroCusto`: Centro de custo
+- `obra`: Obra/projeto
+- `mo`: Tipo de mão de obra
+- `localAlojado`: Local/alojamento
+- `pontoReferencia`: Ponto de referência
+- `statusBancodoc`: Status bancário/documental
+- `efetivoRDO`: Efetivo em RDO (true/false)
+
+### Exemplo de Requisição
+```json
+POST /api/employees/import
+Content-Type: application/json
+
+[
+  {
+    "name": "João Silva Santos",
+    "registration": "12345",
+    "company": "SARTORI SERVIÇOS",
+    "cpf": "12345678901",
+    "phone": "31987654321",
+    "birthDate": "15/05/1985",
+    "admissionDate": "01/03/2024",
+    "gender": "Masculino",
+    "maritalStatus": "Solteiro",
+    "role": "Operador",
+    "category": "CLT",
+    "motherName": "Maria Silva",
+    "status": "Ativo"
+  },
+  {
+    "name": "Maria Santos Costa",
+    "registration": "12346",
+    "company": "SARTORI SERVIÇOS",
+    "cpf": "98765432100",
+    "phone": "31987654322",
+    "birthDate": "20/08/1990",
+    "admissionDate": "15/03/2024",
+    "gender": "Feminino",
+    "maritalStatus": "Casada",
+    "role": "Auxiliar",
+    "category": "CLT",
+    "motherName": "Ana Santos",
+    "status": "Ativo"
+  }
+]
+```
+
+### Exemplo de Resposta de Sucesso
+```json
+{
+  "success": true,
+  "summary": {
+    "total": 2,
+    "created": 2,
+    "failed": 0
+  },
+  "results": [
+    {
+      "index": 1,
+      "name": "João Silva Santos",
+      "registration": "12345",
+      "status": "success",
+      "id": "cm123abc456"
+    },
+    {
+      "index": 2,
+      "name": "Maria Santos Costa",
+      "registration": "12346",
+      "status": "success",
+      "id": "cm123def789"
+    }
+  ],
+  "createdEmployees": [
+    {
+      "id": "cm123abc456",
+      "name": "João Silva Santos",
+      "registration": "12345",
+      "cpf": "12345678901"
+    },
+    {
+      "id": "cm123def789",
+      "name": "Maria Santos Costa",
+      "registration": "12346",
+      "cpf": "98765432100"
+    }
+  ],
+  "failedEmployees": []
+}
+```
+
+### Exemplo de Resposta com Erros
+```json
+{
+  "success": true,
+  "summary": {
+    "total": 2,
+    "created": 1,
+    "failed": 1
+  },
+  "results": [
+    {
+      "index": 1,
+      "name": "João Silva Santos",
+      "registration": "12345",
+      "status": "success",
+      "id": "cm123abc456"
+    },
+    {
+      "index": 2,
+      "name": "Maria Santos Costa",
+      "registration": "",
+      "status": "error",
+      "errors": {
+        "registration": "Matrícula é obrigatória",
+        "cpf": "CPF inválido"
+      }
+    }
+  ],
+  "createdEmployees": [
+    {
+      "id": "cm123abc456",
+      "name": "João Silva Santos",
+      "registration": "12345",
+      "cpf": "12345678901"
+    }
+  ],
+  "failedEmployees": [
+    {
+      "index": 2,
+      "name": "Maria Santos Costa",
+      "errors": {
+        "registration": "Matrícula é obrigatória",
+        "cpf": "CPF inválido"
+      }
+    }
+  ]
+}
+```
+
+### Validações Implementadas
+
+#### CPF
+- Verifica se o CPF tem 11 dígitos
+- Valida usando o algoritmo oficial do CPF
+- Verifica se não são todos os dígitos iguais
+- Verifica unicidade no banco de dados
+
+#### Telefone
+- Deve ter entre 10 e 11 dígitos (após remoção de formatação)
+- Aceita formatação como (31) 99999-9999
+
+#### Datas
+- Aceita formato DD/MM/YYYY
+- Valida se a data é válida
+- Converte automaticamente para formato ISO
+
+#### Matrícula
+- Deve ser única por empresa
+- Considera apenas funcionários ativos
+
+#### Caracteres Especiais
+- Todos os campos de texto são normalizados usando UTF-8
+- Suporte completo para acentos e caracteres especiais
+
+### Códigos de Status HTTP
+- `200`: Sucesso (mesmo com alguns erros individuais)
+- `400`: Formato de dados inválido
+- `500`: Erro interno do servidor
+
+### Tratamento de Erros
+A API processa todos os registros e retorna:
+- Lista detalhada de sucessos e falhas
+- Resumo com contadores
+- Funcionários criados com sucesso
+- Lista de funcionários que falharam com motivos específicos
+
+### Exemplo de Uso com JavaScript/TypeScript
+```typescript
+const employeesData = [
+  // ... dados dos funcionários
+];
+
+const response = await fetch('/api/employees/import', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify(employeesData)
+});
+
+const result = await response.json();
+
+if (result.success) {
+  console.log(`${result.summary.created} funcionários criados com sucesso`);
+  console.log(`${result.summary.failed} funcionários falharam`);
+  
+  if (result.failedEmployees.length > 0) {
+    console.log('Funcionários com erro:', result.failedEmployees);
+  }
+} else {
+  console.error('Erro na importação:', result.error);
+}
+```
+
+### Conversão de CSV para JSON
+Para converter o arquivo CSV para o formato JSON aceito pela API:
+
+```javascript
+// Exemplo de conversão de dados CSV
+function convertCSVRowToJSON(csvRow) {
+  return {
+    name: csvRow.name,
+    registration: csvRow.registration,
+    company: csvRow.company,
+    cpf: csvRow.cpf,
+    phone: csvRow.phone,
+    birthDate: csvRow.birthDate,
+    gender: csvRow.gender,
+    maritalStatus: csvRow.maritalStatus,
+    pis: csvRow.pis,
+    ctps: csvRow.ctps,
+    ctpsSeries: csvRow.ctpsSeries,
+    ctpsUf: csvRow.ctpsUf,
+    motherName: csvRow.motherName,
+    role: csvRow.role,
+    category: csvRow.category,
+    currentContractId: csvRow.currentContractId,
+    admissionDate: csvRow.admissionDate,
+    status: csvRow.status
+  };
+}
+```
+
 ---
 
 💡 **Dica**: Copie estes exemplos e adapte para suas necessidades específicas!

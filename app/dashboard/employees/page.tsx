@@ -55,6 +55,7 @@ import { getEmployees } from '@/lib/employeeService'
 import { useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useAddAdmission, useAddDismissal } from '@/lib/useCreateEmployee'
 import { useEmployeesQuery } from '@/lib/useEmployeesQuery'
 import Papa from 'papaparse';
+import { ImportEmployeesDialog } from '@/components/employees/ImportEmployeesDialog';
 
 // Configuração das colunas disponíveis
 interface ColumnConfig {
@@ -999,14 +1000,13 @@ export default function EmployeesPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowImportModal(true)}
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Importar em Massa
-          </Button>
+          <ImportEmployeesDialog 
+            onImportComplete={(result) => {
+              if (result.summary.created > 0) {
+                refetch(); // Atualiza a lista de funcionários
+              }
+            }}
+          />
           <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
             <Settings className="h-4 w-4 mr-2" />
             Colunas
