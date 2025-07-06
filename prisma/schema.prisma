@@ -1,0 +1,303 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+// ============================================================================
+// PARTE 1: SCHEMA DO BANCO DE DADOS PRINCIPAL (SUPER ADMIN)
+// ============================================================================
+
+generator client_super_admin {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/super-admin-client"
+}
+
+datasource db_super_admin {
+  provider = "postgresql"
+  url      = env("SUPER_ADMIN_DATABASE_URL")
+}
+
+model Tenant {
+  id               String   @id @default(cuid())
+  subdomain        String   @unique // Ex: "empresa-a"
+  companyName      String
+  subscriptionPlan PlanType @default(BASIC)
+  isActive         Boolean  @default(true)
+  databaseUrl      String   // Connection string para o banco de dados do tenant
+  customDomain     String?  @unique
+
+  logoUrl          String?
+  primaryColor     String?  @default("#007bff")
+  secondaryColor   String?  @default("#6c757d")
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+enum PlanType {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+// ============================================================================
+// PARTE 2: SCHEMA TEMPLATE DO TENANT (Será replicado para cada cliente)
+// ============================================================================
+
+generator client_tenant {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/tenant-client"
+}
+
+datasource db_tenant {
+  provider = "postgresql"
+  url      = env("TENANT_DATABASE_URL")
+}
+
+// --- Usuários e Permissões ---
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  cpf       String?  @unique
+  password  String   // Hash
+  role      UserRole
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responsibleForContracts ContractResponsible[]
+  transferRequests        TransferRequest[]     @relation("RequestedBy")
+  transferApprovals       TransferRequest[]     @relation("ApprovedBy")
+  overtimeApprovals       OvertimeApproval[]    @relation("ApprovedBy")
+  auditLogs               AuditLog[]
+}
+
+enum UserRole {
+  TENANT_ADMIN
+  HR
+  PLANNING
+  SAFETY
+  CONTRACT_MANAGER
+  SUPERVISOR
+  OPERATOR
+}
+
+// --- Contratos e Funções ---
+
+model Contract {
+  id               String   @id @default(cuid())
+  name             String
+  code             String   @unique
+  isActive         Boolean  @default(true)
+  workdayHours     Float
+  includesWeekends Boolean  @default(false)
+  includesHolidays Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  responsibles   ContractResponsible[]
+  functions      ContractFunction[]
+  employees      Employee[]
+  riskMappings   RiskMapping[]
+  hourPlannings  HourPlanning[]
+  nfcCollections NFCCollection[]
+}
+
+model ContractResponsible {
+  contractId String
+  userId     String
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+  @@id([contractId, userId])
+}
+
+model ContractFunction {
+  id          String   @id @default(cuid())
+  contractId  String
+  name        String
+  isActive    Boolean  @default(true)
+  contract          Contract           @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  employees         Employee[]
+  requiredTrainings RequiredTraining[]
+  @@unique([contractId, name])
+}
+
+// --- Colaboradores e Transferências ---
+
+model Employee {
+  id                String            @id @default(cuid())
+  name              String
+  cpf               String            @unique
+  nfcCardId         String?           @unique
+  currentContractId String?
+  currentFunctionId String?
+  isActive          Boolean           @default(true)
+  currentContract   Contract?         @relation(fields: [currentContractId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  currentFunction   ContractFunction? @relation(fields: [currentFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  transferHistory   TransferHistory[]
+  asos              ASO[]
+  trainings         EmployeeTraining[]
+  timeRecords       TimeRecord[]
+}
+
+model TransferRequest {
+  id            String         @id @default(cuid())
+  employeeId    String
+  toContractId  String
+  toFunctionId  String
+  requestedById String
+  approvedById  String?
+  status        TransferStatus @default(PENDING)
+  scheduledDate DateTime
+  completedAt   DateTime?
+  employee      Employee       @relation(fields: [employeeId], references: [id])
+  requestedBy   User           @relation("RequestedBy", fields: [requestedById], references: [id])
+  approvedBy    User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
+}
+
+model TransferHistory {
+  id         String   @id @default(cuid())
+  employeeId String
+  contractId String
+  functionId String
+  startDate  DateTime
+  endDate    DateTime?
+  employee   Employee @relation(fields: [employeeId], references: [id])
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+// --- Saúde e Segurança do Trabalho (SST) ---
+
+model ASO {
+  id         String    @id @default(cuid())
+  employeeId String
+  examType   ASOType
+  examDate   DateTime
+  validUntil DateTime
+  result     ASOResult
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+}
+
+enum ASOType {
+  ADMISSIONAL
+  PERIODIC
+  FUNCTION_CHANGE
+  RETURN_TO_WORK
+  DISMISSAL
+}
+
+enum ASOResult {
+  FIT
+  UNFIT
+  FIT_WITH_RESTRICTIONS
+}
+
+model Training {
+  id             String             @id @default(cuid())
+  name           String             @unique
+  validityMonths Int
+  requiredFor    RequiredTraining[]
+  employeeHas    EmployeeTraining[]
+}
+
+model RequiredTraining {
+  functionId String
+  trainingId String
+  function   ContractFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
+  training   Training         @relation(fields: [trainingId], references: [id])
+  @@id([functionId, trainingId])
+}
+
+model EmployeeTraining {
+  id            String   @id @default(cuid())
+  employeeId    String
+  trainingId    String
+  completedDate DateTime
+  validUntil    DateTime
+  employee      Employee @relation(fields: [employeeId], references: [id])
+  training      Training @relation(fields: [trainingId], references: [id])
+}
+
+// --- Planejamento, Ponto e Auditoria ---
+
+model HourPlanning {
+  id            String   @id @default(cuid())
+  contractId    String
+  date          DateTime @db.Date
+  regularHours  Float    @default(0)
+  overtimeHours Float    @default(0)
+  contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  @@unique([contractId, date])
+}
+
+model OvertimeApproval {
+  id           String         @id @default(cuid())
+  contractId   String
+  date         DateTime       @db.Date
+  status       ApprovalStatus @default(PENDING)
+  approvedById String?
+  approvedBy   User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model NFCCollection {
+  id          String      @id @default(cuid())
+  contractId  String
+  collectorId String      // ID do User Supervisor
+  date        DateTime    @db.Date
+  createdAt   DateTime    @default(now())
+  contract    Contract    @relation(fields: [contractId], references: [id])
+  records     NFCRecord[]
+}
+
+model NFCRecord {
+  id           String        @id @default(cuid())
+  collectionId String
+  nfcCardId    String
+  timestamp    DateTime
+  cpfFallback  String?
+  collection   NFCCollection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+}
+
+model TimeRecord {
+  id         String       @id @default(cuid())
+  employeeId String
+  date       DateTime     @db.Date
+  clockIn    DateTime?
+  clockOut   DateTime?
+  source     RecordSource
+  isEdited   Boolean      @default(false)
+  employee   Employee     @relation(fields: [employeeId], references: [id])
+  @@unique([employeeId, date, source])
+}
+
+enum RecordSource {
+  NFC_PROCESSED
+  PAYROLL_IMPORTED
+}
+
+// --- Logs ---
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entityId  String
+  details   Json
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+}

@@ -50,6 +50,7 @@ import { saveAs } from 'file-saver'
 import * as XLSX from 'xlsx'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { getEmployees } from '@/lib/employeeService'
 
 // Configuração das colunas disponíveis
 interface ColumnConfig {
@@ -150,13 +151,14 @@ export default function EmployeesPage() {
     const permissions = getUserPermissions(user)
     setUserPermissions(permissions)
     
-    // Filtrar funcionários baseado nas permissões
-    const accessibleEmployees = mockEmployees.filter(employee => {
+    // Buscar funcionários via service
+    getEmployees().then((allEmployees) => {
+      const accessibleEmployees = allEmployees.filter(employee => {
       if (!employee.currentContractId || !employee.isActive) return false
       return canUserAccessContract(user, employee.currentContractId)
     })
-    
     setEmployees(accessibleEmployees)
+    })
 
     // Carregar configuração de colunas salva
     const savedColumns = localStorage.getItem('employee-columns')
@@ -1676,7 +1678,7 @@ export default function EmployeesPage() {
               <Button variant="ghost" size="sm" onClick={closeHistoryModal} aria-label={t('form.close')}>
                 <X className="h-4 w-4" />
               </Button>
-            </div>
+    </div>
             <div className="space-y-4">
               {historyEmployee.employmentHistory && historyEmployee.employmentHistory.length > 0 ? (
                 <ul className="divide-y divide-gray-200 dark:divide-slate-700">
