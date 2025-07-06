@@ -13,10 +13,7 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getDashboardStats } from '@/lib/mock-data'
-import { useTranslations } from 'next-intl'
-
 export default function DashboardPage() {
-  const t = useTranslations('Dashboard')
   const stats = getDashboardStats()
 
   const statCards = [
@@ -117,8 +114,8 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
-        <p className="text-gray-600">{t('welcome')}</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+        <p className="text-gray-600">Bem-vindo ao painel de controle</p>
       </div>
 
       {/* Stats Grid */}

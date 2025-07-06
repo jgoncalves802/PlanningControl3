@@ -19,7 +19,6 @@ import {
   Calendar
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTranslations } from 'next-intl'
 
 interface SidebarProps {
   collapsed: boolean
@@ -27,20 +26,19 @@ interface SidebarProps {
 }
 
 const navigation = [
-  { name: 'dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'employees', href: '/dashboard/employees', icon: Users },
-  { name: 'contracts', href: '/dashboard/contracts', icon: FileText },
-  { name: 'planning', href: '/dashboard/planning', icon: Calendar },
-  { name: 'workforceControl', href: '/dashboard/workforce-control', icon: UserCheck },
-  { name: 'transfers', href: '/dashboard/transfers', icon: ArrowLeftRight },
-  { name: 'healthSafety', href: '/dashboard/safety', icon: Shield },
-  { name: 'analytics', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'settings', href: '/dashboard/settings', icon: Settings },
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Funcionários', href: '/dashboard/employees', icon: Users },
+  { name: 'Contratos', href: '/dashboard/contracts', icon: FileText },
+  { name: 'Planejamento', href: '/dashboard/planning', icon: Calendar },
+  { name: 'Controle de Efetivo', href: '/dashboard/workforce-control', icon: UserCheck },
+  { name: 'Transferências', href: '/dashboard/transfers', icon: ArrowLeftRight },
+  { name: 'Segurança', href: '/dashboard/safety', icon: Shield },
+  { name: 'Análises', href: '/dashboard/analytics', icon: BarChart3 },
+  { name: 'Configurações', href: '/dashboard/settings', icon: Settings },
 ]
 
 export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
-  const t = useTranslations('Sidebar')
 
   return (
     <motion.div
@@ -58,12 +56,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               exit={{ opacity: 0 }}
               className="flex items-center space-x-3"
             >
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <Building2 className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">PlanningControl</h1>
-                <p className="text-xs text-gray-500 dark:text-slate-400">{t('company')}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">Empresa Demo</p>
               </div>
             </motion.div>
           )}
@@ -92,7 +90,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
               className={cn(
                 "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
                 isActive
-                  ? "bg-primary text-white"
+                  ? "bg-blue-600 text-white"
                   : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800"
               )}
             >
@@ -103,14 +101,14 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                 >
-                  {t(item.name)}
+                  {item.name}
                 </motion.span>
               )}
               
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute inset-0 bg-primary rounded-lg -z-10"
+                  className="absolute inset-0 bg-blue-600 rounded-lg -z-10"
                   initial={false}
                   transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                 />
@@ -129,7 +127,7 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
             exit={{ opacity: 0 }}
             className="text-xs text-gray-500 dark:text-slate-400 text-center"
           >
-            {t('version')}
+            v3.0.0
           </motion.div>
         )}
       </div>
