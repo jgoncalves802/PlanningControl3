@@ -62,55 +62,72 @@ export interface EmploymentHistoryEntry {
   dismissalDate?: Date
 }
 
+export interface Address {
+  cep: string
+  logradouro: string
+  numero: string
+  complemento?: string
+  bairro: string
+  cidade: string
+  uf: string
+}
+
+export interface Dependent {
+  nome: string
+  parentesco: string
+  nascimento: string // ou Date
+}
+
 export interface Employee {
   id: string
   name: string
+  registration: string
+  role: string
+  category: string
+  company: string
   cpf: string
+  rg: string
+  birthDate: string // ou Date
+  admissionDate: string // ou Date
+  dismissalDate?: string // ou Date
+  status: string
+  workplace: string
+  shift: string
+  phone: string
+  address: Address
+  nationality: string
+  naturalness: string
+  gender: string
+  maritalStatus: string
+  educationLevel: string
+  pis: string
+  ctps: string
+  ctpsSeries: string
+  ctpsUf: string
+  voterTitle: string
+  voterZone: string
+  voterSection: string
+  reservist: string
+  reservistCategory: string
+  cnh: string
+  cnhCategory: string
+  cnhValidity: string // ou Date
+  motherName: string
+  fatherName: string
+  dependents: Dependent[]
+  notes?: string
+  employmentHistory?: any
+  isActive: boolean
+  createdAt: string // ou Date
+  updatedAt: string // ou Date
   nfcCardId?: string
   currentContractId?: string
   currentFunctionId?: string
   currentContract?: string
   currentFunction?: string
-  admissionDate: Date
-  /** Data de demissão do funcionário (opcional) */
-  dismissalDate?: Date
-  isActive: boolean
-  status: 'active' | 'on_leave' | 'transferred' | 'dismissed'
-  /** URL da foto/avatar do colaborador (opcional) */
   avatar?: string
   email?: string
-  phone?: string
-  // Campos adicionais para cadastro completo
-  matricula?: string
-  cargo?: string
-  cidade?: string
-  centroCusto?: string
-  turno?: string
-  obra?: string
-  primeiraExperiencia?: string
-  segundaExperiencia?: string
-  previsaoObra?: string
-  dataEntrada?: string // para binding do input de data
-  endereco?: {
-    cep: string
-    logradouro: string
-    numero: string
-    complemento?: string
-    bairro: string
-    cidade: string
-    uf: string
-  }
-  // Novos campos para aderência à tabela de funcionários
-  mo?: string // Tipo de Mão de Obra (Própria, Terceirizada, etc)
-  horasNormaisTrabalhadas?: number // Horas Normais Trabalhadas
-  horasExtrasTrabalhadas?: number // Horas Extras Trabalhadas
-  horasNoturnasTrabalhadas?: number // Horas Noturnas Trabalhadas
-  localAlojado?: string // Local/Alojamento
-  bairro?: string // Bairro (endereçamento rápido)
-  pontoReferencia?: string // Ponto de Referência
-  statusBancodoc?: string // Status Bancário/Documental
-  efetivoRDO?: boolean // Efetivo Apontado em RDO
-  employmentHistory?: EmploymentHistoryEntry[]
+  // ... outros campos auxiliares se necessário ...
 }
 
 export interface TransferRequest {

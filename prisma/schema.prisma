@@ -116,13 +116,50 @@ model ContractFunction {
 // --- Colaboradores e Transferências ---
 
 model Employee {
-  id                String            @id @default(cuid())
+  id                String   @id @default(cuid())
   name              String
-  cpf               String            @unique
+  registration      String?   // Matrícula
+  role              String?   // Função
+  category          String?   // Categoria
+  company           String?   // Empresa
+  cpf               String   @unique
+  rg                String?
+  birthDate         DateTime?
+  admissionDate     DateTime?
+  dismissalDate     DateTime?
+  status            String?   // Situação (ativo, afastado, etc)
+  workplace         String?   // Local de Trabalho
+  shift             String?   // Turno
+  phone             String?
+  address           Json?     // Endereço completo (cep, logradouro, número, bairro, cidade, uf, complemento)
+  nationality       String?
+  naturalness       String?   // Naturalidade
+  gender            String?   // Sexo
+  maritalStatus     String?   // Estado Civil
+  educationLevel    String?   // Grau de Instrução
+  pis               String?
+  ctps              String?   // CTPS
+  ctpsSeries        String?   // Série CTPS
+  ctpsUf            String?   // UF CTPS
+  voterTitle        String?   // Título de Eleitor
+  voterZone         String?
+  voterSection      String?
+  reservist         String?
+  reservistCategory String?
+  cnh               String?
+  cnhCategory       String?
+  cnhValidity       DateTime?
+  motherName        String?
+  fatherName        String?
+  dependents        Json?     // Lista de dependentes (nome, parentesco, nascimento)
+  notes             String?   // Observações
+  employmentHistory Json?     // Histórico de vínculos/admissões/demissões
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
   nfcCardId         String?           @unique
   currentContractId String?
   currentFunctionId String?
-  isActive          Boolean           @default(true)
   currentContract   Contract?         @relation(fields: [currentContractId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   currentFunction   ContractFunction? @relation(fields: [currentFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   transferHistory   TransferHistory[]
@@ -130,7 +167,7 @@ model Employee {
   trainings         EmployeeTraining[]
   timeRecords       TimeRecord[]
   transferRequests  TransferRequest[] @relation("EmployeeTransferRequests")
-  employmentHistory Json? // Histórico de vínculos/admissões/demissões
+  @@unique([registration, company]) // Matrícula única por empresa
 }
 
 model TransferRequest {

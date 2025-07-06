@@ -57,6 +57,7 @@
     "version": "Versão 3.0.0"
   },
   "employees": {
+    "loading": "Carregando funcionários...",
     "form": {
       "title": "Adicionar Funcionário",
       "close": "Fechar",
@@ -98,9 +99,11 @@
         "cargo_required": "Cargo é obrigatório",
         "contract_required": "Contrato é obrigatório",
         "data_entrada_required": "Data de entrada é obrigatória",
-        "status_required": "Status é obrigatório"
+        "status_required": "Status é obrigatório",
+        "generic": "Ocorreu um erro ao processar o formulário. Tente novamente ou contate o suporte."
       },
-      "data_demissao": "Data de Demissão"
+      "data_demissao": "Data de Demissão",
+      "loading": "Salvando funcionário..."
     },
     "filters": {
       "advanced": "Filtros Avançados",
