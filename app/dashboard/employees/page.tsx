@@ -392,15 +392,70 @@ export default function EmployeesPage() {
     });
   };
 
+  const validateEditForm = () => {
+    if (!selectedEmployee) return false;
+    
+    const newErrors: { [key: string]: string } = {};
+    
+    // Validações obrigatórias
+    if (!selectedEmployee.name?.trim()) {
+      newErrors.name = 'Nome é obrigatório';
+    }
+    
+    if (!selectedEmployee.cpf?.trim()) {
+      newErrors.cpf = 'CPF é obrigatório';
+    } else if (!validateCPF(selectedEmployee.cpf)) {
+      newErrors.cpf = 'CPF inválido';
+    }
+    
+    if (!selectedEmployee.status) {
+      newErrors.status = 'Status é obrigatório';
+    }
+    
+    // Validação de telefone se informado
+    if (selectedEmployee.phone && !/^\d{10,11}$/.test(selectedEmployee.phone.replace(/\D/g, ''))) {
+      newErrors.phone = 'Telefone inválido';
+    }
+    
+    // Validação de email se informado
+    if (selectedEmployee.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedEmployee.email)) {
+      newErrors.email = 'Email inválido';
+    }
+    
+    // Validação de CEP se informado
+    if (selectedEmployee.address?.cep && !/^\d{8}$/.test(selectedEmployee.address.cep.replace(/\D/g, ''))) {
+      newErrors.cep = 'CEP inválido';
+    }
+    
+    // Validação de UF
+    if (selectedEmployee.ctpsUf && selectedEmployee.ctpsUf.length !== 2) {
+      newErrors.ctpsUf = 'UF deve ter 2 caracteres';
+    }
+    
+    if (selectedEmployee.address?.uf && selectedEmployee.address.uf.length !== 2) {
+      newErrors.uf = 'UF deve ter 2 caracteres';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleEditEmployee = (e) => {
     e.preventDefault();
     if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES') || !selectedEmployee) return;
+    
+    if (!validateEditForm()) {
+      toast.error('Por favor, corrija os erros no formulário antes de salvar.');
+      return;
+    }
+    
     updateEmployeeMutation.mutate(
       { id: selectedEmployee.id, updates: selectedEmployee },
       {
         onSuccess: () => {
           setShowEditModal(false);
           setSelectedEmployee(null);
+          setErrors({});
           toast.success(t('form.edit_success', { default: 'Alterações salvas com sucesso!' }));
         },
         onError: () => {
@@ -1529,18 +1584,76 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-name"><UserIcon className="h-3 w-3 text-gray-300" />Nome *</label>
-                    <input id="edit-name" type="text" value={selectedEmployee.name} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, name: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" required />
+                    <input id="edit-name" type="text" value={selectedEmployee.name} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, name: e.target.value } : prev)} className={`w-full px-3 py-2 border ${errors.name ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'} focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors`} placeholder="Ex: João da Silva" required />
+                    {errors.name && <span className="text-xs text-red-500 mt-1">{errors.name}</span>}
                 </div>
                 <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cpf"><Shield className="h-3 w-3 text-gray-300" />CPF *</label>
-                    <input id="edit-cpf" type="text" value={selectedEmployee.cpf} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cpf: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" required />
+                    <input id="edit-cpf" type="text" value={selectedEmployee.cpf} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cpf: e.target.value } : prev)} className={`w-full px-3 py-2 border ${errors.cpf ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'} focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors`} placeholder="Ex: 123.456.789-00" required />
+                    {errors.cpf && <span className="text-xs text-red-500 mt-1">{errors.cpf}</span>}
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-rg"><Shield className="h-3 w-3 text-gray-300" />RG</label>
+                    <input id="edit-rg" type="text" value={selectedEmployee.rg || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, rg: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 12.345.678-9" />
                 </div>
                 <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-matricula"><FileText className="h-3 w-3 text-gray-300" />Matrícula</label>
-                    <input id="edit-matricula" type="text" value={selectedEmployee.registration || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, registration: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <input id="edit-matricula" type="text" value={selectedEmployee.registration || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, registration: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: EMP001" />
                 </div>
                 <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-status"><Check className="h-3 w-3 text-gray-300" />Status</label>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-birthDate"><Calendar className="h-3 w-3 text-gray-300" />Data de Nascimento</label>
+                    <input id="edit-birthDate" type="date" value={selectedEmployee.birthDate ? formatDateInput(selectedEmployee.birthDate) : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, birthDate: e.target.value ? new Date(e.target.value) : undefined } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-gender"><UserIcon className="h-3 w-3 text-gray-300" />Sexo</label>
+                    <select id="edit-gender" value={selectedEmployee.gender || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, gender: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="M">Masculino</option>
+                      <option value="F">Feminino</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-maritalStatus"><UserIcon className="h-3 w-3 text-gray-300" />Estado Civil</label>
+                    <select id="edit-maritalStatus" value={selectedEmployee.maritalStatus || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, maritalStatus: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="Solteiro">Solteiro</option>
+                      <option value="Casado">Casado</option>
+                      <option value="Divorciado">Divorciado</option>
+                      <option value="Viúvo">Viúvo</option>
+                      <option value="União Estável">União Estável</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-nationality"><UserIcon className="h-3 w-3 text-gray-300" />Nacionalidade</label>
+                    <input id="edit-nationality" type="text" value={selectedEmployee.nationality || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, nationality: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Brasileira" />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-naturalness"><UserIcon className="h-3 w-3 text-gray-300" />Naturalidade</label>
+                    <input id="edit-naturalness" type="text" value={selectedEmployee.naturalness || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, naturalness: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: São Paulo/SP" />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-educationLevel"><UserIcon className="h-3 w-3 text-gray-300" />Grau de Instrução</label>
+                    <select id="edit-educationLevel" value={selectedEmployee.educationLevel || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, educationLevel: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="Fundamental Incompleto">Fundamental Incompleto</option>
+                      <option value="Fundamental Completo">Fundamental Completo</option>
+                      <option value="Médio Incompleto">Médio Incompleto</option>
+                      <option value="Médio Completo">Médio Completo</option>
+                      <option value="Superior Incompleto">Superior Incompleto</option>
+                      <option value="Superior Completo">Superior Completo</option>
+                      <option value="Pós-graduação">Pós-graduação</option>
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-motherName"><UserIcon className="h-3 w-3 text-gray-300" />Nome da Mãe</label>
+                    <input id="edit-motherName" type="text" value={selectedEmployee.motherName || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, motherName: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Maria da Silva" />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-fatherName"><UserIcon className="h-3 w-3 text-gray-300" />Nome do Pai</label>
+                    <input id="edit-fatherName" type="text" value={selectedEmployee.fatherName || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, fatherName: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: José da Silva" />
+                </div>
+                <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-status"><Check className="h-3 w-3 text-gray-300" />Status *</label>
                     <select id="edit-status" value={selectedEmployee.status} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, status: e.target.value as Employee['status'] } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors" required>
                     <option value="active">Ativo</option>
                     <option value="on_leave">Em Licença</option>
@@ -1566,6 +1679,71 @@ export default function EmployeesPage() {
                     <img src={selectedEmployee.avatar} alt="Avatar" className="mt-2 w-20 h-20 rounded-full object-cover border border-gray-200 dark:border-slate-700" />
                   )}
               </div>
+                </div>
+              </section>
+              {/* Documentos */}
+              <section className="pt-0 pb-4 border-b border-gray-200 dark:border-slate-700">
+                <h4 className="text-base font-semibold mb-2 mt-0 text-gray-700 dark:text-slate-200 flex items-center gap-2"><FileText className="h-4 w-4 text-blue-400" />Documentos</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-pis"><FileText className="h-3 w-3 text-gray-300" />PIS</label>
+                    <input id="edit-pis" type="text" value={selectedEmployee.pis || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, pis: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 12345678900" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-ctps"><FileText className="h-3 w-3 text-gray-300" />CTPS</label>
+                    <input id="edit-ctps" type="text" value={selectedEmployee.ctps || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, ctps: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 1234567" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-ctpsSeries"><FileText className="h-3 w-3 text-gray-300" />Série CTPS</label>
+                    <input id="edit-ctpsSeries" type="text" value={selectedEmployee.ctpsSeries || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, ctpsSeries: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 001" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-ctpsUf"><FileText className="h-3 w-3 text-gray-300" />UF CTPS</label>
+                    <input id="edit-ctpsUf" type="text" value={selectedEmployee.ctpsUf || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, ctpsUf: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: SP" maxLength={2} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-voterTitle"><FileText className="h-3 w-3 text-gray-300" />Título de Eleitor</label>
+                    <input id="edit-voterTitle" type="text" value={selectedEmployee.voterTitle || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, voterTitle: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 123456789012" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-voterZone"><FileText className="h-3 w-3 text-gray-300" />Zona Eleitoral</label>
+                    <input id="edit-voterZone" type="text" value={selectedEmployee.voterZone || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, voterZone: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 001" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-voterSection"><FileText className="h-3 w-3 text-gray-300" />Seção Eleitoral</label>
+                    <input id="edit-voterSection" type="text" value={selectedEmployee.voterSection || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, voterSection: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 0123" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-reservist"><FileText className="h-3 w-3 text-gray-300" />Reservista</label>
+                    <input id="edit-reservist" type="text" value={selectedEmployee.reservist || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, reservist: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 123456789" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-reservistCategory"><FileText className="h-3 w-3 text-gray-300" />Categoria Reservista</label>
+                    <input id="edit-reservistCategory" type="text" value={selectedEmployee.reservistCategory || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, reservistCategory: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 1ª Categoria" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cnh"><FileText className="h-3 w-3 text-gray-300" />CNH</label>
+                    <input id="edit-cnh" type="text" value={selectedEmployee.cnh || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cnh: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: 12345678900" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cnhCategory"><FileText className="h-3 w-3 text-gray-300" />Categoria CNH</label>
+                    <select id="edit-cnhCategory" value={selectedEmployee.cnhCategory || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cnhCategory: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="A">A</option>
+                      <option value="B">B</option>
+                      <option value="C">C</option>
+                      <option value="D">D</option>
+                      <option value="E">E</option>
+                      <option value="AB">AB</option>
+                      <option value="AC">AC</option>
+                      <option value="AD">AD</option>
+                      <option value="AE">AE</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cnhValidity"><Calendar className="h-3 w-3 text-gray-300" />Validade CNH</label>
+                    <input id="edit-cnhValidity" type="date" value={selectedEmployee.cnhValidity ? formatDateInput(selectedEmployee.cnhValidity) : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cnhValidity: e.target.value ? new Date(e.target.value) : undefined } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                  </div>
                 </div>
               </section>
               {/* Contato */}
@@ -1621,43 +1799,87 @@ export default function EmployeesPage() {
                 <h4 className="text-base font-semibold mb-2 mt-0 text-gray-700 dark:text-slate-200 flex items-center gap-2"><BriefcaseIcon className="h-4 w-4 text-blue-400" />Profissional</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cargo"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Cargo</label>
-                    <input id="edit-cargo" type="text" value={selectedEmployee.cargo || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cargo: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-role"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Função</label>
+                    <input id="edit-role" type="text" value={selectedEmployee.role || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, role: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Pedreiro" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-turno"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Turno</label>
-                    <input id="edit-turno" type="text" value={selectedEmployee.turno || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, turno: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-category"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Categoria</label>
+                    <input id="edit-category" type="text" value={selectedEmployee.category || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, category: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Operacional" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-company"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Empresa</label>
+                    <input id="edit-company" type="text" value={selectedEmployee.company || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, company: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Construtora ABC Ltda" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-workplace"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Local de Trabalho</label>
+                    <input id="edit-workplace" type="text" value={selectedEmployee.workplace || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, workplace: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Canteiro de Obras" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-shift"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Turno</label>
+                    <select id="edit-shift" value={selectedEmployee.shift || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, shift: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="Diurno">Diurno</option>
+                      <option value="Noturno">Noturno</option>
+                      <option value="Revezamento">Revezamento</option>
+                      <option value="Administrativo">Administrativo</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-admissionDate"><Calendar className="h-3 w-3 text-gray-300" />Data de Admissão</label>
+                    <input id="edit-admissionDate" type="date" value={selectedEmployee.admissionDate ? formatDateInput(selectedEmployee.admissionDate) : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, admissionDate: e.target.value ? new Date(e.target.value) : undefined } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-mo"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Tipo de Mão de Obra</label>
-                    <input id="edit-mo" type="text" value={selectedEmployee.mo || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, mo: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <select id="edit-mo" value={selectedEmployee.mo || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, mo: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="DIRETO">Direto</option>
+                      <option value="INDIRETO">Indireto</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-localAlojado"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Local/Alojamento</label>
-                    <input id="edit-localAlojado" type="text" value={selectedEmployee.localAlojado || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, localAlojado: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <input id="edit-localAlojado" type="text" value={selectedEmployee.localAlojado || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, localAlojado: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Alojamento A - Bloco 1" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-pontoReferencia"><MapPin className="h-3 w-3 text-gray-300" />Ponto de Referência</label>
+                    <input id="edit-pontoReferencia" type="text" value={selectedEmployee.pontoReferencia || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, pontoReferencia: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Próximo ao shopping center" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-statusBancodoc"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Status Bancário/Documental</label>
-                    <input id="edit-statusBancodoc" type="text" value={selectedEmployee.statusBancodoc || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, statusBancodoc: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <select id="edit-statusBancodoc" value={selectedEmployee.statusBancodoc || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, statusBancodoc: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
+                      <option value="Completo">Completo</option>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Incompleto">Incompleto</option>
+                    </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-efetivoRDO"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Efetivo Apontado em RDO</label>
-                    <select id="edit-efetivoRDO" value={selectedEmployee.efetivoRDO ? 'sim' : 'nao'} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, efetivoRDO: e.target.value === 'sim' } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors" required>
+                    <select id="edit-efetivoRDO" value={selectedEmployee.efetivoRDO === true ? 'sim' : selectedEmployee.efetivoRDO === false ? 'nao' : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, efetivoRDO: e.target.value === 'sim' ? true : e.target.value === 'nao' ? false : null } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 text-sm bg-white dark:bg-slate-800 transition-colors">
+                      <option value="">Selecione</option>
                       <option value="sim">Sim</option>
                       <option value="nao">Não</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-centroCusto"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Centro de Custo</label>
-                    <input id="edit-centroCusto" type="text" value={selectedEmployee.centroCusto || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, centroCusto: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <input id="edit-centroCusto" type="text" value={selectedEmployee.centroCusto || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, centroCusto: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: CC-001" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-obra"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Obra</label>
-                    <input id="edit-obra" type="text" value={selectedEmployee.obra || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, obra: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <input id="edit-obra" type="text" value={selectedEmployee.obra || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, obra: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" placeholder="Ex: Edifício Residencial XYZ" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-currentContract"><BriefcaseIcon className="h-3 w-3 text-gray-300" />Contrato</label>
-                    <input id="edit-currentContract" type="text" value={selectedEmployee.currentContract || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, currentContract: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-primeiraExperiencia"><Calendar className="h-3 w-3 text-gray-300" />Primeira Experiência</label>
+                    <input id="edit-primeiraExperiencia" type="date" value={selectedEmployee.primeiraExperiencia ? formatDateInput(selectedEmployee.primeiraExperiencia) : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, primeiraExperiencia: e.target.value ? new Date(e.target.value) : undefined } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-segundaExperiencia"><Calendar className="h-3 w-3 text-gray-300" />Segunda Experiência</label>
+                    <input id="edit-segundaExperiencia" type="date" value={selectedEmployee.segundaExperiencia ? formatDateInput(selectedEmployee.segundaExperiencia) : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, segundaExperiencia: e.target.value ? new Date(e.target.value) : undefined } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-previsaoObra"><Calendar className="h-3 w-3 text-gray-300" />Previsão na Obra</label>
+                    <input id="edit-previsaoObra" type="date" value={selectedEmployee.previsaoObra ? formatDateInput(selectedEmployee.previsaoObra) : ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, previsaoObra: e.target.value ? new Date(e.target.value) : undefined } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
                   </div>
                 </div>
               </section>
@@ -1676,6 +1898,16 @@ export default function EmployeesPage() {
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-horasNoturnasTrabalhadas"><Clock className="h-3 w-3 text-gray-300" />Horas Noturnas Trabalhadas</label>
                     <input id="edit-horasNoturnasTrabalhadas" type="number" value={selectedEmployee.horasNoturnasTrabalhadas ?? ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, horasNoturnasTrabalhadas: Number(e.target.value) } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" min={0} />
+                  </div>
+                </div>
+              </section>
+              {/* Observações */}
+              <section className="pt-0 pb-4">
+                <h4 className="text-base font-semibold mb-2 mt-0 text-gray-700 dark:text-slate-200 flex items-center gap-2"><FileText className="h-4 w-4 text-blue-400" />Observações</h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-notes"><FileText className="h-3 w-3 text-gray-300" />Observações Gerais</label>
+                    <textarea id="edit-notes" rows={3} value={selectedEmployee.notes || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, notes: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors resize-none" placeholder="Ex: Funcionário com experiência em soldagem, disponível para trabalhos extras..." />
                   </div>
                 </div>
               </section>
