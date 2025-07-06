@@ -23,10 +23,14 @@ export async function PUT(req: NextRequest, { params }) {
     'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory',
     'cnh', 'cnhCategory', 'cnhValidity', 'motherName', 'fatherName', 
     'dependents', 'notes', 'employmentHistory', 'isActive', 'nfcCardId',
-    'currentContractId', 'currentFunctionId', 'avatar'
+    'currentContractId', 'currentFunctionId', 'avatar',
+    // Novos campos adicionados
+    'centroCusto', 'obra', 'primeiraExperiencia', 'segundaExperiencia', 
+    'previsaoObra', 'mo', 'horasNormaisTrabalhadas', 'horasExtrasTrabalhadas', 
+    'horasNoturnasTrabalhadas', 'localAlojado', 'pontoReferencia', 'statusBancodoc', 'efetivoRDO'
   ];
   
-  const filteredUpdates = {};
+  const filteredUpdates: any = {};
   validFields.forEach(field => {
     if (updates.hasOwnProperty(field)) {
       filteredUpdates[field] = updates[field];
@@ -34,13 +38,38 @@ export async function PUT(req: NextRequest, { params }) {
   });
   
   // Tratar campos de data
-  ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity'].forEach(field => {
+  ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'].forEach(field => {
     if (filteredUpdates[field] !== undefined) {
       if (!filteredUpdates[field] || filteredUpdates[field] === '') {
         filteredUpdates[field] = null;
       }
     }
   });
+  
+  // Tratar campos numéricos
+  ['horasNormaisTrabalhadas', 'horasExtrasTrabalhadas', 'horasNoturnasTrabalhadas'].forEach(field => {
+    if (filteredUpdates[field] !== undefined) {
+      if (filteredUpdates[field] === null || filteredUpdates[field] === '') {
+        filteredUpdates[field] = null;
+      } else {
+        const value = parseFloat(filteredUpdates[field]);
+        if (!isNaN(value) && value >= 0) {
+          filteredUpdates[field] = value;
+        } else {
+          filteredUpdates[field] = null;
+        }
+      }
+    }
+  });
+  
+  // Tratar campo booleano
+  if (filteredUpdates.efetivoRDO !== undefined) {
+    if (filteredUpdates.efetivoRDO === null || filteredUpdates.efetivoRDO === '') {
+      filteredUpdates.efetivoRDO = null;
+    } else {
+      filteredUpdates.efetivoRDO = Boolean(filteredUpdates.efetivoRDO);
+    }
+  }
   
   const employee = await prisma.employee.update({ where: { id }, data: filteredUpdates });
   return NextResponse.json(employee);

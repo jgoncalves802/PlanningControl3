@@ -155,6 +155,22 @@ model Employee {
   notes             String?   // Observações
   employmentHistory Json?     // Histórico de vínculos/admissões/demissões
   avatar            String?   // URL ou base64 da foto do funcionário
+  
+  // Campos adicionais usados na interface
+  centroCusto                String?   // Centro de Custo
+  obra                       String?   // Obra/Projeto
+  primeiraExperiencia        DateTime? // Primeira Experiência
+  segundaExperiencia         DateTime? // Segunda Experiência
+  previsaoObra               DateTime? // Previsão na Obra
+  mo                         String?   // Tipo de Mão de Obra (Direto/Indireto)
+  horasNormaisTrabalhadas    Float?    // Horas Normais Trabalhadas
+  horasExtrasTrabalhadas     Float?    // Horas Extras Trabalhadas
+  horasNoturnasTrabalhadas   Float?    // Horas Noturnas Trabalhadas
+  localAlojado               String?   // Local/Alojamento
+  pontoReferencia            String?   // Ponto de Referência
+  statusBancodoc             String?   // Status Bancário/Documental
+  efetivoRDO                 Boolean?  // Efetivo Apontado em RDO
+  
   isActive          Boolean  @default(true)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
