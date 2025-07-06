@@ -273,6 +273,7 @@ export default function EmployeesPage() {
   }
 
   function validateCPF(cpf: string) {
+    if (!cpf || cpf.trim() === '') return false;
     cpf = cpf.replace(/\D/g, '');
     if (cpf.length !== 11 || /^([0-9])\1+$/.test(cpf)) return false;
     let sum = 0, rest;
@@ -288,12 +289,33 @@ export default function EmployeesPage() {
     return true;
   }
 
+  function formatCPF(cpf: string) {
+    cpf = cpf.replace(/\D/g, '');
+    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+    cpf = cpf.replace(/(\d{3})(\d)/, '$1.$2');
+    cpf = cpf.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    return cpf;
+  }
+
   function maskPhone(phone: string) {
-    return phone
-      .replace(/\D/g, '')
-      .replace(/(\d{2})(\d)/, '($1) $2')
-      .replace(/(\d{5})(\d)/, '$1-$2')
-      .replace(/(-\d{4})\d+?$/, '$1');
+    const cleaned = phone.replace(/\D/g, '');
+    if (cleaned.length <= 10) {
+      return cleaned
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{4})(\d)/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    } else {
+      return cleaned
+        .replace(/(\d{2})(\d)/, '($1) $2')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+        .replace(/(-\d{4})\d+?$/, '$1');
+    }
+  }
+
+  function validatePhone(phone: string) {
+    if (!phone) return true; // Campo opcional
+    const cleaned = phone.replace(/\D/g, '');
+    return cleaned.length === 10 || cleaned.length === 11;
   }
 
   function validateStep(currentStep: number) {
@@ -402,38 +424,49 @@ export default function EmployeesPage() {
       newErrors.name = 'Nome é obrigatório';
     }
     
+    // Validação rigorosa do CPF
     if (!selectedEmployee.cpf?.trim()) {
       newErrors.cpf = 'CPF é obrigatório';
-    } else if (!validateCPF(selectedEmployee.cpf)) {
-      newErrors.cpf = 'CPF inválido';
+    } else {
+      const cleanCpf = selectedEmployee.cpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11) {
+        newErrors.cpf = 'CPF deve ter 11 dígitos';
+      } else if (/^([0-9])\1+$/.test(cleanCpf)) {
+        newErrors.cpf = 'CPF não pode ter todos os dígitos iguais';
+      } else if (!validateCPF(selectedEmployee.cpf)) {
+        newErrors.cpf = 'CPF inválido - verifique os dígitos verificadores';
+      }
     }
     
     if (!selectedEmployee.status) {
       newErrors.status = 'Status é obrigatório';
     }
     
-    // Validação de telefone se informado
-    if (selectedEmployee.phone && !/^\d{10,11}$/.test(selectedEmployee.phone.replace(/\D/g, ''))) {
-      newErrors.phone = 'Telefone inválido';
+    // Validação de telefone melhorada
+    if (selectedEmployee.phone && !validatePhone(selectedEmployee.phone)) {
+      newErrors.phone = 'Telefone deve ter 10 ou 11 dígitos - Ex: (11) 99999-9999';
     }
     
     // Validação de email se informado
     if (selectedEmployee.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(selectedEmployee.email)) {
-      newErrors.email = 'Email inválido';
+      newErrors.email = 'Email inválido - Ex: usuario@empresa.com';
     }
     
     // Validação de CEP se informado
-    if (selectedEmployee.address?.cep && !/^\d{8}$/.test(selectedEmployee.address.cep.replace(/\D/g, ''))) {
-      newErrors.cep = 'CEP inválido';
+    if (selectedEmployee.endereco?.cep) {
+      const cleanCep = selectedEmployee.endereco.cep.replace(/\D/g, '');
+      if (cleanCep.length !== 8) {
+        newErrors.cep = 'CEP deve ter 8 dígitos - Ex: 12345-678';
+      }
     }
     
     // Validação de UF
     if (selectedEmployee.ctpsUf && selectedEmployee.ctpsUf.length !== 2) {
-      newErrors.ctpsUf = 'UF deve ter 2 caracteres';
+      newErrors.ctpsUf = 'UF deve ter 2 caracteres - Ex: SP';
     }
     
-    if (selectedEmployee.address?.uf && selectedEmployee.address.uf.length !== 2) {
-      newErrors.uf = 'UF deve ter 2 caracteres';
+    if (selectedEmployee.endereco?.uf && selectedEmployee.endereco.uf.length !== 2) {
+      newErrors.uf = 'UF deve ter 2 caracteres - Ex: SP';
     }
     
     setErrors(newErrors);
@@ -621,7 +654,7 @@ export default function EmployeesPage() {
     }
   }
 
-  // Função para buscar endereço pelo CEP
+  // Função para buscar endereço pelo CEP (formulário de cadastro)
   async function fetchAddressByCep(cep: string) {
     setCepError('');
     setCepSuccess(false);
@@ -648,6 +681,45 @@ export default function EmployeesPage() {
     } catch (e) {
       setCepError('Erro ao buscar CEP');
     }
+  }
+
+  // Função para buscar endereço pelo CEP (drawer de edição)
+  async function fetchAddressByCepEdit(cep: string) {
+    if (!selectedEmployee) return;
+    
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) {
+      return;
+    }
+    
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await res.json();
+      if (!data.erro) {
+        setSelectedEmployee(prev => prev ? {
+          ...prev,
+          endereco: {
+            ...prev.endereco,
+            cep: formatCEP(cleanCep),
+            logradouro: data.logradouro || '',
+            bairro: data.bairro || '',
+            cidade: data.localidade || '',
+            uf: data.uf || ''
+          }
+        } : prev);
+        toast.success('Endereço preenchido automaticamente!');
+      } else {
+        toast.error('CEP não encontrado');
+      }
+    } catch (e) {
+      toast.error('Erro ao buscar CEP');
+    }
+  }
+
+  function formatCEP(cep: string) {
+    cep = cep.replace(/\D/g, '');
+    cep = cep.replace(/(\d{5})(\d)/, '$1-$2');
+    return cep;
   }
 
   // Função para exportar XLSX
@@ -1589,7 +1661,10 @@ export default function EmployeesPage() {
                 </div>
                 <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cpf"><Shield className="h-3 w-3 text-gray-300" />CPF *</label>
-                    <input id="edit-cpf" type="text" value={selectedEmployee.cpf} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, cpf: e.target.value } : prev)} className={`w-full px-3 py-2 border ${errors.cpf ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'} focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors`} placeholder="Ex: 123.456.789-00" required />
+                    <input id="edit-cpf" type="text" value={selectedEmployee.cpf} onChange={e => {
+                      const formatted = formatCPF(e.target.value);
+                      setSelectedEmployee(prev => prev ? { ...prev, cpf: formatted } : prev);
+                    }} className={`w-full px-3 py-2 border ${errors.cpf ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'} focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors`} placeholder="Ex: 123.456.789-00" maxLength={14} required />
                     {errors.cpf && <span className="text-xs text-red-500 mt-1">{errors.cpf}</span>}
                 </div>
                 <div>
@@ -1752,7 +1827,11 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-phone"><Phone className="h-3 w-3 text-gray-300" />Telefone</label>
-                    <input id="edit-phone" type="tel" value={selectedEmployee.phone || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, phone: e.target.value } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <input id="edit-phone" type="tel" value={selectedEmployee.phone || ''} onChange={e => {
+                      const formatted = maskPhone(e.target.value);
+                      setSelectedEmployee(prev => prev ? { ...prev, phone: formatted } : prev);
+                    }} className={`w-full px-3 py-2 border ${errors.phone ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'} focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors`} placeholder="Ex: (11) 99999-9999" maxLength={15} />
+                    {errors.phone && <span className="text-xs text-red-500 mt-1">{errors.phone}</span>}
                 </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-email"><Mail className="h-3 w-3 text-gray-300" />E-mail</label>
@@ -1766,7 +1845,16 @@ export default function EmployeesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-cep"><MapPin className="h-3 w-3 text-gray-300" />CEP</label>
-                    <input id="edit-cep" type="text" value={selectedEmployee.endereco?.cep || ''} onChange={e => setSelectedEmployee(prev => prev ? { ...prev, endereco: { ...prev.endereco, cep: e.target.value } } : prev)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors" />
+                    <input id="edit-cep" type="text" value={selectedEmployee.endereco?.cep || ''} onChange={e => {
+                      const formatted = formatCEP(e.target.value);
+                      setSelectedEmployee(prev => prev ? { ...prev, endereco: { ...prev.endereco, cep: formatted } } : prev);
+                    }} onBlur={e => {
+                      const cep = e.target.value;
+                      if (cep && cep.replace(/\D/g, '').length === 8) {
+                        fetchAddressByCepEdit(cep);
+                      }
+                    }} className={`w-full px-3 py-2 border ${errors.cep ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'} focus:border-primary rounded-lg text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 text-sm bg-white dark:bg-slate-800 transition-colors`} placeholder="Ex: 12345-678" maxLength={9} />
+                    {errors.cep && <span className="text-xs text-red-500 mt-1">{errors.cep}</span>}
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1 text-gray-500 dark:text-slate-400 flex items-center gap-1" htmlFor="edit-logradouro"><Building className="h-3 w-3 text-gray-300" />Logradouro</label>

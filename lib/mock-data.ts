@@ -81,45 +81,46 @@ export interface Dependent {
 export interface Employee {
   id: string
   name: string
-  registration: string
-  role: string
-  category: string
-  company: string
+  registration?: string
+  role?: string
+  category?: string
+  company?: string
   cpf: string
-  rg: string
-  birthDate: string // ou Date
-  admissionDate: string // ou Date
-  dismissalDate?: string // ou Date
+  rg?: string
+  birthDate?: string | Date // ou Date
+  admissionDate?: string | Date // ou Date
+  dismissalDate?: string | Date // ou Date
   status: string
-  workplace: string
-  shift: string
-  phone: string
-  address: Address
-  nationality: string
-  naturalness: string
-  gender: string
-  maritalStatus: string
-  educationLevel: string
-  pis: string
-  ctps: string
-  ctpsSeries: string
-  ctpsUf: string
-  voterTitle: string
-  voterZone: string
-  voterSection: string
-  reservist: string
-  reservistCategory: string
-  cnh: string
-  cnhCategory: string
-  cnhValidity: string // ou Date
-  motherName: string
-  fatherName: string
-  dependents: Dependent[]
+  workplace?: string
+  shift?: string
+  phone?: string
+  address?: Address  // Opcional para compatibilidade
+  endereco?: Address // Campo usado no drawer
+  nationality?: string
+  naturalness?: string
+  gender?: string
+  maritalStatus?: string
+  educationLevel?: string
+  pis?: string
+  ctps?: string
+  ctpsSeries?: string
+  ctpsUf?: string
+  voterTitle?: string
+  voterZone?: string
+  voterSection?: string
+  reservist?: string
+  reservistCategory?: string
+  cnh?: string
+  cnhCategory?: string
+  cnhValidity?: string // ou Date
+  motherName?: string
+  fatherName?: string
+  dependents?: Dependent[]
   notes?: string
   employmentHistory?: any
   isActive: boolean
-  createdAt: string // ou Date
-  updatedAt: string // ou Date
+  createdAt?: string | Date // ou Date
+  updatedAt?: string | Date // ou Date
   nfcCardId?: string
   currentContractId?: string
   currentFunctionId?: string
@@ -127,6 +128,20 @@ export interface Employee {
   currentFunction?: string
   avatar?: string
   email?: string
+  // Novos campos adicionados
+  mo?: string // Tipo de Mão de Obra
+  horasNormaisTrabalhadas?: number // Horas Normais
+  horasExtrasTrabalhadas?: number // Horas Extras
+  horasNoturnasTrabalhadas?: number // Horas Noturnas
+  localAlojado?: string // Local/Alojamento
+  pontoReferencia?: string // Ponto de Referência
+  statusBancodoc?: string // Status Bancário/Documental
+  efetivoRDO?: boolean // Efetivo Apontado em RDO
+  centroCusto?: string // Centro de Custo
+  obra?: string // Obra
+  primeiraExperiencia?: Date // Primeira Experiência
+  segundaExperiencia?: Date // Segunda Experiência
+  previsaoObra?: Date // Previsão na Obra
   // ... outros campos auxiliares se necessário ...
 }
 
