@@ -85,6 +85,9 @@
       "next": "Próximo",
       "submit": "Adicionar Funcionário",
       "success": "Funcionário cadastrado com sucesso!",
+      "edit_success": "Funcionário atualizado com sucesso!",
+      "update": "Atualizar Funcionário",
+      "delete_success": "Funcionário excluído com sucesso!",
       "steps": {
         "0": "Dados Pessoais",
         "endereco": "Endereço",

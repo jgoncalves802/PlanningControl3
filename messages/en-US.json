@@ -59,6 +59,9 @@
       "next": "Next",
       "submit": "Add Employee",
       "success": "Employee successfully registered!",
+      "edit_success": "Employee successfully updated!",
+      "update": "Update Employee",
+      "delete_success": "Employee successfully deleted!",
       "steps": {
         "0": "Personal Data",
         "endereco": "Address",
