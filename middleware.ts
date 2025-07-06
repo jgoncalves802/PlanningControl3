@@ -3,21 +3,32 @@ import createIntlMiddleware from 'next-intl/middleware';
 
 const intlMiddleware = createIntlMiddleware({
   locales: ['pt-BR', 'en-US'],
-  defaultLocale: 'pt-BR'
+  defaultLocale: 'pt-BR',
+  localePrefix: 'never' // Não usar prefixo de locale nas URLs
 });
 
 export default function middleware(request: NextRequest) {
-  // Garantir que todas as respostas tenham charset UTF-8
-  const response = intlMiddleware(request);
+  const pathname = request.nextUrl.pathname;
   
-  // Para rotas da API, garantir UTF-8
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const newResponse = NextResponse.next();
-    newResponse.headers.set('Content-Type', 'application/json; charset=utf-8');
-    return newResponse;
+  // Para rotas da API, apenas garantir UTF-8
+  if (pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    response.headers.set('Content-Type', 'application/json; charset=utf-8');
+    return response;
   }
   
-  // Para outras rotas, usar o middleware de internacionalização
+  // Para rotas estáticas e assets, pular middleware
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/_vercel') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+  
+  // Para outras rotas (incluindo /login, /dashboard, etc), usar internacionalização
+  const response = intlMiddleware(request);
+  
   if (response) {
     response.headers.set('Content-Type', 'text/html; charset=utf-8');
     return response;
@@ -29,10 +40,8 @@ export default function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     // Match all pathnames except for
-    // - … if they start with `/api`, `/_next` or `/_vercel`
+    // - … if they start with `/_next` or `/_vercel`
     // - … the ones containing a dot (e.g. `favicon.ico`)
-    '/((?!api|_next|_vercel|.*\\..*).*)',
-    // However, match all pathnames within `/api/`, except for Next.js internals
-    '/api/((?!_next).*)'
+    '/((?!_next|_vercel|.*\\..*).*)'
   ]
 }; 
