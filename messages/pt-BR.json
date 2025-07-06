@@ -108,6 +108,9 @@
       "all_functions": "Todas as Funções",
       "clear": "Limpar Filtros",
       "apply": "Aplicar Filtros"
+    },
+    "actions": {
+      "edit": "Editar informações do funcionário"
     }
   }
 } 

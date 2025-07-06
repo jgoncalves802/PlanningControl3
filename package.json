@@ -12,6 +12,7 @@
   "dependencies": {
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
+    "daisyui": "^5.0.43",
     "date-fns": "^3.0.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.0.0",

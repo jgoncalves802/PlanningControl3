@@ -440,8 +440,16 @@ export default function EmployeesPage() {
             <div>
               <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{employee.name}</p>
               <div className="flex items-center gap-2 mt-1">
-                {employee.email && <Mail className="h-3 w-3 text-gray-400 dark:text-slate-500" />}
-                {employee.phone && <Phone className="h-3 w-3 text-gray-400 dark:text-slate-500" />}
+                {employee.email && (
+                  <div className="tooltip" data-tip={employee.email}>
+                    <Mail className="h-3 w-3 text-gray-400 dark:text-slate-500" />
+                  </div>
+                )}
+                {employee.phone && (
+                  <div className="tooltip" data-tip={employee.phone}>
+                    <Phone className="h-3 w-3 text-gray-400 dark:text-slate-500" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -930,10 +938,27 @@ export default function EmployeesPage() {
                       </th>
                     )}
                     {enabledColumns.map((column) => (
-                      <th 
-                        key={column.key} 
-                        className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300"
+                      <th
+                        key={column.key}
                         style={{ width: column.width }}
+                        data-tip={
+                          column.key === 'name' ? 'Nome completo do funcionário' :
+                          column.key === 'cpf' ? 'CPF do funcionário' :
+                          column.key === 'matricula' ? 'Matrícula interna do funcionário' :
+                          column.key === 'cargo' ? 'Cargo/Função atual' :
+                          column.key === 'status' ? 'Status atual do vínculo' :
+                          column.key === 'cidade' ? 'Cidade de atuação' :
+                          column.key === 'dataEntrada' ? 'Data de admissão' :
+                          column.key === 'contrato' ? 'Contrato principal' :
+                          column.key === 'dismissalDate' ? 'Data de demissão/desligamento' :
+                          undefined
+                        }
+                        className={
+                          [
+                            'text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300',
+                            'tooltip'
+                          ].join(' ')
+                        }
                       >
                         {column.label}
                       </th>
@@ -961,33 +986,21 @@ export default function EmployeesPage() {
                       ))}
                       <td className="p-4">
                         <div className="flex items-center space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedEmployee(employee)
-                              setShowViewModal(true)
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                            <>
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedEmployee(employee)
-                                  setShowEditModal(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                            </>
-                          )}
+                          <div className="tooltip" data-tip="Visualizar detalhes do funcionário">
+                            <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowViewModal(true); }}>
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="tooltip" data-tip={t('actions.edit') || 'Editar informações do funcionário'}>
+                            <Button variant="ghost" size="sm" onClick={() => { setSelectedEmployee(employee); setShowEditModal(true); }}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="tooltip" data-tip="Mais ações">
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </td>
                     </tr>
