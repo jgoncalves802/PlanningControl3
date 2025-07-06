@@ -24,4 +24,8 @@ dist-ssr
 *.sw?
 .env
 
+# Next.js
+.next/
+out/
+
 /generated/prisma
