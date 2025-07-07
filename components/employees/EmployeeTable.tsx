@@ -69,37 +69,50 @@ const EmployeeTable = memo(function EmployeeTable({
       case 'name':
         return (
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden border-2 border-gray-200 dark:border-slate-600 shadow-sm">
-              {employee.avatar ? (
-                <img 
-                  src={employee.avatar} 
-                  alt={employee.name} 
-                  className="w-full h-full object-cover rounded-full"
-                />
-              ) : (
-                <span className="text-white text-sm font-medium">
-                  {employee.name.split(' ').map(n => n[0]).join('')}
-                </span>
-              )}
+            <div className="relative">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center overflow-hidden border-2 border-white dark:border-slate-700 shadow-md">
+                {employee.avatar ? (
+                  <img 
+                    src={employee.avatar} 
+                    alt={employee.name} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-white text-sm font-semibold">
+                    {employee.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                  </span>
+                )}
+              </div>
+              {/* Indicador de status online/offline */}
+              <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white dark:border-slate-800 ${
+                employee.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+              }`}></div>
             </div>
-            <div>
-              <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{employee.name}</p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-gray-900 dark:text-slate-100 truncate">{employee.name}</p>
               <div className="flex items-center gap-2 mt-1">
                 {employee.email && (
                   <div className="group relative cursor-help">
-                    <Mail className="h-3 w-3 text-gray-400 dark:text-slate-500" />
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                    <Mail className="h-3 w-3 text-blue-500 hover:text-blue-600 transition-colors" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
                       {employee.email}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
                     </div>
                   </div>
                 )}
                 {employee.phone && (
                   <div className="group relative cursor-help">
-                    <Phone className="h-3 w-3 text-gray-400 dark:text-slate-500" />
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                    <Phone className="h-3 w-3 text-green-500 hover:text-green-600 transition-colors" />
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
                       {employee.phone}
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
                     </div>
                   </div>
+                )}
+                {employee.cpf && (
+                  <span className="text-xs text-gray-500 dark:text-slate-400 font-mono">
+                    {employee.id.padStart(6, '0')}
+                  </span>
                 )}
               </div>
             </div>
@@ -113,7 +126,12 @@ const EmployeeTable = memo(function EmployeeTable({
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.currentFunction || 'Não atribuído'}</span>;
       case 'status':
         return (
-          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(employee.status)}`}>
+          <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm ${getStatusColor(employee.status)}`}>
+            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+              employee.status === 'active' ? 'bg-green-600' : 
+              employee.status === 'on_leave' ? 'bg-yellow-600' : 
+              employee.status === 'transferred' ? 'bg-blue-600' : 'bg-gray-600'
+            }`}></div>
             {getStatusLabel(employee.status)}
           </span>
         );
@@ -163,17 +181,17 @@ const EmployeeTable = memo(function EmployeeTable({
   };
 
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
       <table className="w-full">
-        <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
+        <thead className="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-slate-800 dark:to-slate-700 border-b border-gray-200 dark:border-slate-600">
           <tr>
             {canManageEmployees && (
               <th className="text-left p-4">
                 <input
                   type="checkbox"
-                  checked={selectedEmployees.length === employees.length}
+                  checked={selectedEmployees.length === employees.length && employees.length > 0}
                   onChange={onSelectAll}
-                  className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary"
+                  className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary focus:ring-offset-0"
                 />
               </th>
             )}
@@ -181,24 +199,29 @@ const EmployeeTable = memo(function EmployeeTable({
               <th 
                 key={column.key} 
                 style={{ width: column.width }}
-                className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300"
+                className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wider"
               >
                 {column.label}
               </th>
             ))}
-            <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Ações</th>
+            <th className="text-left p-4 text-sm font-semibold text-gray-700 dark:text-slate-300 uppercase tracking-wider">Ações</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-200 dark:divide-slate-700">
-          {employees.map((employee) => (
-            <tr key={employee.id} className="hover:bg-gray-50 dark:hover:bg-slate-800">
+        <tbody className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+          {employees.map((employee, index) => (
+            <tr 
+              key={employee.id} 
+              className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-150 ${
+                index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-gray-50/30 dark:bg-slate-800/50'
+              }`}
+            >
               {canManageEmployees && (
                 <td className="p-4">
                   <input
                     type="checkbox"
                     checked={selectedEmployees.includes(employee.id)}
                     onChange={() => onSelectEmployee(employee.id)}
-                    className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary"
+                    className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary focus:ring-offset-0"
                   />
                 </td>
               )}
@@ -208,29 +231,47 @@ const EmployeeTable = memo(function EmployeeTable({
                 </td>
               ))}
               <td className="p-4">
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
                   <div className="group relative">
-                    <Button variant="ghost" size="sm" onClick={() => onViewEmployee(employee)}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onViewEmployee(employee)}
+                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-all duration-200"
+                    >
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
                       Visualizar detalhes
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
                     </div>
                   </div>
                   <div className="group relative">
-                    <Button variant="ghost" size="sm" onClick={() => onEditEmployee(employee)}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onEditEmployee(employee)}
+                      className="h-8 w-8 p-0 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-all duration-200"
+                    >
                       <Edit className="h-4 w-4" />
                     </Button>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
                       Editar funcionário
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
                     </div>
                   </div>
                   <div className="group relative">
-                    <Button variant="ghost" size="sm" onClick={() => onShowHistory(employee)}>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => onShowHistory(employee)}
+                      className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20 dark:hover:text-purple-400 transition-all duration-200"
+                    >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
                       Histórico de vínculos
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
                     </div>
                   </div>
                 </div>

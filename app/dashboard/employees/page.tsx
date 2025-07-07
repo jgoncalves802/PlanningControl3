@@ -10,7 +10,10 @@ import {
   Settings,
   Trash2,
   X,
-  UserPlus
+  UserPlus,
+  FileText,
+  FileSpreadsheet,
+  FileType
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -116,6 +119,9 @@ export default function EmployeesPage() {
     { key: 'turno', label: 'Turno', enabled: false, width: '80px' },
     { key: 'obra', label: 'Obra', enabled: false, width: '100px' },
     { key: 'mo', label: 'Tipo de Mão de Obra', enabled: true, width: '130px' },
+    { key: 'primeiraExperiencia', label: 'Primeira Experiência', enabled: false, width: '140px' },
+    { key: 'segundaExperiencia', label: 'Segunda Experiência', enabled: false, width: '140px' },
+    { key: 'previsaoObra', label: 'Previsão na Obra', enabled: false, width: '130px' },
     { key: 'dismissalDate', label: 'Data de Demissão', enabled: false, width: '110px' },
   ];
 
@@ -387,21 +393,24 @@ export default function EmployeesPage() {
             {showExportMenu && (
                 <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
                   <li>
-                    <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                    Exportar CSV
-                  </button>
-                </li>
+                    <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200">
+                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm font-medium">Exportar CSV</span>
+                    </button>
+                  </li>
                   <li>
-                    <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30">
-                    Exportar XLSX
-                  </button>
-                </li>
+                    <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors duration-200">
+                      <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-medium">Exportar XLSX</span>
+                    </button>
+                  </li>
                   <li>
-                    <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30">
-                    Exportar PDF
-                  </button>
-                </li>
-              </ul>
+                    <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200">
+                      <FileType className="h-4 w-4 text-red-600 dark:text-red-400" />
+                      <span className="text-sm font-medium">Exportar PDF</span>
+                    </button>
+                  </li>
+                </ul>
             )}
           </div>
           {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
