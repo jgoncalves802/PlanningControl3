@@ -2,7 +2,8 @@
 // Hoje usa mock, amanhã pode ser fetch/axios para backend próprio
 
 export async function getEmployees() {
-  const res = await fetch('/api/employees');
+  // Buscar todos os funcionários sem limite de paginação
+  const res = await fetch('/api/employees?limit=1000&page=1');
   if (!res.ok) throw new Error('Erro ao buscar funcionários');
   return res.json();
 }
