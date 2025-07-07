@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Employee } from '@/lib/mock-data';
 
-export function useEmployeeFilters(employees: Employee[]) {
+export function useEmployeeFilters(employees: Employee[] | undefined) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
@@ -18,6 +18,10 @@ export function useEmployeeFilters(employees: Employee[]) {
   }
 
   const filteredEmployees = useMemo(() => {
+    if (!employees || !Array.isArray(employees)) {
+      return [];
+    }
+
     return employees.filter(employee => {
       const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            employee.cpf.includes(searchTerm) ||

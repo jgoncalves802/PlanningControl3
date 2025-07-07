@@ -90,11 +90,14 @@ export default function EmployeesPage() {
   const deleteEmployeeMutation = useDeleteEmployee();
   const addAdmissionMutation = useAddAdmission();
   const addDismissalMutation = useAddDismissal();
-  const { data: employees = [], isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery();
+  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery();
   
   // Functions queries
   const { data: functions = [] } = useFunctionsQuery({});
   const createFunctionMutation = useCreateFunction();
+
+  // Extrair array de funcionários da resposta da API
+  const employees = employeesData?.employees || [];
 
   // Hook de filtros
   const {
