@@ -117,27 +117,29 @@ export function useFunctionsQuery(filters?: FunctionFilters) {
     queryKey: ['functions', filters],
     queryFn: () => functionsService.getFunctions(filters),
     staleTime: 5 * 60 * 1000, // 5 minutos
+    gcTime: 10 * 60 * 1000, // 10 minutos (anteriormente cacheTime)
+    refetchOnWindowFocus: false, // Evitar refetch desnecessários
+    retry: 3, // Tentar novamente em caso de erro
   })
 }
 
 // Hook para listar funções com contagem atualizada em tempo real
 export function useFunctionsWithRealTimeCount(filters?: FunctionFilters) {
-  const { data: functions = [], ...queryResult } = useFunctionsQuery(filters)
+  const { data: functions = [], isLoading, ...queryResult } = useFunctionsQuery(filters)
   const queryClient = useQueryClient()
   
   // Buscar dados dos funcionários do cache
   const employeesData = queryClient.getQueryData(['employees']) as any
   const employees = employeesData?.employees || []
   
-  // Debug temporário
-  console.log('🐛 DEBUG useFunctionsWithRealTimeCount:');
-  console.log('   Functions from API:', functions.length);
-  console.log('   Employees from cache:', employees.length);
-  console.log('   Employees with companyFunctionId:', employees.filter((emp: any) => emp.companyFunctionId).length);
-  
   // Calcular contagens em tempo real baseado nos funcionários carregados
   const functionsWithUpdatedCount = useMemo(() => {
-    const result = functions.map(func => {
+    // Se ainda estiver carregando ou não tiver funções, retornar array vazio
+    if (isLoading || !functions || functions.length === 0) {
+      return []
+    }
+    
+    return functions.map(func => {
       // Contar funcionários que têm esta função atribuída
       const employeeCount = employees.filter((emp: any) => emp.companyFunctionId === func.id).length
       
@@ -147,15 +149,12 @@ export function useFunctionsWithRealTimeCount(filters?: FunctionFilters) {
           employees: employeeCount
         }
       }
-    });
-    
-    console.log('   Functions with updated count:', result.filter(f => f._count.employees > 0).length);
-    
-    return result;
-  }, [functions, employees])
+    })
+  }, [functions, employees, isLoading])
   
   return {
     ...queryResult,
+    isLoading,
     data: functionsWithUpdatedCount
   }
 }
@@ -227,24 +226,15 @@ export function useDeleteFunction() {
 export function useFunctionStats() {
   const { data: functions = [] } = useFunctionsWithRealTimeCount()
   
-  // Debug temporário
-  const functionsWithEmployees = functions.filter(f => (f._count?.employees || 0) > 0);
-  console.log('🐛 DEBUG useFunctionStats:');
-  console.log('   Total functions:', functions.length);
-  console.log('   Functions with employees:', functionsWithEmployees.length);
-  console.log('   Functions with employees list:', functionsWithEmployees.map(f => ({ name: f.name, count: f._count?.employees })));
-  
   const stats = {
     total: functions.length,
     active: functions.filter(f => f.isActive).length,
     inactive: functions.filter(f => !f.isActive).length,
     direto: functions.filter(f => f.laborType === 'DIRETO').length,
     indireto: functions.filter(f => f.laborType === 'INDIRETO').length,
-    withEmployees: functionsWithEmployees.length,
+    withEmployees: functions.filter(f => (f._count?.employees || 0) > 0).length,
     totalEmployees: functions.reduce((acc, f) => acc + (f._count?.employees || 0), 0),
   }
-  
-  console.log('   Stats calculated:', stats);
   
   return stats
 } 
