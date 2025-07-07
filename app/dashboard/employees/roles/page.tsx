@@ -1,173 +1,174 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Edit, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Plus, Edit, Trash2, Users } from "lucide-react";
+import { mockContracts, Contract } from '@/lib/mock-data'
+import { 
+  getCurrentUser, 
+  getUserPermissions, 
+  validateUserAccess,
+  User,
+  UserRole
+} from '@/lib/auth'
 
 interface Role {
   id: string;
   name: string;
-  type: "Direto" | "Indireto";
+  description: string;
+  contractId: string;
+  isActive: boolean;
 }
 
 const mockRoles: Role[] = [
-  { id: "1", name: "ADMINISTRATIVO DE OBRAS", type: "Indireto" },
-  { id: "2", name: "ENCANADOR", type: "Direto" },
-  { id: "3", name: "ENGENHEIRO CIVIL", type: "Indireto" },
+  { id: "1", name: "ADMINISTRATIVO DE OBRAS", description: "Função administrativa", contractId: "1", isActive: true },
+  { id: "2", name: "ENCANADOR", description: "Função operacional", contractId: "1", isActive: true },
+  { id: "3", name: "ENGENHEIRO CIVIL", description: "Função técnica", contractId: "2", isActive: true },
 ];
 
 export default function RolesPage() {
-  const t = useTranslations("roles");
-  const [roles, setRoles] = useState<Role[]>(mockRoles);
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [userPermissions, setUserPermissions] = useState<any>(null)
+  const [roles, setRoles] = useState<Role[]>(mockRoles)
+  const [contracts] = useState<Contract[]>(mockContracts)
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditDrawer, setShowEditDrawer] = useState(false);
-  const [editRole, setEditRole] = useState<Role | null>(null);
-  const [addForm, setAddForm] = useState({ name: "", type: "Direto" });
-  const [addError, setAddError] = useState("");
-  const [editForm, setEditForm] = useState({ name: "", type: "Direto" });
-  const [editError, setEditError] = useState("");
+  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
+  const [newRoleName, setNewRoleName] = useState("");
+  const [newRoleDescription, setNewRoleDescription] = useState("");
 
-  // Função para abrir drawer de edição
-  const handleEdit = (role: Role) => {
-    setEditRole(role);
-    setEditForm({ name: role.name, type: role.type });
-    setShowEditDrawer(true);
-  };
+  useEffect(() => {
+    const user = getCurrentUser()
+    setCurrentUser(user)
+    
+    const permissions = getUserPermissions(user)
+    setUserPermissions(permissions)
+  }, [])
 
-  // Função para adicionar função
-  const handleAdd = () => {
-    if (!addForm.name.trim()) {
-      setAddError(t('form.name_required', { default: 'Nome é obrigatório' }));
-      return;
+  const handleAddRole = () => {
+    if (newRoleName.trim()) {
+      const newRole: Role = {
+        id: Date.now().toString(),
+        name: newRoleName.trim(),
+        description: newRoleDescription.trim(),
+        contractId: "1", // Default contract
+        isActive: true
+      }
+      setRoles(prev => [...prev, newRole])
+      setNewRoleName("")
+      setNewRoleDescription("")
+      setShowAddModal(false)
     }
-    setRoles(prev => [
-      ...prev,
-      { id: String(Date.now()), name: addForm.name.trim(), type: addForm.type as Role['type'] }
-    ]);
-    setAddForm({ name: "", type: "Direto" });
-    setAddError("");
-    setShowAddModal(false);
-  };
+  }
 
-  // Função para salvar edição
-  const handleEditSave = () => {
-    if (!editForm.name.trim()) {
-      setEditError(t('form.name_required', { default: 'Nome é obrigatório' }));
-      return;
+  const handleDeleteRole = (id: string) => {
+    if (confirm("Tem certeza que deseja excluir esta função?")) {
+      setRoles(prev => prev.filter(role => role.id !== id))
     }
-    setRoles(prev => prev.map(r => r.id === editRole?.id ? { ...r, name: editForm.name.trim(), type: editForm.type as Role['type'] } : r));
-    setShowEditDrawer(false);
-    setEditRole(null);
-    setEditError("");
-  };
+  }
+
+  if (!currentUser || !userPermissions) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600">Carregando...</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t('title', { default: 'Funções' })}</CardTitle>
-          <Button variant="primary" size="sm" onClick={() => setShowAddModal(true)}>
-            <Plus className="h-4 w-4 mr-2" /> {t('add', { default: 'Adicionar Função' })}
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Funções</h1>
+          <p className="text-gray-600">Gerencie as funções disponíveis nos contratos</p>
+        </div>
+        {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Função
           </Button>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Funções Cadastradas ({roles.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="table w-full">
-              <thead>
-                <tr>
-                  <th>{t('table.name', { default: 'Função' })}</th>
-                  <th>{t('table.type', { default: 'Tipo' })}</th>
-                  <th className="w-24 text-center">{t('table.actions', { default: 'Ações' })}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.map((role) => (
-                  <tr key={role.id}>
-                    <td>{role.name}</td>
-                    <td>{role.type}</td>
-                    <td className="flex gap-2 justify-center">
-                      <Button variant="ghost" size="sm" aria-label={t('edit', { default: 'Editar' })} onClick={() => handleEdit(role)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" aria-label={t('delete', { default: 'Excluir' })}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {roles.map((role) => (
+              <div key={role.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                  <h3 className="font-medium">{role.name}</h3>
+                  <p className="text-sm text-gray-600">{role.description}</p>
+                </div>
+                {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedRole(role)
+                        setShowEditDrawer(true)
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDeleteRole(role.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Modal Adicionar Função */}
+      {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-8 w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">{t('add', { default: 'Adicionar Função' })}</h2>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">{t('form.name', { default: 'Nome da Função' })}</label>
-              <input
-                className="input input-bordered w-full"
-                value={addForm.name}
-                onChange={e => setAddForm(f => ({ ...f, name: e.target.value }))}
-                maxLength={60}
-                autoFocus
-              />
-              {addError && <span className="text-xs text-red-500 mt-1 block">{addError}</span>}
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Adicionar Nova Função</h2>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Nome da Função</label>
+                <input
+                  type="text"
+                  value={newRoleName}
+                  onChange={(e) => setNewRoleName(e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Digite o nome da função"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Descrição</label>
+                <input
+                  type="text"
+                  value={newRoleDescription}
+                  onChange={(e) => setNewRoleDescription(e.target.value)}
+                  className="w-full p-2 border rounded-lg"
+                  placeholder="Digite a descrição da função"
+                />
+              </div>
             </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-1">{t('form.type', { default: 'Tipo' })}</label>
-              <select
-                className="select select-bordered w-full"
-                value={addForm.type}
-                onChange={e => setAddForm(f => ({ ...f, type: e.target.value }))}
-              >
-                <option value="Direto">{t('form.direct', { default: 'Direto' })}</option>
-                <option value="Indireto">{t('form.indirect', { default: 'Indireto' })}</option>
-              </select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => { setShowAddModal(false); setAddError(""); }}>{t('form.cancel', { default: 'Cancelar' })}</Button>
-              <Button variant="primary" onClick={handleAdd}>{t('form.save', { default: 'Salvar' })}</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Drawer Editar Função */}
-      {showEditDrawer && (
-        <div className="fixed inset-0 z-50 flex">
-          <div className="flex-1" onClick={() => setShowEditDrawer(false)} />
-          <div className="w-full max-w-md bg-white dark:bg-slate-800 h-full shadow-xl p-8 overflow-y-auto">
-            <h2 className="text-lg font-semibold mb-4">{t('edit', { default: 'Editar Função' })}</h2>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">{t('form.name', { default: 'Nome da Função' })}</label>
-              <input
-                className="input input-bordered w-full"
-                value={editForm.name}
-                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
-                maxLength={60}
-                autoFocus
-              />
-              {editError && <span className="text-xs text-red-500 mt-1 block">{editError}</span>}
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-1">{t('form.type', { default: 'Tipo' })}</label>
-              <select
-                className="select select-bordered w-full"
-                value={editForm.type}
-                onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
-              >
-                <option value="Direto">{t('form.direct', { default: 'Direto' })}</option>
-                <option value="Indireto">{t('form.indirect', { default: 'Indireto' })}</option>
-              </select>
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" onClick={() => setShowEditDrawer(false)}>{t('form.cancel', { default: 'Cancelar' })}</Button>
-              <Button variant="primary" onClick={handleEditSave}>{t('form.save', { default: 'Salvar' })}</Button>
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleAddRole}>
+                Adicionar
+              </Button>
             </div>
           </div>
         </div>

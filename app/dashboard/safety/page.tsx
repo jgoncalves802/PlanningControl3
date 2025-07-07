@@ -17,7 +17,9 @@ import {
   Building,
   Edit,
   Trash2,
-  Eye
+  Eye,
+  X,
+  Info
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -36,14 +38,12 @@ import {
   getCurrentUser, 
   getUserPermissions, 
   validateUserAccess,
-  User,
+  User as AuthUser,
   UserRole
 } from '@/lib/auth'
-import { useTranslations } from 'next-intl'
 
 export default function SafetyPage() {
-  const t = useTranslations('Safety')
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [asos] = useState<ASO[]>(mockASOs)
   const [trainings] = useState<EmployeeTraining[]>(mockEmployeeTrainings)
@@ -162,10 +162,10 @@ export default function SafetyPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('accessDenied')}</h2>
-          <p className="text-gray-600 mb-4">{t('noPermission')}</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h2>
+          <p className="text-gray-600 mb-4">Você não tem permissão para acessar esta página.</p>
           <p className="text-sm text-gray-500">
-            {t('currentRole')} <span className="font-medium">{getRoleDisplayName(currentUser.role)}</span>
+            {`Perfil atual: ${getRoleDisplayName(currentUser.role)}`}
           </p>
         </div>
       </div>
@@ -190,9 +190,9 @@ export default function SafetyPage() {
       {/* Header com Informações de Permissão */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">{t('title')}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Segurança</h1>
           <div className="flex items-center gap-4">
-            <p className="text-gray-600">{t('monitor')}</p>
+            <p className="text-gray-600">Monitorando...</p>
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
               <Shield className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-900">
@@ -204,15 +204,15 @@ export default function SafetyPage() {
         <div className="flex items-center gap-3">
           <Button variant="outline" size="sm" onClick={() => setShowConfigModal(true)}>
             <Settings className="h-4 w-4 mr-2" />
-            {t('settings')}
+            Configurações
           </Button>
           <Button variant="outline" size="sm">
             <FileText className="h-4 w-4 mr-2" />
-            {t('generateReport')}
+            Gerar Relatório
           </Button>
           <Button size="sm">
             <Plus className="h-4 w-4 mr-2" />
-            {t('addRecord')}
+            Adicionar Registro
           </Button>
         </div>
       </div>
@@ -221,35 +221,35 @@ export default function SafetyPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         {[
           { 
-            label: t('validASOs'), 
+            label: 'ASOs Válidos', 
             value: safetyStats.validASOs, 
             total: safetyStats.totalASOs,
             color: 'green',
             icon: CheckCircle
           },
           { 
-            label: t('expiringASOs'), 
+            label: 'ASOs Vencendo', 
             value: safetyStats.expiringASOs,
             total: safetyStats.totalASOs,
             color: 'yellow',
             icon: AlertTriangle 
           },
           { 
-            label: t('validTrainings'), 
+            label: 'Treinamentos Válidos', 
             value: safetyStats.validTrainings,
             total: safetyStats.totalTrainings,
             color: 'blue',
             icon: Shield 
           },
           { 
-            label: t('expiredItems'), 
+            label: 'Itens Vencidos', 
             value: safetyStats.expiredASOs + safetyStats.expiredTrainings,
             total: safetyStats.totalASOs + safetyStats.totalTrainings,
             color: 'red',
             icon: XCircle 
           },
           {
-            label: t('impeditiveTrainings'),
+            label: 'Treinamentos Impeditivos',
             value: safetyStats.impeditiveTrainings,
             total: safetyStats.totalContractTrainings,
             color: 'purple',
@@ -337,7 +337,7 @@ export default function SafetyPage() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {t('asoRecords')}
+                Registros ASO
               </button>
               <button
                 onClick={() => setActiveTab('trainings')}
@@ -347,7 +347,7 @@ export default function SafetyPage() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {t('trainings')}
+                Treinamentos
               </button>
               <button
                 onClick={() => setActiveTab('contract-trainings')}
@@ -357,7 +357,7 @@ export default function SafetyPage() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {t('contractTrainings')}
+                Treinamentos por Contrato
               </button>
             </div>
           </div>
@@ -779,19 +779,19 @@ export default function SafetyPage() {
               </div>
 
               <div className="border-t pt-6">
-                <h4 className="font-medium text-gray-900 mb-4">{t('infoTitle')}</h4>
+                <h4 className="font-medium text-gray-900 mb-4">Informações Adicionais</h4>
                 <div className="space-y-3 text-sm text-gray-600">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                    <p><strong>{t('impeditiveTrainings')}:</strong> {t('impeditiveInfo')}</p>
+                    <p><strong>Treinamentos Impeditivos:</strong> Quando marcados como impeditivos, funcionários sem estes treinamentos válidos não poderão ser transferidos para o contrato.</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Shield className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                    <p><strong>{t('autoValidation').split(':')[0]}:</strong> {t('autoValidation').split(':').slice(1).join(':')}</p>
+                    <p><strong>Auto Validação:</strong> O sistema verifica automaticamente os requisitos de segurança antes de permitir transferências.</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Settings className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
-                    <p><strong>{t('flexConfig').split(':')[0]}:</strong> {t('flexConfig').split(':').slice(1).join(':')}</p>
+                    <p><strong>Configurações Flexíveis:</strong> Gestores podem ajustar os prazos de vencimento ASO conforme a necessidade de cada contrato.</p>
                   </div>
                 </div>
               </div>

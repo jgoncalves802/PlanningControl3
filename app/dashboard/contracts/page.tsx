@@ -42,7 +42,6 @@ import {
   User,
   UserRole
 } from '@/lib/auth'
-import { useTranslations } from 'next-intl'
 
 // Configuração das colunas disponíveis baseada na imagem
 interface ColumnConfig {
@@ -80,7 +79,6 @@ const defaultColumns: ColumnConfig[] = [
 ]
 
 export default function ContractsPage() {
-  const t = useTranslations('Contracts')
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [contracts, setContracts] = useState<Contract[]>([])
@@ -355,7 +353,7 @@ export default function ContractsPage() {
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold mb-4">{t('title')}</h1>
+      <h1 className="text-3xl font-bold mb-4">Contratos</h1>
       <div className="space-y-6">
         {/* Header com Informações de Permissão */}
         <div className="flex items-center justify-between">
