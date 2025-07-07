@@ -73,11 +73,13 @@ export default function EmployeesPage() {
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
+  const [showViewModal, setShowViewModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [columns, setColumns] = useState<ColumnConfig[]>([])
+  const [showColumnConfig, setShowColumnConfig] = useState(false)
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({ status: 'active' })
