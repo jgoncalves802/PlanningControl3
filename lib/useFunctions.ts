@@ -129,9 +129,15 @@ export function useFunctionsWithRealTimeCount(filters?: FunctionFilters) {
   const employeesData = queryClient.getQueryData(['employees']) as any
   const employees = employeesData?.employees || []
   
+  // Debug temporário
+  console.log('🐛 DEBUG useFunctionsWithRealTimeCount:');
+  console.log('   Functions from API:', functions.length);
+  console.log('   Employees from cache:', employees.length);
+  console.log('   Employees with companyFunctionId:', employees.filter((emp: any) => emp.companyFunctionId).length);
+  
   // Calcular contagens em tempo real baseado nos funcionários carregados
   const functionsWithUpdatedCount = useMemo(() => {
-    return functions.map(func => {
+    const result = functions.map(func => {
       // Contar funcionários que têm esta função atribuída
       const employeeCount = employees.filter((emp: any) => emp.companyFunctionId === func.id).length
       
@@ -141,7 +147,11 @@ export function useFunctionsWithRealTimeCount(filters?: FunctionFilters) {
           employees: employeeCount
         }
       }
-    })
+    });
+    
+    console.log('   Functions with updated count:', result.filter(f => f._count.employees > 0).length);
+    
+    return result;
   }, [functions, employees])
   
   return {
@@ -217,15 +227,24 @@ export function useDeleteFunction() {
 export function useFunctionStats() {
   const { data: functions = [] } = useFunctionsWithRealTimeCount()
   
+  // Debug temporário
+  const functionsWithEmployees = functions.filter(f => (f._count?.employees || 0) > 0);
+  console.log('🐛 DEBUG useFunctionStats:');
+  console.log('   Total functions:', functions.length);
+  console.log('   Functions with employees:', functionsWithEmployees.length);
+  console.log('   Functions with employees list:', functionsWithEmployees.map(f => ({ name: f.name, count: f._count?.employees })));
+  
   const stats = {
     total: functions.length,
     active: functions.filter(f => f.isActive).length,
     inactive: functions.filter(f => !f.isActive).length,
     direto: functions.filter(f => f.laborType === 'DIRETO').length,
     indireto: functions.filter(f => f.laborType === 'INDIRETO').length,
-    withEmployees: functions.filter(f => (f._count?.employees || 0) > 0).length,
+    withEmployees: functionsWithEmployees.length,
     totalEmployees: functions.reduce((acc, f) => acc + (f._count?.employees || 0), 0),
   }
+  
+  console.log('   Stats calculated:', stats);
   
   return stats
 } 
