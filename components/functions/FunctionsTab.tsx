@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Download, Settings, RefreshCw } from 'lucide-react'
+import { Plus, Download, Settings, RefreshCw, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'react-hot-toast'
@@ -11,6 +11,7 @@ import FunctionFilters from './FunctionFilters'
 import FunctionsList from './FunctionsList'
 import FunctionModal from './FunctionModal'
 import FunctionViewModal from './FunctionViewModal'
+import FunctionImportDialog from './FunctionImportDialog'
 import { 
   useFunctionsQuery, 
   useCreateFunction, 
@@ -33,6 +34,7 @@ export default function FunctionsTab({ currentUser }: FunctionsTabProps) {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [selectedFunction, setSelectedFunction] = useState<CompanyFunction | null>(null)
 
   // Permissões
@@ -80,6 +82,12 @@ export default function FunctionsTab({ currentUser }: FunctionsTabProps) {
   const handleViewFunction = (func: CompanyFunction) => {
     setSelectedFunction(func)
     setShowViewModal(true)
+  }
+
+  const handleImportComplete = (result: any) => {
+    if (result.success > 0) {
+      refetch()
+    }
   }
 
   const handleExportData = () => {
@@ -132,32 +140,6 @@ export default function FunctionsTab({ currentUser }: FunctionsTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
-            Funções e Cargos
-          </h2>
-          <p className="text-gray-600 dark:text-slate-400">
-            Gerencie as funções e tipos de mão de obra da empresa
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {functions.length > 0 && (
-            <Button variant="outline" size="sm" onClick={handleExportData}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-          )}
-          {canManage && (
-            <Button onClick={() => setShowCreateModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Função
-            </Button>
-          )}
-        </div>
-      </div>
-
       {/* Estatísticas */}
       <FunctionStats />
 
@@ -232,6 +214,13 @@ export default function FunctionsTab({ currentUser }: FunctionsTabProps) {
         onEdit={handleEditFunction}
         onDelete={handleDeleteFunction}
         canManage={canManage}
+      />
+
+      {/* Modal de Importação */}
+      <FunctionImportDialog
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImportComplete={handleImportComplete}
       />
     </div>
   )

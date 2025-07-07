@@ -84,7 +84,7 @@ export async function GET(req: NextRequest, { params }) {
 
 export async function PUT(req: NextRequest, { params }) {
   try {
-    const { id } = params;
+  const { id } = params;
     
     console.log('=== DEBUG PUT EMPLOYEE ===');
     console.log('ID:', id);

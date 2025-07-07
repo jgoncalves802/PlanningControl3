@@ -252,9 +252,9 @@ function convertCSVToEmployeeData(csvData: any): any {
 
 export async function POST(req: NextRequest) {
   try {
-    const employees = await req.json();
+  const employees = await req.json();
     
-    if (!Array.isArray(employees)) {
+  if (!Array.isArray(employees)) {
       return NextResponse.json(
         { error: 'Formato inválido: esperado array de funcionários.' }, 
         { 
@@ -264,8 +264,8 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const results = [];
-    const createdEmployees = [];
+  const results = [];
+  const createdEmployees = [];
     const failedEmployees = [];
     
     for (const [index, csvData] of employees.entries()) {
@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
         // Validar dados do CSV
         const errors = await validateEmployeeFromCSV(csvData, index);
         
-        if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length > 0) {
           results.push({ 
             index: index + 1, 
             name: csvData.name || 'Nome não informado',
@@ -282,8 +282,8 @@ export async function POST(req: NextRequest) {
             errors 
           });
           failedEmployees.push({ index: index + 1, name: csvData.name, errors });
-          continue;
-        }
+      continue;
+    }
         
         // Converter dados para formato do banco
         const employeeData = convertCSVToEmployeeData(csvData);
@@ -293,7 +293,7 @@ export async function POST(req: NextRequest) {
           data: employeeData 
         });
         
-        createdEmployees.push(employee);
+      createdEmployees.push(employee);
         results.push({ 
           index: index + 1, 
           name: employee.name,
