@@ -113,6 +113,23 @@ model ContractFunction {
   @@unique([contractId, name])
 }
 
+model CompanyFunction {
+  id          String    @id @default(cuid())
+  name        String    @unique // Nome da função (ex: "PEDREIRO", "SOLDADOR")
+  laborType   LaborType // Tipo de mão de obra
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relacionamentos
+  employees   Employee[] @relation("EmployeeCompanyFunction")
+}
+
+enum LaborType {
+  DIRETO    // Mão de obra direta
+  INDIRETO  // Mão de obra indireta
+}
+
 // --- Colaboradores e Transferências ---
 
 model Employee {
@@ -180,8 +197,10 @@ model Employee {
   nfcCardId         String?           @unique
   currentContractId String?
   currentFunctionId String?
+  companyFunctionId String?
   currentContract   Contract?         @relation(fields: [currentContractId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   currentFunction   ContractFunction? @relation(fields: [currentFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
+  companyFunction   CompanyFunction?  @relation("EmployeeCompanyFunction", fields: [companyFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   transferHistory   TransferHistory[]
   asos              ASO[]
   trainings         EmployeeTraining[]

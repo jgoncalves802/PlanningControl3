@@ -44,6 +44,7 @@ import EmployeeAddModal from '@/components/employees/EmployeeAddModal'
 import EmployeeEditModal from '@/components/employees/EmployeeEditModal'
 import EmployeeViewModal from '@/components/employees/EmployeeViewModal'
 import EmployeeHistoryModal from '@/components/employees/EmployeeHistoryModal'
+import FunctionsTab from '@/components/functions/FunctionsTab'
 import { useEmployeeFilters } from '@/lib/hooks/useEmployeeFilters'
 
 // Configuração das colunas disponíveis
@@ -56,6 +57,7 @@ interface ColumnConfig {
 
 export default function EmployeesPage() {
   // Estados principais
+  const [activeTab, setActiveTab] = useState<'employees' | 'functions'>('employees')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showViewModal, setShowViewModal] = useState(false)
@@ -352,9 +354,16 @@ export default function EmployeesPage() {
       {/* Header com Informações de Permissão */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">Funcionários</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
+            {activeTab === 'employees' ? 'Funcionários' : 'Funções e Cargos'}
+          </h1>
           <div className="flex items-center gap-4">
-            <p className="text-gray-600 dark:text-slate-400">Gerencie sua força de trabalho e informações dos funcionários</p>
+            <p className="text-gray-600 dark:text-slate-400">
+              {activeTab === 'employees' 
+                ? 'Gerencie sua força de trabalho e informações dos funcionários'
+                : 'Gerencie as funções e tipos de mão de obra da empresa'
+              }
+            </p>
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
@@ -368,125 +377,170 @@ export default function EmployeesPage() {
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-            <ImportEmployeesDialog 
-              onImportComplete={(result) => {
-                if (result.summary.created > 0) {
-                  refetch();
-                }
-              }}
-            />
-          <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
-            <Settings className="h-4 w-4 mr-2" />
-            Colunas
-          </Button>
-          <div className="dropdown dropdown-end relative" ref={exportMenuRef}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowExportMenu((v) => !v)}
-                className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4 mr-1" />
-              <span className="font-semibold">Exportar</span>
-          </Button>
-            {showExportMenu && (
-                <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
-                  <li>
-                    <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200">
+        {activeTab === 'employees' && (
+          <div className="flex items-center gap-3">
+              <ImportEmployeesDialog 
+                onImportComplete={(result) => {
+                  if (result.summary.created > 0) {
+                    refetch();
+                  }
+                }}
+              />
+            <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Colunas
+            </Button>
+            <div className="dropdown dropdown-end relative" ref={exportMenuRef}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowExportMenu((v) => !v)}
+                  className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                <span className="font-semibold">Exportar</span>
+            </Button>
+              {showExportMenu && (
+                  <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
+                    <li>
+                      <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200">
                       <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                      <span className="text-sm font-medium">Exportar CSV</span>
+                        <span className="text-sm font-medium">Exportar CSV</span>
                     </button>
                   </li>
-                  <li>
-                    <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors duration-200">
-                      <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <span className="text-sm font-medium">Exportar XLSX</span>
+                    <li>
+                      <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors duration-200">
+                        <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium">Exportar XLSX</span>
                     </button>
                   </li>
-                  <li>
-                    <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200">
-                      <FileType className="h-4 w-4 text-red-600 dark:text-red-400" />
-                      <span className="text-sm font-medium">Exportar PDF</span>
+                    <li>
+                      <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200">
+                        <FileType className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <span className="text-sm font-medium">Exportar PDF</span>
                     </button>
                   </li>
                 </ul>
-            )}
-          </div>
-          {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-            <Button size="sm" onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Funcionário
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-        <EmployeeStats employees={employees} />
-
-      {/* Filters and Search */}
-        <EmployeeFilters
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          statusFilter={statusFilter}
-          setStatusFilter={setStatusFilter}
-          showFilters={showFilters}
-          setShowFilters={setShowFilters}
-          filterContract={filterContract}
-          setFilterContract={setFilterContract}
-          filterFunction={filterFunction}
-          setFilterFunction={setFilterFunction}
-          filterAdmission={filterAdmission}
-          setFilterAdmission={setFilterAdmission}
-          filterCity={filterCity}
-          setFilterCity={setFilterCity}
-          filterDismissal={filterDismissal}
-          setFilterDismissal={setFilterDismissal}
-          onClearFilters={clearFilters}
-        />
-
-      {/* Employees Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.3 }}
-      >
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Funcionários ({filteredEmployees.length})
-              </CardTitle>
-              {selectedEmployees.length > 0 && validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-slate-400">
-                    {selectedEmployees.length} selecionados
-                  </span>
-                  <Button variant="outline" size="sm" onClick={handleBulkDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Selecionados
-                  </Button>
-                </div>
               )}
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
-              <EmployeeTable
-                employees={filteredEmployees}
-                columns={columns}
-                selectedEmployees={selectedEmployees}
-                canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}
-                onSelectEmployee={handleSelectEmployee}
-                onSelectAll={handleSelectAll}
-                onViewEmployee={handleViewEmployee}
-                onEditEmployee={handleOpenEditDrawer}
-                onShowHistory={handleShowHistory}
-              />
-          </CardContent>
-        </Card>
-      </motion.div>
+            {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+              <Button size="sm" onClick={() => setShowAddModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Funcionário
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Sistema de Abas */}
+      <div className="border-b border-gray-200 dark:border-slate-700">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('employees')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              activeTab === 'employees'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Funcionários
+              <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
+                {employees.length}
+              </span>
+            </div>
+          </button>
+          
+          <button
+            onClick={() => setActiveTab('functions')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+              activeTab === 'functions'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Funções
+            </div>
+          </button>
+        </nav>
+      </div>
+
+      {/* Conteúdo das Abas */}
+      {activeTab === 'employees' ? (
+        <>
+          {/* Stats Cards */}
+          <EmployeeStats employees={employees} />
+
+          {/* Filters and Search */}
+          <EmployeeFilters
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            statusFilter={statusFilter}
+            setStatusFilter={setStatusFilter}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            filterContract={filterContract}
+            setFilterContract={setFilterContract}
+            filterFunction={filterFunction}
+            setFilterFunction={setFilterFunction}
+            filterAdmission={filterAdmission}
+            setFilterAdmission={setFilterAdmission}
+            filterCity={filterCity}
+            setFilterCity={setFilterCity}
+            filterDismissal={filterDismissal}
+            setFilterDismissal={setFilterDismissal}
+            onClearFilters={clearFilters}
+          />
+
+          {/* Employees Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Funcionários ({filteredEmployees.length})
+                  </CardTitle>
+                  {selectedEmployees.length > 0 && validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600 dark:text-slate-400">
+                        {selectedEmployees.length} selecionados
+                      </span>
+                      <Button variant="outline" size="sm" onClick={handleBulkDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Selecionados
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <EmployeeTable
+                  employees={filteredEmployees}
+                  columns={columns}
+                  selectedEmployees={selectedEmployees}
+                  canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}
+                  onSelectEmployee={handleSelectEmployee}
+                  onSelectAll={handleSelectAll}
+                  onViewEmployee={handleViewEmployee}
+                  onEditEmployee={handleOpenEditDrawer}
+                  onShowHistory={handleShowHistory}
+                />
+              </CardContent>
+            </Card>
+          </motion.div>
+        </>
+      ) : (
+        <FunctionsTab currentUser={currentUser} />
+      )}
 
       {/* Column Configuration Modal */}
       {showColumnConfig && (

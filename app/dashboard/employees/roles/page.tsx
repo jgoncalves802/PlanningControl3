@@ -53,7 +53,7 @@ export default function RolesPage() {
         description: newRoleDescription.trim(),
         contractId: "1", // Default contract
         isActive: true
-      }
+    }
       setRoles(prev => [...prev, newRole])
       setNewRoleName("")
       setNewRoleDescription("")
@@ -102,7 +102,7 @@ export default function RolesPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {roles.map((role) => (
+                {roles.map((role) => (
               <div key={role.id} className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                   <h3 className="font-medium">{role.name}</h3>
@@ -118,19 +118,19 @@ export default function RolesPage() {
                         setShowEditDrawer(true)
                       }}
                     >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                        <Edit className="h-4 w-4" />
+                      </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteRole(role.id)}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                   </div>
                 )}
               </div>
-            ))}
+                ))}
           </div>
         </CardContent>
       </Card>
@@ -143,24 +143,24 @@ export default function RolesPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Nome da Função</label>
-                <input
+              <input
                   type="text"
                   value={newRoleName}
                   onChange={(e) => setNewRoleName(e.target.value)}
                   className="w-full p-2 border rounded-lg"
                   placeholder="Digite o nome da função"
                 />
-              </div>
+            </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Descrição</label>
-                <input
+              <input
                   type="text"
                   value={newRoleDescription}
                   onChange={(e) => setNewRoleDescription(e.target.value)}
                   className="w-full p-2 border rounded-lg"
                   placeholder="Digite a descrição da função"
                 />
-              </div>
+            </div>
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={() => setShowAddModal(false)}>

@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Employee } from '@/lib/mock-data';
 import { useEmployeeForm } from '@/lib/hooks/useEmployeeForm';
 import { toast } from 'react-hot-toast';
+import FunctionSelector from '@/components/functions/FunctionSelector';
 
 interface EmployeeEditModalProps {
   isOpen: boolean;
@@ -242,7 +243,8 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
       shift: formData.turno,
       address: formData.endereco,
       isActive: formData.status === 'active',
-      avatar: avatarPreview || formData.avatar
+      avatar: avatarPreview || formData.avatar,
+      companyFunctionId: formData.companyFunctionId || null
     };
 
     // Remover campos que podem causar problemas de chave estrangeira
@@ -656,12 +658,18 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                       Cargo
                     </label>
-                    <input
-                      type="text"
-                      value={formData.cargo || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cargo: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100"
-                      placeholder="Ex: Pedreiro, Eletricista, etc."
+                    <FunctionSelector
+                      value={formData.companyFunctionId || ''}
+                      onChange={(functionId, functionData) => {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          companyFunctionId: functionId,
+                          cargo: functionData?.name || '',
+                          mo: functionData?.laborType || ''
+                        }))
+                      }}
+                      placeholder="Selecione uma função"
+                      showCreateButton={false}
                     />
                   </div>
 

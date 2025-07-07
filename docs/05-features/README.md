@@ -1,230 +1,170 @@
-# ✨ Features
+# ✨ Features - Funcionalidades do Sistema
 
-Esta seção contém documentação sobre funcionalidades específicas e integrações do sistema.
+Esta seção documenta todas as funcionalidades específicas e integrações do projeto.
 
-## 📋 Documentos Disponíveis
+## 📋 Índice de Funcionalidades
 
-### [autenticacao.md](./autenticacao.md)
-- Sistema de autenticação com Clerk
-- Configuração de provedores OAuth
-- Proteção de rotas
-- Gerenciamento de usuários
-- Customização de páginas de login
-
-### [internacionalizacao.md](./internacionalizacao.md)
-- Suporte a múltiplos idiomas
-- Configuração do next-intl
-- Tradução de conteúdo
-- Formatação localizada
-- Roteamento internacionalizado
-
-### [validacao-formularios.md](./validacao-formularios.md)
-- Validação avançada com Zod
-- React Hook Form integration
-- Validações brasileiras (CPF, CNPJ, CEP)
-- Feedback de erro em tempo real
-- Formulários complexos
-
-### [whatsapp-widget.md](./whatsapp-widget.md)
-- Widget de contato flutuante
-- Interface simulada do WhatsApp
-- Integração com webhooks (n8n, Zapier, Make.com)
-- Encaminhamento para CRM
-- Configuração flexível de payload
-
-### [supabase-integration.md](./supabase-integration.md)
-- Integração completa com Supabase otimizada
-- Sistema de migrações corrigido e melhorado
-- Row Level Security (RLS) com integração Clerk
-- Real-time subscriptions automáticas
-- Setup local simplificado com Supabase CLI
-
-### [zustand-state-management.md](./zustand-state-management.md)
-- Gerenciamento de estado global com Zustand
-- Stores otimizados e TypeScript
-- Persistência e sincronização
-- DevTools e debugging
-- Padrões e boas práticas
-
-### [tanstack-query.md](./tanstack-query.md)
-- Gerenciamento de estado do servidor com TanStack Query
-- Cache inteligente e background updates
-- Integração com Supabase e APIs
-- Mutations e optimistic updates
-- Real-time synchronization
-
-### [real-time-notifications.md](./real-time-notifications.md)
-- Sistema de notificações em tempo real
-- Integração TanStack Query + Supabase + Zustand
-- Subscriptions automáticas com cache inteligente
-- Toast notifications e persistência
-- Optimistic updates e rollback automático
-- Padrões de performance e UX
-
-## 🚀 Funcionalidades Principais
-
-### 🔐 Autenticação
-- **Clerk Integration** - Autenticação moderna e segura
-- **OAuth Providers** - Google, GitHub, Facebook
-- **Role-based Access** - Controle de permissões
-- **Session Management** - Gerenciamento de sessão
-- **Custom Pages** - Páginas personalizadas
+### 🔐 Autenticação e Segurança
+- **[autenticacao.md](./autenticacao.md)** - Sistema de autenticação com Clerk
+  - Login/logout com múltiplos provedores
+  - Controle de acesso e permissões
+  - Proteção de rotas
+  - Integração com Supabase
 
 ### 🌍 Internacionalização
-- **Multi-language** - Português e Inglês
-- **Auto-redirect** - Redirecionamento automático de locale
-- **Dynamic Switching** - Troca dinâmica de idioma
-- **Localized Content** - Conteúdo localizado
-- **Date/Number Formatting** - Formatação regional
-- **SEO Friendly** - URLs internacionalizadas
+- **[internacionalizacao.md](./internacionalizacao.md)** - Suporte a múltiplos idiomas
+  - Configuração pt-BR e en
+  - Sistema de traduções
+  - Formatação de datas e números
+  - Componentes internacionalizados
 
-### 📝 Formulários Avançados
-- **Brazilian Validations** - CPF, CNPJ, CEP
-- **Real-time Validation** - Validação em tempo real
-- **Error Handling** - Tratamento robusto de erros
-- **Form State** - Gerenciamento de estado
-- **Auto-completion** - Preenchimento automático
+### 📝 Formulários e Validação
+- **[validacao-formularios.md](./validacao-formularios.md)** - Validação avançada
+  - React Hook Form + Zod
+  - Validação em tempo real
+  - Mensagens de erro personalizadas
+  - Formulários complexos multi-step
 
-### 🎨 Temas e Personalização
-- **Dark/Light Mode** - Alternância de temas
-- **Custom Branding** - Marca personalizada
-- **Responsive Design** - Design responsivo
-- **Accessibility** - Acessibilidade completa
+### 🏢 Gestão Organizacional
+- **[sistema-funcoes.md](./sistema-funcoes.md)** - Sistema de funções e cargos
+  - CRUD completo de funções
+  - Classificação de mão de obra (Direta/Indireta)
+  - Integração com funcionários
+  - Filtros avançados e estatísticas
+  - Exportação de dados
 
-### 🏪 Gerenciamento de Estado
-- **Zustand** - Estado global performático para UI/cliente
-- **TanStack Query** - Cache inteligente para dados do servidor
-- **TypeScript** - Tipagem completa em ambos
-- **Persistência** - LocalStorage automático (Zustand)
-- **Cache Management** - Cache automático e background updates (TanStack Query)
-- **DevTools** - Debug e monitoramento para ambos
-- **Sync** - Sincronização com Clerk/APIs
+### 💬 Comunicação
+- **[whatsapp-widget.md](./whatsapp-widget.md)** - Widget de contato WhatsApp
+  - Botão flutuante personalizado
+  - Integração com WhatsApp Business
+  - Configuração responsiva
+  - Suporte a dark mode
 
-### 📊 Dashboard e Analytics
-- **Interactive Charts** - Gráficos interativos
-- **Real-time Data** - Dados em tempo real
-- **Export Functions** - Funções de exportação
-- **Filtering/Sorting** - Filtros e ordenação
+### 🔄 Gerenciamento de Estado
+- **[zustand-state-management.md](./zustand-state-management.md)** - Estado client-side
+  - Configuração do Zustand
+  - Padrões de uso
+  - Persistência de dados
+  - DevTools integration
 
-## 🔧 Integrações Brasileiras
+- **[tanstack-query.md](./tanstack-query.md)** - Estado server-side
+  - Cache inteligente
+  - Sincronização automática
+  - Otimizações de performance
+  - Mutations e queries
 
-### APIs Nacionais
-- **ViaCEP** - Consulta de endereços
-- **Correios** - Cálculo de frete
-- **IBGE** - Dados geográficos
-- **Banco Central** - Cotações
+### 🗄️ Banco de Dados
+- **[supabase-integration.md](./supabase-integration.md)** - Integração com Supabase
+  - Configuração e setup
+  - Autenticação integrada
+  - Realtime subscriptions
+  - Row Level Security (RLS)
 
-### Validações
-- **CPF** - Cadastro de Pessoa Física
-- **CNPJ** - Cadastro Nacional de Pessoa Jurídica
-- **CEP** - Código de Endereçamento Postal
-- **Telefone** - Números brasileiros
+### 🔔 Notificações
+- **[real-time-notifications.md](./real-time-notifications.md)** - Notificações em tempo real
+  - WebSockets com Supabase
+  - Sistema de toast notifications
+  - Notificações push
+  - Configuração de preferências
 
-### Formatações
-- **Moeda** - Real brasileiro (R$)
-- **Data** - Formato brasileiro (dd/mm/aaaa)
-- **Documentos** - Máscara automática
+## 🚀 Funcionalidades por Categoria
 
-## 💡 Como Usar Funcionalidades
+### 👥 Recursos Humanos
+- **Sistema de Funções**: Gestão completa de cargos organizacionais
+- **Classificação de Mão de Obra**: Direta vs Indireta
+- **Integração com Funcionários**: Associação automática de funções
 
-### Autenticação
-```tsx
-import { useUser } from '@clerk/nextjs';
+### 🎨 Interface e UX
+- **Dark Mode**: Suporte completo a temas
+- **Responsividade**: Design mobile-first
+- **Animações**: Transições suaves com Framer Motion
+- **Acessibilidade**: ARIA labels e navegação por teclado
 
-function ProtectedPage() {
-  const { isSignedIn, user } = useUser();
-  
-  if (!isSignedIn) {
-    return <SignInButton />;
-  }
-  
-  return <Dashboard user={user} />;
-}
-```
+### 📊 Dados e Analytics
+- **Exportação CSV**: Dados estruturados
+- **Estatísticas em Tempo Real**: Dashboards dinâmicos
+- **Filtros Avançados**: Busca e filtros inteligentes
+- **Cache Inteligente**: Performance otimizada
 
-### Validação de Formulários
-```tsx
-import { useFormValidation } from '@/hooks/useFormValidation';
-import { cpfSchema } from '@/lib/validation/schemas';
+### 🔧 Desenvolvimento
+- **TypeScript**: Tipagem completa
+- **Validação Runtime**: Zod schemas
+- **Error Handling**: Tratamento robusto de erros
+- **Logging**: Sistema de logs estruturado
 
-function UserForm() {
-  const { register, handleSubmit, errors } = useFormValidation({
-    schema: cpfSchema
-  });
-  
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register('cpf')} />
-      {errors.cpf && <span>{errors.cpf.message}</span>}
-    </form>
-  );
-}
-```
+## 🎯 Roadmap de Funcionalidades
 
-### Internacionalização
-```tsx
-import { useTranslations } from 'next-intl';
+### 🔄 Em Desenvolvimento
+- **Hierarquia de Funções**: Níveis organizacionais
+- **Sistema de Competências**: Habilidades por função
+- **Relatórios Avançados**: Analytics de RH
+- **Integração API**: Conectores externos
 
-function WelcomeMessage() {
-  const t = useTranslations('Navigation');
-  
-  return <h1>{t('welcome')}</h1>;
-}
-```
+### 📋 Planejado
+- **Workflow de Aprovação**: Fluxos de aprovação
+- **Auditoria Avançada**: Logs detalhados
+- **Backup Automático**: Backup incremental
+- **Multi-tenancy**: Suporte a múltiplas empresas
 
-### Gerenciamento de Estado
+### 💡 Ideias Futuras
+- **IA/ML**: Sugestões inteligentes
+- **Mobile App**: Aplicativo nativo
+- **Integração ERP**: Conectores para ERPs
+- **API Pública**: API para terceiros
 
-#### Cliente State (Zustand)
-```tsx
-import { useAuthUser, useShowToast, useSetTheme } from '@/store';
+## 📚 Como Usar Esta Documentação
 
-function MyComponent() {
-  // ✅ Seletores individuais (melhor performance)
-  const user = useAuthUser();
-  const showToast = useShowToast();
-  const setTheme = useSetTheme();
-  
-  const handleAction = () => {
-    showToast({
-      type: 'success',
-      message: 'Ação realizada com sucesso!',
-    });
-  };
-  
-  return <Button onClick={handleAction}>Executar</Button>;
-}
-```
+### 🔍 Para Encontrar Funcionalidades
+1. **Busque por categoria** no índice acima
+2. **Use a busca** no seu editor/navegador
+3. **Consulte o README principal** para visão geral
 
-#### Server State (TanStack Query)
-```tsx
-import { useNotificationsQuery } from '@/hooks/queries/useNotifications';
-import { useMarkNotificationAsRead } from '@/hooks/mutations/useNotificationMutations';
+### 📖 Para Implementar Funcionalidades
+1. **Leia a documentação** da funcionalidade específica
+2. **Consulte os exemplos** de código
+3. **Verifique as dependências** necessárias
+4. **Siga os padrões** estabelecidos
 
-function NotificationsList() {
-  // Cache inteligente + real-time updates
-  const { data: notifications, isLoading } = useNotificationsQuery();
-  const markAsRead = useMarkNotificationAsRead();
-  
-  if (isLoading) return <Spinner />;
-  
-  return (
-    <div>
-      {notifications.map(notification => (
-        <div key={notification.id}>
-          {notification.title}
-          <Button onClick={() => markAsRead.mutate(notification.id)}>
-            Marcar como lida
-          </Button>
-        </div>
-      ))}
-    </div>
-  );
-}
-```
+### 🛠️ Para Desenvolvedores
+1. **Consulte o guia técnico** correspondente
+2. **Verifique a arquitetura** do sistema
+3. **Siga as convenções** de código
+4. **Implemente testes** adequados
 
-## 🔗 Próximos Passos
+## 🔗 Links Relacionados
 
-Para implementar funcionalidades:
-- **[Configuration](../02-configuration/)** - Configure as integrações
-- **[Components](../04-components/)** - Use componentes relacionados
-- **[Deployment](../06-deployment/)** - Deploy com funcionalidades ativas
+### 📋 Documentação Técnica
+- **[Guia de Desenvolvimento](../03-development/README.md)** - Aspectos técnicos
+- **[Arquitetura](../04-architecture/README.md)** - Padrões arquiteturais
+- **[Componentes](../04-components/README.md)** - UI e design system
+
+### 🚀 Configuração
+- **[Getting Started](../01-getting-started/README.md)** - Primeiros passos
+- **[Configuração](../02-configuration/README.md)** - Setup e personalização
+- **[Deploy](../06-deployment/README.md)** - Produção e deploy
+
+## 💡 Contribuindo com Novas Funcionalidades
+
+### 📝 Documentação
+1. **Crie um arquivo** na pasta correspondente
+2. **Siga o template** das funcionalidades existentes
+3. **Inclua exemplos** práticos
+4. **Atualize este README** com a nova funcionalidade
+
+### 🔧 Implementação
+1. **Siga os padrões** estabelecidos
+2. **Implemente testes** adequados
+3. **Documente a API** se aplicável
+4. **Atualize o changelog** com as mudanças
+
+### 🎯 Boas Práticas
+- **Mantenha consistência** com funcionalidades existentes
+- **Priorize acessibilidade** e usabilidade
+- **Otimize performance** desde o início
+- **Considere internacionalização** em todas as features
+
+---
+
+**Última atualização**: Janeiro 2025  
+**Funcionalidades documentadas**: 10+  
+**Próximas adições**: Sistema de competências, hierarquia de funções, relatórios avançados

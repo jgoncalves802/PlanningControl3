@@ -8,6 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Employee } from '@/lib/mock-data';
 import { useEmployeeForm } from '@/lib/hooks/useEmployeeForm';
 import { toast } from 'react-hot-toast';
+import FunctionSelector from '@/components/functions/FunctionSelector';
 
 interface EmployeeAddModalProps {
   isOpen: boolean;
@@ -145,6 +146,7 @@ const EmployeeAddModal: React.FC<EmployeeAddModalProps> = ({
       admissionDate: formData.dataEntrada ? new Date(formData.dataEntrada) : new Date(),
       currentContract: formData.contrato,
       currentContractId: formData.contrato,
+      companyFunctionId: formData.companyFunctionId || null,
       isActive: true
     };
 
@@ -643,16 +645,24 @@ const EmployeeAddModal: React.FC<EmployeeAddModalProps> = ({
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                       {t('form.cargo')} *
                     </label>
-                    <input
-                      type="text"
-                      value={formData.cargo || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cargo: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 ${
-                        errors.cargo ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
-                      }`}
-                      placeholder="Ex: Pedreiro, Eletricista, etc."
+                    <FunctionSelector
+                      value={formData.companyFunctionId || ''}
+                      onChange={(functionId, functionData) => {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          companyFunctionId: functionId,
+                          cargo: functionData?.name || '',
+                          mo: functionData?.laborType || ''
+                        }))
+                        if (errors.cargo) {
+                          setErrors(prev => ({ ...prev, cargo: '' }))
+                        }
+                      }}
+                      error={errors.cargo}
+                      placeholder="Selecione uma função"
+                      required={true}
+                      showCreateButton={false}
                     />
-                    {errors.cargo && <span className="text-xs text-red-500 mt-1">{errors.cargo}</span>}
                   </div>
 
                   <div>

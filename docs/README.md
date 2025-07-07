@@ -48,6 +48,7 @@ Guias de desenvolvimento e arquitetura.
 - **[api-examples.md](./03-development/api-examples.md)** - Exemplos práticos de APIs
 - **[supabase-local.md](./03-development/supabase-local.md)** - Configuração Supabase local
 - **[database-migrations.md](./03-development/database-migrations.md)** - Sistema de migrações do banco
+- **[guia-sistema-funcoes.md](./03-development/guia-sistema-funcoes.md)** - Guia técnico do sistema de funções
 
 ### 🏗️ [04 - Architecture](./04-architecture/)
 Arquitetura e padrões do sistema.
@@ -73,6 +74,7 @@ Funcionalidades específicas e integrações.
 - **[zustand-state-management.md](./05-features/zustand-state-management.md)** - Gerenciamento de estado com Zustand
 - **[tanstack-query.md](./05-features/tanstack-query.md)** - Gerenciamento de servidor state com TanStack Query
 - **[real-time-notifications.md](./05-features/real-time-notifications.md)** - Sistema de notificações em tempo real
+- **[sistema-funcoes.md](./05-features/sistema-funcoes.md)** - Sistema de gestão de funções e cargos organizacionais
 
 ### 🚀 [06 - Deployment](./06-deployment/)
 Deploy e produção.
@@ -95,6 +97,7 @@ Deploy e produção.
 - **WhatsApp Widget**: [05-features/whatsapp-widget.md](./05-features/whatsapp-widget.md)
 - **Analytics**: [02-configuration/analytics.md](./02-configuration/analytics.md)
 - **Deploy**: [06-deployment/deploy.md](./06-deployment/deploy.md)
+- **Sistema de Funções**: [05-features/sistema-funcoes.md](./05-features/sistema-funcoes.md) + [03-development/guia-sistema-funcoes.md](./03-development/guia-sistema-funcoes.md)
 
 ### Por Tipo de Tarefa:
 - **Configuração Inicial**: Comece com [01-getting-started/](./01-getting-started/)
@@ -118,5 +121,5 @@ Deploy e produção.
 ---
 
 **Última atualização**: Janeiro 2025  
-**Versão**: 1.2.1  
-**Novidades**: Sistema de notificações em tempo real com TanStack Query, integração com analytics e documentação atualizada
+**Versão**: 1.3.0  
+**Novidades**: Sistema completo de gestão de funções e cargos organizacionais com classificação de mão de obra, integração com funcionários e documentação técnica detalhada
