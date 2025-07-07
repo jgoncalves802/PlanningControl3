@@ -44,7 +44,7 @@ import {
   User,
   UserRole
 } from '@/lib/auth'
-import { useTranslations } from 'next-intl'
+// Removido useTranslations para evitar erro de contexto
 import { toast } from 'react-hot-toast'
 import { Toaster } from 'react-hot-toast'
 import { saveAs } from 'file-saver'
@@ -66,27 +66,29 @@ interface ColumnConfig {
 }
 
 export default function EmployeesPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [userPermissions, setUserPermissions] = useState<any>(null)
+  // Função simples para compatibilidade com traduções
+  const t = (key: string, options?: { default?: string }) => {
+    return options?.default || key;
+  };
+
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
-  const [showColumnConfig, setShowColumnConfig] = useState(false)
   const [columns, setColumns] = useState<ColumnConfig[]>([])
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showViewModal, setShowViewModal] = useState(false)
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [userPermissions, setUserPermissions] = useState<any>(null)
   const [newEmployee, setNewEmployee] = useState<Partial<Employee>>({ status: 'active' })
   const [step, setStep] = useState(0);
   const [showSuccess, setShowSuccess] = useState(false);
-  const t = useTranslations('employees');
   const steps = [
-    t('form.steps.0'),
-    t('form.steps.endereco'),
-    t('form.steps.1'),
-    t('form.steps.2'),
-    t('form.steps.3'),
+    'Dados Pessoais',
+    'Endereço',
+    'Dados Profissionais',
+    'Documentos',
+    'Observações'
   ];
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [address, setAddress] = useState({
@@ -130,23 +132,23 @@ export default function EmployeesPage() {
   const [importProgress, setImportProgress] = useState(0);
   const [importCancelled, setImportCancelled] = useState(false);
 
-  // Dentro do componente EmployeesPage, após obter t:
+  // Configuração das colunas da tabela com textos estáticos
   const defaultColumns: ColumnConfig[] = [
-    { key: 'name', label: t('form.name'), enabled: true, width: '230px' },
-    { key: 'cpf', label: t('form.cpf'), enabled: true, width: '150px' },
-    { key: 'matricula', label: t('form.matricula'), enabled: true, width: '90px' },
-    { key: 'cargo', label: t('form.cargo'), enabled: true, width: '150px' },
-    { key: 'status', label: t('form.status'), enabled: true, width: '90px' },
-    { key: 'cidade', label: t('form.cidade'), enabled: true, width: '110px' },
-    { key: 'telefone', label: t('form.phone'), enabled: false, width: '110px' },
-    { key: 'dataEntrada', label: t('form.data_entrada'), enabled: true, width: '150px' },
-    { key: 'contrato', label: t('form.contract'), enabled: true, width: '110px' },
-    { key: 'centroCusto', label: t('form.centroCusto'), enabled: true, width: '150px' },
-    { key: 'turno', label: t('form.turno'), enabled: false, width: '80px' },
-    { key: 'obra', label: t('form.obra'), enabled: false, width: '100px' },
-    { key: 'primeiraExperiencia', label: t('form.primeira_experiencia'), enabled: false, width: '110px' },
-    { key: 'segundaExperiencia', label: t('form.segunda_experiencia'), enabled: false, width: '110px' },
-    { key: 'previsaoObra', label: t('form.previsao_obra'), enabled: false, width: '100px' },
+    { key: 'name', label: 'Nome', enabled: true, width: '230px' },
+    { key: 'cpf', label: 'CPF', enabled: true, width: '150px' },
+    { key: 'matricula', label: 'Matrícula', enabled: true, width: '90px' },
+    { key: 'cargo', label: 'Cargo', enabled: true, width: '150px' },
+    { key: 'status', label: 'Status', enabled: true, width: '90px' },
+    { key: 'cidade', label: 'Cidade', enabled: true, width: '110px' },
+    { key: 'telefone', label: 'Telefone', enabled: false, width: '110px' },
+    { key: 'dataEntrada', label: 'Data de Entrada', enabled: true, width: '150px' },
+    { key: 'contrato', label: 'Contrato', enabled: true, width: '110px' },
+    { key: 'centroCusto', label: 'Centro de Custo', enabled: true, width: '150px' },
+    { key: 'turno', label: 'Turno', enabled: false, width: '80px' },
+    { key: 'obra', label: 'Obra', enabled: false, width: '100px' },
+    { key: 'primeiraExperiencia', label: 'Primeira Experiência', enabled: false, width: '110px' },
+    { key: 'segundaExperiencia', label: 'Segunda Experiência', enabled: false, width: '110px' },
+    { key: 'previsaoObra', label: 'Previsão da Obra', enabled: false, width: '100px' },
     { key: 'mo', label: 'Tipo de Mão de Obra', enabled: true, width: '130px' },
     { key: 'horasNormaisTrabalhadas', label: 'Horas Normais Trabalhadas', enabled: false, width: '120px' },
     { key: 'horasExtrasTrabalhadas', label: 'Horas Extras Trabalhadas', enabled: false, width: '120px' },
@@ -156,7 +158,7 @@ export default function EmployeesPage() {
     { key: 'pontoReferencia', label: 'Ponto de Referência', enabled: false, width: '120px' },
     { key: 'statusBancodoc', label: 'Status Bancário/Documental', enabled: false, width: '120px' },
     { key: 'efetivoRDO', label: 'Efetivo Apontado em RDO', enabled: false, width: '120px' },
-    { key: 'dismissalDate', label: t('form.data_demissao') || 'Data de Demissão', enabled: false, width: '110px' },
+    { key: 'dismissalDate', label: 'Data de Demissão', enabled: false, width: '110px' },
   ];
 
   // Inicializar usuário e permissões
@@ -322,9 +324,9 @@ export default function EmployeesPage() {
   function validateStep(currentStep: number) {
     const newErrors: { [key: string]: string } = {};
     if (currentStep === 0) {
-      if (!newEmployee.name) newErrors.name = t('form.error.name_required');
-      if (!newEmployee.cpf) newErrors.cpf = t('form.error.cpf_required');
-      else if (!validateCPF(newEmployee.cpf)) newErrors.cpf = t('form.error.cpf_invalid');
+      if (!newEmployee.name) newErrors.name = 'Nome é obrigatório';
+      if (!newEmployee.cpf) newErrors.cpf = 'CPF é obrigatório';
+      else if (!validateCPF(newEmployee.cpf)) newErrors.cpf = 'CPF inválido';
       if (!newEmployee.phone) newErrors.phone = 'Telefone obrigatório';
       else if (!/^\(\d{2}\) \d{4,5}-\d{4}$/.test(maskPhone(newEmployee.phone))) newErrors.phone = 'Telefone inválido';
     }
@@ -359,7 +361,7 @@ export default function EmployeesPage() {
       )
     ) {
       setErrors(prev => ({ ...prev, cpf: 'CPF já cadastrado para outro funcionário ativo' }));
-      toast.error(t('form.error.cpf_duplicate', { default: 'Já existe um colaborador ativo com este CPF!' }));
+      toast.error('Já existe um colaborador ativo com este CPF!');
       return;
     }
     // Montar payload para o backend (adequado para todos os campos obrigatórios)
@@ -407,10 +409,10 @@ export default function EmployeesPage() {
         setAddress({ cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' });
         setStep(0);
         setErrors({});
-        toast.success(t('form.success', { default: 'Funcionário cadastrado com sucesso!' }));
+        toast.success('Funcionário cadastrado com sucesso!');
       },
       onError: (error: any) => {
-        toast.error(t('form.error.generic', { default: 'Erro ao cadastrar funcionário.' }));
+        toast.error('Erro ao cadastrar funcionário.');
       },
     });
   };
