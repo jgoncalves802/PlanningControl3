@@ -14,10 +14,24 @@ export function useCreateEmployee() {
 export function useUpdateEmployee() {
   const queryClient = useQueryClient();
   return useMutation<{ id: string; updates: any }, any, { id: string; updates: any }>({
-    mutationFn: ({ id, updates }) => updateEmployee(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+    mutationFn: ({ id, updates }) => {
+      console.log('=== MUTATION FUNCTION ===');
+      console.log('ID:', id);
+      console.log('Updates:', updates);
+      return updateEmployee(id, updates);
     },
+    onSuccess: (data, variables) => {
+      console.log('=== MUTATION onSuccess ===');
+      console.log('Data returned:', data);
+      console.log('Variables used:', variables);
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      console.log('Query invalidated');
+    },
+    onError: (error, variables) => {
+      console.log('=== MUTATION onError ===');
+      console.log('Error:', error);
+      console.log('Variables used:', variables);
+    }
   });
 }
 

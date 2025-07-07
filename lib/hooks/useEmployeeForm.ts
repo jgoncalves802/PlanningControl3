@@ -109,8 +109,15 @@ export function useEmployeeForm(initialData: EmployeeFormData = { status: 'activ
       if (!formData.name) newErrors.name = 'Nome é obrigatório';
       if (!formData.cpf) newErrors.cpf = 'CPF é obrigatório';
       else if (!validateCPF(formData.cpf)) newErrors.cpf = 'CPF inválido';
-      if (!formData.phone) newErrors.phone = 'Telefone obrigatório';
-      else if (!/^\(\d{2}\) \d{4,5}-\d{4}$/.test(maskPhone(formData.phone))) newErrors.phone = 'Telefone inválido';
+    }
+    if (currentStep === 2) {
+      if (formData.phone && !/^\(\d{2}\) \d{4,5}-\d{4}$/.test(maskPhone(formData.phone))) {
+        newErrors.phone = 'Telefone inválido';
+      }
+    }
+    if (currentStep === 4) {
+      if (!formData.cargo) newErrors.cargo = 'Cargo é obrigatório';
+      if (!formData.dataEntrada) newErrors.dataEntrada = 'Data de entrada é obrigatória';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;

@@ -38,6 +38,7 @@ import EmployeeTable from '@/components/employees/EmployeeTable'
 import EmployeeFilters from '@/components/employees/EmployeeFilters'
 import EmployeeStats from '@/components/employees/EmployeeStats'
 import EmployeeAddModal from '@/components/employees/EmployeeAddModal'
+import EmployeeEditModal from '@/components/employees/EmployeeEditModal'
 import EmployeeViewModal from '@/components/employees/EmployeeViewModal'
 import EmployeeHistoryModal from '@/components/employees/EmployeeHistoryModal'
 import { useEmployeeFilters } from '@/lib/hooks/useEmployeeFilters'
@@ -125,7 +126,7 @@ export default function EmployeesPage() {
     
     const permissions = getUserPermissions(user)
     setUserPermissions(permissions)
-    
+
     // Carregar configuração de colunas salva
     const savedColumns = localStorage.getItem('employee-columns')
     if (savedColumns) {
@@ -291,8 +292,8 @@ export default function EmployeesPage() {
     const doc = new jsPDF({ orientation: 'landscape' })
     const companyName = currentUser?.name || 'Empresa'
     
-    doc.setFontSize(14)
-    doc.text(companyName, 14, 14)
+      doc.setFontSize(14)
+      doc.text(companyName, 14, 14)
     doc.text('Funcionários', 14, 28)
     
     const tableData = filteredEmployees.map(row => exportColumns.map(col => row[col.key] ?? ''))
@@ -341,27 +342,27 @@ export default function EmployeesPage() {
   return (
     <>
       <Toaster position="top-center" />
-      <div className="space-y-6">
-        {/* Header com Informações de Permissão */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">Funcionários</h1>
-            <div className="flex items-center gap-4">
-              <p className="text-gray-600 dark:text-slate-400">Gerencie sua força de trabalho e informações dos funcionários</p>
-              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                  {getRoleDisplayName(currentUser.role)}
+    <div className="space-y-6">
+      {/* Header com Informações de Permissão */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">Funcionários</h1>
+          <div className="flex items-center gap-4">
+            <p className="text-gray-600 dark:text-slate-400">Gerencie sua força de trabalho e informações dos funcionários</p>
+            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                {getRoleDisplayName(currentUser.role)}
+              </span>
+              {!userPermissions.canViewAllContracts && (
+                <span className="text-xs text-blue-700 dark:text-blue-400">
+                  ({userPermissions.allowedContracts.length} contrato{userPermissions.allowedContracts.length !== 1 ? 's' : ''})
                 </span>
-                {!userPermissions.canViewAllContracts && (
-                  <span className="text-xs text-blue-700 dark:text-blue-400">
-                    ({userPermissions.allowedContracts.length} contrato{userPermissions.allowedContracts.length !== 1 ? 's' : ''})
-                  </span>
-                )}
-              </div>
+              )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+        </div>
+        <div className="flex items-center gap-3">
             <ImportEmployeesDialog 
               onImportComplete={(result) => {
                 if (result.summary.created > 0) {
@@ -369,53 +370,53 @@ export default function EmployeesPage() {
                 }
               }}
             />
-            <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
-              <Settings className="h-4 w-4 mr-2" />
-              Colunas
-            </Button>
-            <div className="dropdown dropdown-end relative" ref={exportMenuRef}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowExportMenu((v) => !v)}
+          <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
+            <Settings className="h-4 w-4 mr-2" />
+            Colunas
+          </Button>
+          <div className="dropdown dropdown-end relative" ref={exportMenuRef}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowExportMenu((v) => !v)}
                 className="flex items-center gap-2"
-              >
-                <Download className="h-4 w-4 mr-1" />
-                <span className="font-semibold">Exportar</span>
-              </Button>
-              {showExportMenu && (
+            >
+              <Download className="h-4 w-4 mr-1" />
+              <span className="font-semibold">Exportar</span>
+          </Button>
+            {showExportMenu && (
                 <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
                   <li>
                     <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30">
-                      Exportar CSV
-                    </button>
-                  </li>
+                    Exportar CSV
+                  </button>
+                </li>
                   <li>
                     <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30">
-                      Exportar XLSX
-                    </button>
-                  </li>
+                    Exportar XLSX
+                  </button>
+                </li>
                   <li>
                     <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-2 px-3 py-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30">
-                      Exportar PDF
-                    </button>
-                  </li>
-                </ul>
-              )}
-            </div>
-            {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-              <Button size="sm" onClick={() => setShowAddModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Funcionário
-              </Button>
+                    Exportar PDF
+                  </button>
+                </li>
+              </ul>
             )}
           </div>
+          {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+            <Button size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Adicionar Funcionário
+            </Button>
+          )}
         </div>
+      </div>
 
-        {/* Stats Cards */}
+      {/* Stats Cards */}
         <EmployeeStats employees={employees} />
 
-        {/* Filters and Search */}
+      {/* Filters and Search */}
         <EmployeeFilters
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -436,33 +437,33 @@ export default function EmployeesPage() {
           onClearFilters={clearFilters}
         />
 
-        {/* Employees Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-        >
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Funcionários ({filteredEmployees.length})
-                </CardTitle>
-                {selectedEmployees.length > 0 && validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-slate-400">
-                      {selectedEmployees.length} selecionados
-                    </span>
-                    <Button variant="outline" size="sm" onClick={handleBulkDelete}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Selecionados
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
+      {/* Employees Table */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.3 }}
+      >
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Funcionários ({filteredEmployees.length})
+              </CardTitle>
+              {selectedEmployees.length > 0 && validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-slate-400">
+                    {selectedEmployees.length} selecionados
+                  </span>
+                  <Button variant="outline" size="sm" onClick={handleBulkDelete}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir Selecionados
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
               <EmployeeTable
                 employees={filteredEmployees}
                 columns={columns}
@@ -474,59 +475,59 @@ export default function EmployeesPage() {
                 onEditEmployee={handleOpenEditDrawer}
                 onShowHistory={handleShowHistory}
               />
-            </CardContent>
-          </Card>
-        </motion.div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
-        {/* Column Configuration Modal */}
-        {showColumnConfig && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Configurar Colunas</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setShowColumnConfig(false)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+      {/* Column Configuration Modal */}
+      {showColumnConfig && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-slate-800 rounded-2xl p-8 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-100">Configurar Colunas</h3>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setShowColumnConfig(false)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
-              <div className="space-y-3">
-                {columns.map((column) => (
-                  <div key={column.key} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-slate-700">
-                    <span className="text-sm font-medium text-gray-900 dark:text-slate-100">{column.label}</span>
-                    <button
-                      onClick={() => handleColumnToggle(column.key)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        column.enabled ? 'bg-primary' : 'bg-gray-200 dark:bg-slate-600'
+            <div className="space-y-3">
+              {columns.map((column) => (
+                <div key={column.key} className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-slate-700">
+                  <span className="text-sm font-medium text-gray-900 dark:text-slate-100">{column.label}</span>
+                  <button
+                    onClick={() => handleColumnToggle(column.key)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      column.enabled ? 'bg-primary' : 'bg-gray-200 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        column.enabled ? 'translate-x-6' : 'translate-x-1'
                       }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                          column.enabled ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                ))}
-              </div>
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
 
-              <div className="flex justify-end mt-6">
-                <Button onClick={() => setShowColumnConfig(false)}>
-                  Fechar
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
+            <div className="flex justify-end mt-6">
+              <Button onClick={() => setShowColumnConfig(false)}>
+                Fechar
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
-        {/* Add Employee Modal */}
+      {/* Add Employee Modal */}
         <EmployeeAddModal
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
@@ -546,7 +547,38 @@ export default function EmployeesPage() {
           isLoading={createEmployeeMutation.isPending}
         />
 
-        {/* View Employee Modal */}
+      {/* Edit Employee Modal */}
+        <EmployeeEditModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          employee={selectedEmployee}
+          onSubmit={async (employeeData) => {
+            console.log('=== MUTATION INICIADA ===');
+            console.log('Employee ID:', selectedEmployee?.id);
+            console.log('Data para update:', employeeData);
+            
+            return new Promise((resolve, reject) => {
+              updateEmployeeMutation.mutate({ id: selectedEmployee!.id, updates: employeeData }, {
+                onSuccess: (data) => {
+                  console.log('=== MUTATION SUCCESS ===');
+                  console.log('Dados retornados:', data);
+                  toast.success('Funcionário atualizado com sucesso!');
+                  setShowEditModal(false); // Fecha o modal apenas após sucesso
+                  resolve(data);
+                },
+                onError: (error) => {
+                  console.error('=== MUTATION ERROR ===');
+                  console.error('Erro ao atualizar funcionário:', error);
+                  toast.error('Erro ao atualizar funcionário');
+                  reject(error);
+                }
+              });
+            });
+          }}
+          isLoading={updateEmployeeMutation.isPending}
+        />
+
+      {/* View Employee Modal */}
         <EmployeeViewModal
           isOpen={showViewModal}
           onClose={() => setShowViewModal(false)}
@@ -560,24 +592,24 @@ export default function EmployeesPage() {
           employee={historyEmployee}
         />
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600 dark:text-slate-400">
-            Mostrando {filteredEmployees.length} de {employees.length} funcionários
-          </p>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" size="sm" disabled>
-              Anterior
-            </Button>
-            <Button variant="outline" size="sm">
-              1
-            </Button>
-            <Button variant="outline" size="sm" disabled>
-              Próximo
-            </Button>
-          </div>
+      {/* Pagination */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-gray-600 dark:text-slate-400">
+          Mostrando {filteredEmployees.length} de {employees.length} funcionários
+        </p>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" disabled>
+            Anterior
+          </Button>
+          <Button variant="outline" size="sm">
+            1
+          </Button>
+          <Button variant="outline" size="sm" disabled>
+            Próximo
+          </Button>
         </div>
       </div>
+    </div>
     </>
   )
-} 
+}

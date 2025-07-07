@@ -18,12 +18,26 @@ export async function createEmployee(data) {
 }
 
 export async function updateEmployee(id, updates) {
+  console.log('=== DEBUG EMPLOYEE SERVICE ===');
+  console.log('ID:', id);
+  console.log('Updates:', updates);
+  console.log('Updates JSON:', JSON.stringify(updates));
+  
   const res = await fetch(`/api/employees/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(updates),
   });
-  if (!res.ok) throw new Error('Erro ao atualizar funcionário');
+  
+  console.log('Response status:', res.status);
+  console.log('Response headers:', Object.fromEntries(res.headers.entries()));
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Response error text:', errorText);
+    throw new Error('Erro ao atualizar funcionário');
+  }
+  
   return res.json();
 }
 

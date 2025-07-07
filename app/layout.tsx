@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className="antialiased min-h-screen bg-background">
         <ReactQueryProvider>
-          {children}
+            {children}
         </ReactQueryProvider>
       </body>
     </html>

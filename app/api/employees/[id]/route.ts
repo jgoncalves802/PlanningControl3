@@ -59,9 +59,9 @@ function normalizeTextFields(data: any): any {
 
 export async function GET(req: NextRequest, { params }) {
   try {
-    const { id } = params;
-    const employee = await prisma.employee.findUnique({ where: { id } });
-    if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  const { id } = params;
+  const employee = await prisma.employee.findUnique({ where: { id } });
+  if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     
     return NextResponse.json(employee, {
       headers: {
@@ -85,7 +85,57 @@ export async function GET(req: NextRequest, { params }) {
 export async function PUT(req: NextRequest, { params }) {
   try {
     const { id } = params;
-    const rawUpdates = await req.json();
+    
+    console.log('=== DEBUG PUT EMPLOYEE ===');
+    console.log('ID:', id);
+    console.log('Content-Type:', req.headers.get('content-type'));
+    
+    // Verificar se há conteúdo no body
+    const body = await req.text();
+    console.log('Body length:', body.length);
+    
+    if (!body || body.trim() === '') {
+      console.log('Body está vazio');
+      return NextResponse.json({ 
+        error: 'Body da requisição está vazio' 
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
+    
+    let rawUpdates;
+    try {
+      rawUpdates = JSON.parse(body);
+      console.log('JSON parsed successfully');
+      console.log('Parsed data keys:', Object.keys(rawUpdates));
+    } catch (parseError) {
+      console.error('Erro ao fazer parse do JSON:', parseError);
+      return NextResponse.json({ 
+        error: 'JSON inválido no body da requisição',
+        details: parseError.message
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
+    
+    // Verificar se rawUpdates é um objeto válido
+    if (!rawUpdates || typeof rawUpdates !== 'object') {
+      console.log('rawUpdates não é um objeto válido:', typeof rawUpdates);
+      return NextResponse.json({ 
+        error: 'Dados inválidos no body da requisição' 
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
     
     // Normalizar caracteres especiais
     const updates = normalizeTextFields(rawUpdates);
@@ -105,7 +155,7 @@ export async function PUT(req: NextRequest, { params }) {
       'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory',
       'cnh', 'cnhCategory', 'cnhValidity', 'motherName', 'fatherName', 
       'dependents', 'notes', 'employmentHistory', 'isActive', 'nfcCardId',
-      'currentContractId', 'currentFunctionId', 'avatar',
+      'avatar', 'email', 'sexo', 'estadoCivil',
       // Novos campos adicionados
       'centroCusto', 'obra', 'primeiraExperiencia', 'segundaExperiencia', 
       'previsaoObra', 'mo', 'horasNormaisTrabalhadas', 'horasExtrasTrabalhadas', 
@@ -119,11 +169,28 @@ export async function PUT(req: NextRequest, { params }) {
       }
     });
     
+    // Remover campos problemáticos que podem causar erro de chave estrangeira
+    delete filteredUpdates.currentContractId;
+    delete filteredUpdates.currentFunctionId;
+    delete filteredUpdates.currentContract;
+    delete filteredUpdates.currentFunction;
+    delete filteredUpdates.contrato;
+    delete filteredUpdates.cargo;
+    delete filteredUpdates.turno;
+    delete filteredUpdates.dataEntrada;
+    delete filteredUpdates.dataNascimento;
+    
     // Tratar campos de data
     ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'].forEach(field => {
       if (filteredUpdates[field] !== undefined) {
         if (!filteredUpdates[field] || filteredUpdates[field] === '') {
           filteredUpdates[field] = null;
+        } else if (typeof filteredUpdates[field] === 'string') {
+          try {
+            filteredUpdates[field] = new Date(filteredUpdates[field]);
+          } catch (e) {
+            filteredUpdates[field] = null;
+          }
         }
       }
     });
@@ -153,7 +220,39 @@ export async function PUT(req: NextRequest, { params }) {
       }
     }
     
-    const employee = await prisma.employee.update({ where: { id }, data: filteredUpdates });
+    // Tratar campo isActive
+    if (filteredUpdates.isActive !== undefined) {
+      filteredUpdates.isActive = Boolean(filteredUpdates.isActive);
+    }
+    
+    console.log('Atualizando funcionário:', id);
+    console.log('Dados filtrados:', JSON.stringify(filteredUpdates, null, 2));
+    console.log('Avatar presente nos dados filtrados:', !!filteredUpdates.avatar);
+    if (filteredUpdates.avatar) {
+      console.log('Avatar length:', filteredUpdates.avatar.length);
+      console.log('Avatar preview:', filteredUpdates.avatar.substring(0, 50) + '...');
+    }
+    
+    // Verificar se o funcionário existe antes de tentar atualizar
+    const existingEmployee = await prisma.employee.findUnique({ where: { id } });
+    if (!existingEmployee) {
+      return NextResponse.json({ 
+        error: 'Funcionário não encontrado' 
+      }, { 
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
+    
+    const employee = await prisma.employee.update({ 
+      where: { id }, 
+      data: filteredUpdates 
+    });
+    
+    console.log('Funcionário atualizado com sucesso');
+    console.log('Dados finais no banco:', JSON.stringify(employee, null, 2));
     
     return NextResponse.json(employee, {
       headers: {
@@ -162,6 +261,20 @@ export async function PUT(req: NextRequest, { params }) {
     });
   } catch (error) {
     console.error('Erro ao atualizar funcionário:', error);
+    
+    // Verificar se é erro de chave estrangeira
+    if (error.code === 'P2003') {
+      return NextResponse.json({ 
+        error: 'Erro de referência: Verifique se os dados relacionados existem',
+        details: error.message 
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
+    
     return NextResponse.json({ 
       error: 'Erro interno do servidor', 
       details: error.message 
@@ -176,8 +289,8 @@ export async function PUT(req: NextRequest, { params }) {
 
 export async function DELETE(req: NextRequest, { params }) {
   try {
-    const { id } = params;
-    await prisma.employee.delete({ where: { id } });
+  const { id } = params;
+  await prisma.employee.delete({ where: { id } });
     return NextResponse.json({ success: true }, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'

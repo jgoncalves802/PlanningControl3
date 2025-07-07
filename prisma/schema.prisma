@@ -131,11 +131,14 @@ model Employee {
   workplace         String?   // Local de Trabalho
   shift             String?   // Turno
   phone             String?
+  email             String?   // Email do funcionário
   address           Json?     // Endereço completo (cep, logradouro, número, bairro, cidade, uf, complemento)
   nationality       String?
   naturalness       String?   // Naturalidade
   gender            String?   // Sexo
   maritalStatus     String?   // Estado Civil
+  sexo              String?   // Sexo (campo adicional para compatibilidade)
+  estadoCivil       String?   // Estado Civil (campo adicional para compatibilidade)
   educationLevel    String?   // Grau de Instrução
   pis               String?
   ctps              String?   // CTPS
