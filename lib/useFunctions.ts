@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
+import { useMemo } from 'react'
 
 // Tipos
 export interface CompanyFunction {
@@ -119,6 +120,36 @@ export function useFunctionsQuery(filters?: FunctionFilters) {
   })
 }
 
+// Hook para listar funções com contagem atualizada em tempo real
+export function useFunctionsWithRealTimeCount(filters?: FunctionFilters) {
+  const { data: functions = [], ...queryResult } = useFunctionsQuery(filters)
+  const queryClient = useQueryClient()
+  
+  // Buscar dados dos funcionários do cache
+  const employeesData = queryClient.getQueryData(['employees']) as any
+  const employees = employeesData?.employees || []
+  
+  // Calcular contagens em tempo real baseado nos funcionários carregados
+  const functionsWithUpdatedCount = useMemo(() => {
+    return functions.map(func => {
+      // Contar funcionários que têm esta função atribuída
+      const employeeCount = employees.filter((emp: any) => emp.companyFunctionId === func.id).length
+      
+      return {
+        ...func,
+        _count: {
+          employees: employeeCount
+        }
+      }
+    })
+  }, [functions, employees])
+  
+  return {
+    ...queryResult,
+    data: functionsWithUpdatedCount
+  }
+}
+
 // Hook para buscar função por ID
 export function useFunctionQuery(id: string) {
   return useQuery({
@@ -182,9 +213,9 @@ export function useDeleteFunction() {
   })
 }
 
-// Hook para estatísticas das funções
+// Hook para estatísticas das funções com contagem em tempo real
 export function useFunctionStats() {
-  const { data: functions = [] } = useFunctionsQuery()
+  const { data: functions = [] } = useFunctionsWithRealTimeCount()
   
   const stats = {
     total: functions.length,

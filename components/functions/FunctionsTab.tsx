@@ -13,7 +13,7 @@ import FunctionModal from './FunctionModal'
 import FunctionViewModal from './FunctionViewModal'
 import FunctionImportDialog from './FunctionImportDialog'
 import { 
-  useFunctionsQuery, 
+  useFunctionsWithRealTimeCount, 
   useCreateFunction, 
   useUpdateFunction, 
   useDeleteFunction,
@@ -46,7 +46,7 @@ export default function FunctionsTab({ currentUser }: FunctionsTabProps) {
     isLoading, 
     isError, 
     refetch 
-  } = useFunctionsQuery(filters)
+  } = useFunctionsWithRealTimeCount(filters)
   
   const createMutation = useCreateFunction()
   const updateMutation = useUpdateFunction()

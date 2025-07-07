@@ -7,6 +7,7 @@ export function useCreateEmployee() {
     mutationFn: createEmployee,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
   });
 }
@@ -17,6 +18,7 @@ export function useUpdateEmployee() {
     mutationFn: ({ id, updates }) => updateEmployee(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
     onError: (error, variables) => {
       console.error('Erro na mutação de atualização:', error);
@@ -31,6 +33,7 @@ export function useDeleteEmployee() {
     mutationFn: (id: string) => deleteEmployee(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
   });
 }
