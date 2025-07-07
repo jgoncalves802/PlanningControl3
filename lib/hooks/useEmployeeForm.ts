@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Employee } from '@/lib/mock-data';
 import { toast } from 'react-hot-toast';
 
-export interface EmployeeFormData extends Partial<Employee> {
+export interface EmployeeFormData extends Omit<Partial<Employee>, 'primeiraExperiencia' | 'segundaExperiencia' | 'previsaoObra'> {
   cargo?: string;
   turno?: string;
   dataEntrada?: string;
+  contrato?: string;
+  salary?: number;
   primeiraExperiencia?: string | Date;
   segundaExperiencia?: string | Date;
   previsaoObra?: string | Date;
@@ -83,6 +85,22 @@ export function useEmployeeForm(initialData: EmployeeFormData = { status: 'activ
     cep = cep.replace(/\D/g, '');
     cep = cep.replace(/(\d{5})(\d)/, '$1-$2');
     return cep;
+  }
+
+  function formatPhone(phone: string) {
+    return maskPhone(phone);
+  }
+
+  function searchCEP(cep: string) {
+    fetchAddressByCep(cep);
+  }
+
+  function handleNextStep() {
+    handleNext();
+  }
+
+  function handlePreviousStep() {
+    handlePrev();
   }
 
   function validateStep(currentStep: number) {
@@ -212,12 +230,16 @@ export function useEmployeeForm(initialData: EmployeeFormData = { status: 'activ
     maskPhone,
     validatePhone,
     formatCEP,
+    formatPhone,
+    searchCEP,
     validateStep,
     validateEditForm,
     fetchAddressByCep,
     handleNext,
     handlePrev,
     resetForm,
-    formatDateInput
+    formatDateInput,
+    handleNextStep,
+    handlePreviousStep
   };
 } 

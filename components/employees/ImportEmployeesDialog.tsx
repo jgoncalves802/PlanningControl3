@@ -183,7 +183,7 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
+      <DialogTrigger>
         <Button variant="outline" className="gap-2">
           <Upload className="h-4 w-4" />
           Importar em Massa

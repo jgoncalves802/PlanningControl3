@@ -27,7 +27,11 @@ export function useEmployeeFilters(employees: Employee[]) {
       const matchesContract = !filterContract || employee.currentContractId === filterContract;
       const matchesFunction = !filterFunction || employee.currentFunctionId === filterFunction;
       const matchesAdmission = !filterAdmission || (employee.admissionDate && formatDateInput(employee.admissionDate) === filterAdmission);
-      const matchesCity = !filterCity || (employee.cidade && employee.cidade.toLowerCase().includes(filterCity.toLowerCase()));
+      const matchesCity = !filterCity || (
+        (employee.address && typeof employee.address === 'object' && employee.address.cidade?.toLowerCase().includes(filterCity.toLowerCase())) ||
+        (employee.endereco && typeof employee.endereco === 'object' && employee.endereco.cidade?.toLowerCase().includes(filterCity.toLowerCase())) ||
+        ((employee as any).cidade && (employee as any).cidade.toLowerCase().includes(filterCity.toLowerCase()))
+      );
       const matchesDismissal = !filterDismissal || (employee.dismissalDate && formatDateInput(employee.dismissalDate) === filterDismissal);
 
       return matchesSearch && matchesStatus && matchesContract && matchesFunction && matchesAdmission && matchesCity && matchesDismissal;
