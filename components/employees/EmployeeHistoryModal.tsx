@@ -201,7 +201,7 @@ const EmployeeHistoryModal: React.FC<EmployeeHistoryModalProps> = ({
                           Contrato:
                         </span>
                         <span className="ml-2 text-sm text-gray-900 dark:text-slate-100">
-                          {item.contract || '-'}
+                          {typeof item.contract === 'string' ? item.contract : item.contract?.name || '-'}
                         </span>
                       </div>
                       <div>
@@ -209,7 +209,7 @@ const EmployeeHistoryModal: React.FC<EmployeeHistoryModalProps> = ({
                           Função:
                         </span>
                         <span className="ml-2 text-sm text-gray-900 dark:text-slate-100">
-                          {item.function || '-'}
+                          {typeof item.function === 'string' ? item.function : item.function?.name || '-'}
                         </span>
                       </div>
                     </div>

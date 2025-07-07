@@ -21,7 +21,9 @@ export function useEmployeeFilters(employees: Employee[]) {
     return employees.filter(employee => {
       const matchesSearch = employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            employee.cpf.includes(searchTerm) ||
-        employee.currentContract?.toLowerCase().includes(searchTerm.toLowerCase());
+                           (typeof employee.currentContract === 'string' 
+                             ? employee.currentContract.toLowerCase().includes(searchTerm.toLowerCase())
+                             : employee.currentContract?.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesStatus = statusFilter === 'all' || employee.status === statusFilter;
       const matchesContract = !filterContract || employee.currentContractId === filterContract;

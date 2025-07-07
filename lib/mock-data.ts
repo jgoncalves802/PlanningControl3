@@ -78,6 +78,15 @@ export interface Dependent {
   nascimento: string // ou Date
 }
 
+export interface CompanyFunction {
+  id: string
+  name: string
+  laborType: 'DIRETO' | 'INDIRETO'
+  isActive: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+
 export interface Employee {
   id: string
   name: string
@@ -124,8 +133,10 @@ export interface Employee {
   nfcCardId?: string
   currentContractId?: string
   currentFunctionId?: string
-  currentContract?: string
-  currentFunction?: string
+  companyFunctionId?: string
+  currentContract?: string | { id: string; name: string; code: string }
+  currentFunction?: string | { id: string; name: string }
+  companyFunction?: CompanyFunction
   avatar?: string
   email?: string
   // Novos campos adicionados

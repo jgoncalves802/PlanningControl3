@@ -183,11 +183,9 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger>
-        <Button variant="outline" className="gap-2">
-          <Upload className="h-4 w-4" />
-          Importar em Massa
-        </Button>
+      <DialogTrigger className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+        <Upload className="h-4 w-4" />
+        Importar em Massa
       </DialogTrigger>
       
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -226,12 +224,14 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
                     className="hidden"
                     id="csv-upload"
                   />
-                  <label
-                    htmlFor="csv-upload"
-                    className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  <Button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
                   >
+                    <Upload className="h-4 w-4" />
                     Selecionar Arquivo CSV
-                  </label>
+                  </Button>
                 </div>
                 <p className="mt-2 text-sm text-gray-500">
                   Arquivo deve estar no formato CSV com separador ponto e vírgula (;)

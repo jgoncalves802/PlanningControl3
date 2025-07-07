@@ -116,7 +116,9 @@ export default function WorkforceControlPage() {
             employeeName: employee.name,
             contractId: contract.id,
             contractName: contract.name,
-            functionName: employee.currentFunction || 'Não definida',
+            functionName: typeof employee.currentFunction === 'string' 
+              ? employee.currentFunction 
+              : employee.currentFunction?.name || 'Não definida',
             checkInTime,
             status: isLate ? 'late' : 'present',
             location: `Setor ${Math.floor(Math.random() * 5) + 1}`,
@@ -194,7 +196,9 @@ export default function WorkforceControlPage() {
             employeeName: employee.name,
             contractId: employee.currentContractId,
             contractName: contract.name,
-            functionName: employee.currentFunction || 'Não definida',
+            functionName: typeof employee.currentFunction === 'string' 
+              ? employee.currentFunction 
+              : employee.currentFunction?.name || 'Não definida',
             checkInTime: now,
             status: isLate ? 'late' : 'present',
             location,

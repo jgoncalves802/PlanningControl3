@@ -2,23 +2,39 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { X, User, FileText, Phone, MapPin, Briefcase, Clock, StickyNote } from 'lucide-react';
+import { X, User, FileText, Phone, MapPin, Briefcase, Clock, StickyNote, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Employee } from '@/lib/mock-data';
 import { formatDate } from '@/lib/utils';
+
+interface User {
+  id: string;
+  name: string;
+  role: string;
+}
 
 interface EmployeeViewModalProps {
   isOpen: boolean;
   onClose: () => void;
   employee: Employee | null;
+  onEditEmployee?: (employee: Employee) => void;
+  onDelete?: (employeeId: string) => void;
+  onShowHistory?: (employee: Employee) => void;
+  currentUser?: User;
 }
 
 const EmployeeViewModal: React.FC<EmployeeViewModalProps> = ({
   isOpen,
   onClose,
-  employee
+  employee,
+  onEditEmployee,
+  onDelete,
+  onShowHistory,
+  currentUser
 }) => {
   if (!isOpen || !employee) return null;
+
+  const canManageEmployees = currentUser?.role === 'TENANT_ADMIN' || currentUser?.role === 'HR';
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -78,9 +94,26 @@ const EmployeeViewModal: React.FC<EmployeeViewModalProps> = ({
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-4">
+            {onEditEmployee && (
+              <Button variant="ghost" size="sm" onClick={() => onEditEmployee(employee)}>
+                <Edit className="h-5 w-5" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button variant="ghost" size="sm" onClick={() => onDelete(employee.id)}>
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            )}
+            {onShowHistory && (
+              <Button variant="ghost" size="sm" onClick={() => onShowHistory(employee)}>
+                <MoreHorizontal className="h-5 w-5" />
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Content */}
@@ -271,13 +304,21 @@ const EmployeeViewModal: React.FC<EmployeeViewModalProps> = ({
                   <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">
                     Cargo
                   </label>
-                  <p className="text-sm text-gray-900 dark:text-slate-100">{employee.currentFunction || employee.role || '-'}</p>
+                  <p className="text-sm text-gray-900 dark:text-slate-100">
+                    {typeof employee.currentFunction === 'string' 
+                      ? employee.currentFunction 
+                      : employee.currentFunction?.name || employee.role || '-'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">
                     Contrato
                   </label>
-                  <p className="text-sm text-gray-900 dark:text-slate-100">{employee.currentContract || '-'}</p>
+                  <p className="text-sm text-gray-900 dark:text-slate-100">
+                    {typeof employee.currentContract === 'string' 
+                      ? employee.currentContract 
+                      : employee.currentContract?.name || '-'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-600 dark:text-slate-400 mb-1">
@@ -358,7 +399,35 @@ const EmployeeViewModal: React.FC<EmployeeViewModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end p-6 border-t border-gray-200 dark:border-slate-700">
+        <div className="flex justify-between p-6 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex gap-2">
+            {canManageEmployees && onEditEmployee && (
+              <Button variant="outline" onClick={() => onEditEmployee(employee)}>
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+            )}
+            {onShowHistory && (
+              <Button variant="outline" onClick={() => onShowHistory(employee)}>
+                <MoreHorizontal className="h-4 w-4 mr-2" />
+                Histórico
+              </Button>
+            )}
+            {canManageEmployees && onDelete && (
+              <Button 
+                variant="danger" 
+                onClick={() => {
+                  if (confirm('Tem certeza que deseja excluir este funcionário?')) {
+                    onDelete(employee.id);
+                    onClose();
+                  }
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir
+              </Button>
+            )}
+          </div>
           <Button onClick={onClose}>
             Fechar
           </Button>

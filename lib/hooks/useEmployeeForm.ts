@@ -8,6 +8,7 @@ export interface EmployeeFormData extends Omit<Partial<Employee>, 'primeiraExper
   dataEntrada?: string;
   contrato?: string;
   salary?: number;
+  companyFunctionId?: string;
   primeiraExperiencia?: string | Date;
   segundaExperiencia?: string | Date;
   previsaoObra?: string | Date;

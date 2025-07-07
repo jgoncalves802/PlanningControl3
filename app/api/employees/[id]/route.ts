@@ -59,9 +59,14 @@ function normalizeTextFields(data: any): any {
 
 export async function GET(req: NextRequest, { params }) {
   try {
-  const { id } = params;
-  const employee = await prisma.employee.findUnique({ where: { id } });
-  if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    const { id } = params;
+    const employee = await prisma.employee.findUnique({ 
+      where: { id },
+      include: {
+        companyFunction: true
+      }
+    });
+    if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     
     return NextResponse.json(employee, {
       headers: {
@@ -155,7 +160,7 @@ export async function PUT(req: NextRequest, { params }) {
       'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory',
       'cnh', 'cnhCategory', 'cnhValidity', 'motherName', 'fatherName', 
       'dependents', 'notes', 'employmentHistory', 'isActive', 'nfcCardId',
-      'avatar', 'email', 'sexo', 'estadoCivil',
+      'avatar', 'email', 'sexo', 'estadoCivil', 'companyFunctionId',
       // Novos campos adicionados
       'centroCusto', 'obra', 'primeiraExperiencia', 'segundaExperiencia', 
       'previsaoObra', 'mo', 'horasNormaisTrabalhadas', 'horasExtrasTrabalhadas', 
@@ -225,13 +230,53 @@ export async function PUT(req: NextRequest, { params }) {
       filteredUpdates.isActive = Boolean(filteredUpdates.isActive);
     }
     
-    console.log('Atualizando funcionário:', id);
-    console.log('Dados filtrados:', JSON.stringify(filteredUpdates, null, 2));
-    console.log('Avatar presente nos dados filtrados:', !!filteredUpdates.avatar);
+    // Validação especial para avatar
     if (filteredUpdates.avatar) {
-      console.log('Avatar length:', filteredUpdates.avatar.length);
-      console.log('Avatar preview:', filteredUpdates.avatar.substring(0, 50) + '...');
+      // Verificar se é uma string base64 válida
+      if (typeof filteredUpdates.avatar === 'string') {
+        // Limitar o tamanho do avatar (máximo 2MB em base64)
+        const maxSize = 2 * 1024 * 1024; // 2MB
+        if (filteredUpdates.avatar.length > maxSize) {
+          console.log('Avatar muito grande, removendo dos dados de atualização');
+          delete filteredUpdates.avatar;
+        } else {
+          // Verificar se é um base64 válido
+          const base64Regex = /^data:image\/(jpeg|jpg|png|gif);base64,/;
+          if (!base64Regex.test(filteredUpdates.avatar)) {
+            console.log('Avatar não é um base64 válido, removendo dos dados de atualização');
+            delete filteredUpdates.avatar;
+          }
+        }
+      } else {
+        delete filteredUpdates.avatar;
+      }
     }
+    
+    // Validação para campos duplicados ou inconsistentes
+    if (filteredUpdates.motherName && filteredUpdates.fatherName) {
+      if (filteredUpdates.motherName === filteredUpdates.fatherName) {
+        console.log('Campos motherName e fatherName são idênticos, corrigindo...');
+        // Se são iguais, provavelmente há um erro nos dados
+        // Vamos manter apenas o motherName e limpar o fatherName
+        delete filteredUpdates.fatherName;
+      }
+    }
+    
+    // Validação para campos de gênero duplicados
+    if (filteredUpdates.gender && filteredUpdates.sexo) {
+      // Manter apenas o campo 'gender' que é o padrão
+      delete filteredUpdates.sexo;
+    }
+    
+    // Validação para campos de estado civil duplicados
+    if (filteredUpdates.maritalStatus && filteredUpdates.estadoCivil) {
+      // Manter apenas o campo 'maritalStatus' que é o padrão
+      delete filteredUpdates.estadoCivil;
+    }
+    
+    console.log('Atualizando funcionário:', id);
+    console.log('Dados filtrados:', JSON.stringify({...filteredUpdates, avatar: filteredUpdates.avatar ? '[AVATAR_DATA]' : undefined}, null, 2));
+    console.log('Avatar presente nos dados filtrados:', !!filteredUpdates.avatar);
     
     // Verificar se o funcionário existe antes de tentar atualizar
     const existingEmployee = await prisma.employee.findUnique({ where: { id } });

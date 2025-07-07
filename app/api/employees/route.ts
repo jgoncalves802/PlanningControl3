@@ -57,9 +57,81 @@ function normalizeTextFields(data: any): any {
   return normalized;
 }
 
-export async function GET() {
-  const employees = await prisma.employee.findMany();
-  return NextResponse.json(employees);
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
+    const status = searchParams.get('status') || '';
+    const sortBy = searchParams.get('sortBy') || 'name';
+    const sortOrder = searchParams.get('sortOrder') || 'asc';
+
+    const skip = (page - 1) * limit;
+
+    // Construir filtros
+    const where: any = {};
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { cpf: { contains: search, mode: 'insensitive' } },
+        { registration: { contains: search, mode: 'insensitive' } },
+        { role: { contains: search, mode: 'insensitive' } }
+      ];
+    }
+
+    if (status) {
+      if (status === 'active') {
+        where.isActive = true;
+      } else if (status === 'inactive') {
+        where.isActive = false;
+      } else {
+        where.status = status;
+      }
+    }
+
+    // Buscar funcionários
+    const employees = await prisma.employee.findMany({
+      where,
+      include: {
+        companyFunction: true
+      },
+      skip,
+      take: limit,
+      orderBy: {
+        [sortBy]: sortOrder
+      }
+    });
+
+    // Contar total
+    const total = await prisma.employee.count({ where });
+
+    return NextResponse.json({
+      employees,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    }, {
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      }
+    });
+  } catch (error) {
+    console.error('Erro ao buscar funcionários:', error);
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor', 
+      details: error.message 
+    }, { 
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      }
+    });
+  }
 }
 
 function parseDateBR(dateStr) {

@@ -122,7 +122,7 @@ export default function EmployeesPage() {
   const defaultColumns: ColumnConfig[] = [
     { key: 'name', label: 'Nome', enabled: true, width: '230px' },
     { key: 'cpf', label: 'CPF', enabled: true, width: '150px' },
-    { key: 'matricula', label: 'Matrícula', enabled: true, width: '90px' },
+    { key: 'matricula', label: 'Matrícula', enabled: false, width: '90px' },
     { key: 'cargo', label: 'Cargo', enabled: true, width: '150px' },
     { key: 'status', label: 'Status', enabled: true, width: '90px' },
     { key: 'cidade', label: 'Cidade', enabled: true, width: '110px' },
@@ -267,6 +267,43 @@ export default function EmployeesPage() {
       toast.error('Erro ao carregar dados do funcionário');
       return null;
     }
+  };
+
+  const handleCreateEmployee = async (employeeData: Partial<Employee>) => {
+    createEmployeeMutation.mutate(
+      employeeData,
+      {
+        onSuccess: () => {
+          toast.success('Funcionário criado com sucesso!');
+          setShowAddModal(false);
+          refetch();
+        },
+        onError: (error: any) => {
+          console.error('Erro ao criar funcionário:', error);
+          toast.error(error?.message || 'Erro ao criar funcionário');
+        }
+      }
+    );
+  };
+
+  const handleUpdateEmployee = async (employeeData: Partial<Employee>) => {
+    if (!selectedEmployee) return;
+    
+    updateEmployeeMutation.mutate(
+      { id: selectedEmployee.id, updates: employeeData },
+      {
+        onSuccess: () => {
+          toast.success('Funcionário atualizado com sucesso!');
+          setShowEditModal(false);
+          setSelectedEmployee(null);
+          refetch();
+        },
+        onError: (error: any) => {
+          console.error('Erro ao atualizar funcionário:', error);
+          toast.error(error?.message || 'Erro ao atualizar funcionário');
+        }
+      }
+    );
   };
 
   const handleOpenEditDrawer = async (employee: Employee) => {
@@ -597,7 +634,7 @@ export default function EmployeesPage() {
                         {selectedEmployees.length} selecionado{selectedEmployees.length !== 1 ? 's' : ''}
                   </span>
                       {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                        <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
+                        <Button size="sm" variant="danger" onClick={handleBulkDelete}>
                     <Trash2 className="h-4 w-4 mr-2" />
                     Excluir Selecionados
                   </Button>
@@ -611,13 +648,12 @@ export default function EmployeesPage() {
                   employees={filteredEmployees}
                   columns={columns}
                   selectedEmployees={selectedEmployees}
+                  canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}
                   onSelectEmployee={handleSelectEmployee}
                   onSelectAll={handleSelectAll}
-                  onEdit={handleOpenEditDrawer}
-                  onDelete={handleDeleteEmployee}
-                  onView={handleViewEmployee}
+                  onEditEmployee={handleOpenEditDrawer}
+                  onViewEmployee={handleViewEmployee}
                   onShowHistory={handleShowHistory}
-                  currentUser={currentUser}
                 />
           </CardContent>
         </Card>
@@ -632,10 +668,7 @@ export default function EmployeesPage() {
         <EmployeeAddModal
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
-          onSuccess={() => {
-            setShowAddModal(false);
-            refetch();
-          }}
+          onSubmit={handleCreateEmployee}
         />
       )}
 
@@ -647,11 +680,7 @@ export default function EmployeesPage() {
             setSelectedEmployee(null);
           }}
           employee={selectedEmployee}
-          onSuccess={() => {
-            setShowEditModal(false);
-            setSelectedEmployee(null);
-            refetch();
-          }}
+          onSubmit={handleUpdateEmployee}
         />
       )}
 
@@ -663,7 +692,7 @@ export default function EmployeesPage() {
             setSelectedEmployee(null);
           }}
           employee={selectedEmployee}
-          onEdit={handleOpenEditDrawer}
+          onEditEmployee={handleOpenEditDrawer}
           onDelete={handleDeleteEmployee}
           onShowHistory={handleShowHistory}
           currentUser={currentUser}

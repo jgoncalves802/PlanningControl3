@@ -114,7 +114,8 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
         turno: employee.shift || '',
         contrato: employee.currentContract || '',
         endereco: employee.endereco || employee.address || {},
-        dataNascimento: employee.birthDate ? formatDateInput(employee.birthDate) : ''
+        dataNascimento: employee.birthDate ? formatDateInput(employee.birthDate) : '',
+        companyFunctionId: employee.companyFunctionId || ''
       });
       setAvatarPreview(employee.avatar || '');
     }
@@ -231,10 +232,6 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
       return;
     }
 
-    console.log('=== DEBUG MODAL SUBMIT ===');
-    console.log('formData original:', formData);
-    console.log('avatarPreview:', avatarPreview);
-
     const employeeData: any = {
       ...formData,
       admissionDate: formData.dataEntrada ? new Date(formData.dataEntrada) : formData.admissionDate,
@@ -259,12 +256,10 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
     delete employeeData.dataNascimento; // já mapeado para birthDate
     delete employeeData.endereco; // já mapeado para address
 
-    console.log('employeeData preparado:', employeeData);
-    console.log('Avatar incluído:', !!employeeData.avatar);
-
     try {
       await onSubmit(employeeData);
-      console.log('onSubmit executado com sucesso');
+      toast.success('Funcionário atualizado com sucesso!');
+      handleClose();
     } catch (error) {
       console.error('Erro ao atualizar funcionário:', error);
       toast.error('Erro ao atualizar funcionário');
@@ -277,15 +272,53 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
     onClose();
   };
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Função para comprimir imagem
+  const compressImage = (file: File, maxWidth: number = 300, quality: number = 0.8): Promise<string> => {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calcular dimensões mantendo proporção
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        // Desenhar imagem redimensionada
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Converter para base64 com compressão
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressedDataUrl);
+      };
+      
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setAvatarFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Verificar tamanho do arquivo (máximo 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error('Arquivo muito grande. Máximo permitido: 5MB');
+          return;
+        }
+        
+        setAvatarFile(file);
+        
+        // Comprimir imagem antes de definir o preview
+        const compressedImage = await compressImage(file, 300, 0.8);
+        setAvatarPreview(compressedImage);
+        
+        console.log('Avatar original size:', file.size);
+        console.log('Avatar compressed size:', compressedImage.length);
+      } catch (error) {
+        console.error('Erro ao processar imagem:', error);
+        toast.error('Erro ao processar imagem');
+      }
     }
   };
 

@@ -831,7 +831,7 @@ export default function TransfersPage() {
                       emp.currentContractId && canUserAccessContract(currentUser, emp.currentContractId)
                     ).map(emp => (
                       <option key={emp.id} value={emp.id}>
-                        {emp.name} - {emp.currentContract}
+                        {emp.name} - {typeof emp.currentContract === 'string' ? emp.currentContract : emp.currentContract?.name || 'Sem contrato'}
                       </option>
                     ))}
                   </select>

@@ -123,7 +123,12 @@ const EmployeeTable = memo(function EmployeeTable({
       case 'matricula':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.id.padStart(6, '0')}</span>;
       case 'cargo':
-        return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.currentFunction || 'Não atribuído'}</span>;
+        // Priorizar companyFunction.name, depois role, depois currentFunction.name
+        const cargoDisplay = employee.companyFunction?.name || 
+                           employee.role || 
+                           (typeof employee.currentFunction === 'string' ? employee.currentFunction : employee.currentFunction?.name) ||
+                           'Não atribuído';
+        return <span className="text-sm text-gray-900 dark:text-slate-100">{cargoDisplay}</span>;
       case 'status':
         return (
           <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm ${getStatusColor(employee.status)}`}>
@@ -142,7 +147,10 @@ const EmployeeTable = memo(function EmployeeTable({
       case 'dataEntrada':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{formatDate(employee.admissionDate)}</span>;
       case 'contrato':
-        return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.currentContract || 'Não atribuído'}</span>;
+        const contratoDisplay = typeof employee.currentContract === 'string' 
+          ? employee.currentContract 
+          : employee.currentContract?.name || 'Não atribuído';
+        return <span className="text-sm text-gray-900 dark:text-slate-100">{contratoDisplay}</span>;
       case 'centroCusto':
         return <span className="text-sm text-gray-900 dark:text-slate-100">CC-{Math.floor(Math.random() * 1000)}</span>;
       case 'turno':
