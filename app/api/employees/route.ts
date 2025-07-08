@@ -95,7 +95,15 @@ export async function GET(req: NextRequest) {
     const employees = await prisma.employee.findMany({
       where,
       include: {
-        companyFunction: true
+        companyFunction: true,
+        nfcBadge: {
+          select: {
+            id: true,
+            badgeId: true,
+            status: true,
+            assignedAt: true,
+          }
+        }
       },
       skip,
       take: limit,

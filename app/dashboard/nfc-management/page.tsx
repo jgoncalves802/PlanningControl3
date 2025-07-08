@@ -13,6 +13,7 @@ import NFCBadgeModal from '@/components/nfc-badges/NFCBadgeModal';
 import NFCBadgeViewModal from '@/components/nfc-badges/NFCBadgeViewModal';
 import NFCBadgeAssignModal from '@/components/nfc-badges/NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
+import NFCBadgeCreateModal from '@/components/nfc-badges/NFCBadgeCreateModal';
 import NFCScanner from '@/components/nfc-badges/NFCScanner';
 import { toast } from 'react-hot-toast';
 
@@ -199,10 +200,9 @@ export default function NFCManagementPage() {
       </div>
 
       {/* Modais */}
-      <NFCBadgeModal
+      <NFCBadgeCreateModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        badge={null}
       />
 
       <NFCBadgeModal
