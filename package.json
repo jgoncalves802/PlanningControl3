@@ -4,16 +4,18 @@
   "version": "3.0.0",
   "scripts": {
     "dev": "next dev",
-    "dev:https": "node scripts/dev-https.js",
-    "dev:simple": "node scripts/simple-https.js",
-    "dev:setup": "node scripts/setup-https.js",
+    "dev:https": "node scripts/https-server.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "nfc:setup": "node scripts/setup-https.js",
-    "nfc:dev": "node scripts/simple-https.js",
-    "nfc:test": "echo 'Acesse https://localhost:3001/dashboard/nfc-management no Chrome Android'"
+    "cert:create": "node scripts/create-cert.js",
+    "nfc:setup": "node scripts/create-cert.js",
+    "nfc:tunnel": "node scripts/nfc-tunnel.js",
+    "nfc:ngrok": "npx ngrok http 3000",
+    "nfc:dev": "npm run dev",
+    "nfc:ip": "ipconfig | findstr IPv4",
+    "nfc:test": "echo 'Use npm run nfc:tunnel para criar túnel HTTPS automático'"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",
