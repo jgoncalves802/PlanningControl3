@@ -59,14 +59,14 @@ function normalizeTextFields(data: any): any {
 
 export async function GET(req: NextRequest, { params }) {
   try {
-    const { id } = params;
+  const { id } = params;
     const employee = await prisma.employee.findUnique({ 
       where: { id },
       include: {
         companyFunction: true
       }
     });
-    if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     
     return NextResponse.json(employee, {
       headers: {

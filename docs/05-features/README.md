@@ -8,7 +8,7 @@ Esta seção documenta todas as funcionalidades específicas e integrações do 
 - **[autenticacao.md](./autenticacao.md)** - Sistema de autenticação com Clerk
   - Login/logout com múltiplos provedores
   - Controle de acesso e permissões
-  - Proteção de rotas
+- Proteção de rotas
   - Integração com Supabase
 
 ### 🌍 Internacionalização
