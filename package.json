@@ -12,10 +12,11 @@
     "cert:create": "node scripts/create-cert.js",
     "nfc:setup": "node scripts/create-cert.js",
     "nfc:tunnel": "node scripts/nfc-tunnel.js",
+    "nfc:localtunnel": "node scripts/nfc-localtunnel.js",
     "nfc:ngrok": "npx ngrok http 3000",
     "nfc:dev": "npm run dev",
     "nfc:ip": "ipconfig | findstr IPv4",
-    "nfc:test": "echo 'Use npm run nfc:tunnel para criar túnel HTTPS automático'"
+    "nfc:test": "echo 'Use npm run nfc:localtunnel (sem conta) ou npm run nfc:tunnel (com conta ngrok)'"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",
@@ -54,3 +55,4 @@
     "typescript": "^5.5.3"
   }
 }
+
