@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { nfcCardId, location, action } = body
 
-    // Validate required fields
+    // Validar campos obrigatórios
     if (!nfcCardId) {
       return NextResponse.json(
         { error: 'ID do cartão NFC é obrigatório' },
@@ -14,14 +14,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Find employee by NFC card
-    const employee = await prisma.employee.findFirst({
-      where: { 
-        nfcCardId: nfcCardId,
-        isActive: true 
-      },
+    // Buscar funcionário pelo cartão NFC
+    const employee = await prisma.employee.findUnique({
+      where: { nfcCardId },
       include: {
-        companyFunction: true
+        companyFunction: true,
+        currentContract: true
       }
     })
 
@@ -32,86 +30,129 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const now = new Date()
-    const today = new Date(now)
-    today.setHours(0, 0, 0, 0)
+    if (!employee.isActive) {
+      return NextResponse.json(
+        { error: 'Funcionário não está ativo' },
+        { status: 400 }
+      )
+    }
+
+    // Verificar se já existe registro para hoje
+    const today = new Date()
+    const startOfDay = new Date(today)
+    startOfDay.setHours(0, 0, 0, 0)
     const endOfDay = new Date(today)
     endOfDay.setHours(23, 59, 59, 999)
 
-    // Check if employee already has an entry for today
     const existingEntry = await prisma.workforceEntry.findFirst({
       where: {
         employeeId: employee.id,
         createdAt: {
-          gte: today,
+          gte: startOfDay,
           lte: endOfDay
         }
       }
     })
 
-    // Get contract info
-    let contractName = ''
-    if (employee.currentContractId) {
-      const contract = await prisma.contract.findUnique({
-        where: { id: employee.currentContractId }
-      })
-      contractName = contract?.name || ''
-    }
-
-    let workforceEntry
-
+    const now = new Date()
+    
     if (existingEntry) {
-      // Update existing entry
-      if (action === 'check_out' || (!existingEntry.checkOutTime && existingEntry.checkInTime)) {
-        // Check out
-        const checkInTime = existingEntry.checkInTime || existingEntry.createdAt
+      // Atualizar registro existente
+      let updateData: any = {
+        updatedAt: now
+      }
+
+      if (action === 'check_in' && !existingEntry.checkInTime) {
+        // Primeiro check-in do dia
+        const lateThreshold = new Date(now)
+        lateThreshold.setHours(8, 15, 0, 0)
+        const isLate = now > lateThreshold
+
+        updateData = {
+          ...updateData,
+          checkInTime: now,
+          status: isLate ? 'LATE' : 'PRESENT',
+          isLate,
+          location
+        }
+      } else if (action === 'check_out' && existingEntry.checkInTime && !existingEntry.checkOutTime) {
+        // Check-out
+        const checkInTime = existingEntry.checkInTime
         const hoursWorked = (now.getTime() - checkInTime.getTime()) / (1000 * 60 * 60)
-        
-        workforceEntry = await prisma.workforceEntry.update({
-          where: { id: existingEntry.id },
-          data: {
-            checkOutTime: now,
-            status: 'left',
-            hoursWorked: Math.round(hoursWorked * 100) / 100, // Round to 2 decimal places
-            location: location || existingEntry.location,
-            updatedAt: now
-          },
-          include: {
-            employee: {
-              include: {
-                companyFunction: true
-              }
+
+        updateData = {
+          ...updateData,
+          checkOutTime: now,
+          status: 'LEFT',
+          hoursWorked,
+          location
+        }
+      } else {
+        return NextResponse.json(
+          { error: 'Ação NFC inválida para o estado atual do funcionário' },
+          { status: 400 }
+        )
+      }
+
+      const updatedEntry = await prisma.workforceEntry.update({
+        where: { id: existingEntry.id },
+        data: updateData,
+        include: {
+          employee: {
+            include: {
+              companyFunction: true
             }
           }
-        })
-      } else {
-        // Already checked in today
-        return NextResponse.json({
-          message: 'Funcionário já registrou presença hoje',
-          entry: {
-            id: existingEntry.id,
-            employeeId: existingEntry.employeeId,
-            employeeName: employee.name,
-            checkInTime: existingEntry.checkInTime,
-            checkOutTime: existingEntry.checkOutTime,
-            status: existingEntry.status
-          }
-        }, { status: 200 })
-      }
-    } else {
-      // Create new entry (check in)
-      const isLate = now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 15)
-      const status = isLate ? 'late' : 'present'
+        }
+      })
 
-      workforceEntry = await prisma.workforceEntry.create({
+      const response = {
+        id: updatedEntry.id,
+        employeeId: updatedEntry.employeeId,
+        employeeName: updatedEntry.employee.name,
+        contractId: updatedEntry.employee.currentContractId || '',
+        contractName: updatedEntry.contractName || '',
+        functionId: updatedEntry.employee.companyFunctionId || '',
+        functionName: updatedEntry.employee.companyFunction?.name || '',
+        checkInTime: updatedEntry.checkInTime,
+        checkOutTime: updatedEntry.checkOutTime,
+        status: updatedEntry.status,
+        location: updatedEntry.location,
+        nfcCardId: updatedEntry.employee.nfcCardId,
+        isLate: updatedEntry.isLate,
+        hoursWorked: updatedEntry.hoursWorked,
+        action: action,
+        message: action === 'check_in' ? 'Check-in realizado com sucesso' : 'Check-out realizado com sucesso'
+      }
+
+      return NextResponse.json(response, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      })
+
+    } else {
+      // Criar novo registro
+      if (action !== 'check_in') {
+        return NextResponse.json(
+          { error: 'Primeiro registro do dia deve ser check-in' },
+          { status: 400 }
+        )
+      }
+
+      const lateThreshold = new Date(now)
+      lateThreshold.setHours(8, 15, 0, 0)
+      const isLate = now > lateThreshold
+
+      const newEntry = await prisma.workforceEntry.create({
         data: {
           employeeId: employee.id,
           checkInTime: now,
-          status,
-          location: location || `Setor ${Math.floor(Math.random() * 5) + 1}`,
+          status: isLate ? 'LATE' : 'PRESENT',
+          location,
           isLate,
-          hoursWorked: 0,
-          contractName
+          contractName: employee.currentContract?.name || ''
         },
         include: {
           employee: {
@@ -121,38 +162,33 @@ export async function POST(request: NextRequest) {
           }
         }
       })
-    }
 
-    // Transform response
-    const response = {
-      id: workforceEntry.id,
-      employeeId: workforceEntry.employeeId,
-      employeeName: workforceEntry.employee.name,
-      contractId: workforceEntry.employee.currentContractId || '',
-      contractName: workforceEntry.contractName || '',
-      functionId: workforceEntry.employee.companyFunctionId || '',
-      functionName: workforceEntry.employee.companyFunction?.name || '',
-      checkInTime: workforceEntry.checkInTime,
-      checkOutTime: workforceEntry.checkOutTime,
-      status: workforceEntry.status,
-      location: workforceEntry.location,
-      nfcCardId: workforceEntry.employee.nfcCardId,
-      isLate: workforceEntry.isLate,
-      hoursWorked: workforceEntry.hoursWorked,
-      action: workforceEntry.checkOutTime ? 'check_out' : 'check_in',
-      message: workforceEntry.checkOutTime 
-        ? `Saída registrada para ${workforceEntry.employee.name}`
-        : `Entrada registrada para ${workforceEntry.employee.name}${workforceEntry.isLate ? ' (ATRASADO)' : ''}`,
-      createdAt: workforceEntry.createdAt,
-      updatedAt: workforceEntry.updatedAt
-    }
+      const response = {
+        id: newEntry.id,
+        employeeId: newEntry.employeeId,
+        employeeName: newEntry.employee.name,
+        contractId: newEntry.employee.currentContractId || '',
+        contractName: newEntry.contractName || '',
+        functionId: newEntry.employee.companyFunctionId || '',
+        functionName: newEntry.employee.companyFunction?.name || '',
+        checkInTime: newEntry.checkInTime,
+        checkOutTime: newEntry.checkOutTime,
+        status: newEntry.status,
+        location: newEntry.location,
+        nfcCardId: newEntry.employee.nfcCardId,
+        isLate: newEntry.isLate,
+        hoursWorked: newEntry.hoursWorked,
+        action: action,
+        message: `Check-in realizado com sucesso${isLate ? ' (ATRASADO)' : ''}`
+      }
 
-    return NextResponse.json(response, {
-      status: existingEntry ? 200 : 201,
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    })
+      return NextResponse.json(response, {
+        status: 201,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      })
+    }
 
   } catch (error) {
     console.error('Erro ao processar leitura NFC:', error)
