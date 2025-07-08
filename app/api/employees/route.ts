@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || '';
     const sortBy = searchParams.get('sortBy') || 'name';
     const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const isActive = searchParams.get('isActive'); // Adicionar este parâmetro
 
     const skip = (page - 1) * limit;
 
@@ -91,20 +92,15 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Filtro específico para isActive
+    if (isActive !== null && isActive !== undefined) {
+      where.isActive = isActive === 'true';
+    }
+
     // Buscar funcionários
     const employees = await prisma.employee.findMany({
       where,
-      include: {
-        companyFunction: true,
-        nfcBadge: {
-          select: {
-            id: true,
-            badgeId: true,
-            status: true,
-            assignedAt: true,
-          }
-        }
-      },
+      // Remover include de nfcBadge que não existe no schema
       skip,
       take: limit,
       orderBy: {

@@ -99,7 +99,13 @@ export default function EmployeesPage() {
   // Extrair array de funcionários da resposta da API
   const employees = employeesData?.employees || [];
 
-  // Hook de filtros
+  // Converter dados da API para o formato esperado pelos componentes
+  const processedEmployees = employees.map(emp => ({
+    ...emp,
+    status: emp.isActive ? 'active' : 'inactive' // Adicionar campo status baseado em isActive
+  }));
+
+  // Hook de filtros usando dados processados
   const {
     searchTerm,
     setSearchTerm,
@@ -119,7 +125,7 @@ export default function EmployeesPage() {
     setFilterDismissal,
     filteredEmployees,
     clearFilters
-  } = useEmployeeFilters(employees);
+  } = useEmployeeFilters(processedEmployees);
 
   // Configuração das colunas da tabela
   const defaultColumns: ColumnConfig[] = [
@@ -595,7 +601,7 @@ export default function EmployeesPage() {
       {activeTab === 'employees' ? (
         <>
           {/* Stats Cards */}
-          <EmployeeStats employees={employees} />
+          <EmployeeStats employees={processedEmployees} />
 
           {/* Filters and Search */}
           <EmployeeFilters

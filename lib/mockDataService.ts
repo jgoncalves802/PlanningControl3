@@ -1,0 +1,136 @@
+// Dados mockados para funcionar sem banco de dados
+export const mockEmployees = [
+  {
+    id: '1',
+    name: 'Pedro Silva Santos',
+    cpf: '123.456.789-01',
+    registration: 'EMP001',
+    company: 'Empresa A',
+    position: 'Desenvolvedor',
+    department: 'TI',
+    admissionDate: new Date('2023-01-15'),
+    salary: 5000,
+    email: 'pedro.silva@empresa.com',
+    phone: '(11) 99999-1234',
+    address: 'Rua das Flores, 123',
+    city: 'São Paulo',
+    state: 'SP',
+    zipCode: '01234-567',
+    birthDate: new Date('1990-05-20'),
+    gender: 'Masculino',
+    maritalStatus: 'Solteiro',
+    education: 'Superior Completo',
+    experience: '5 anos',
+    skills: 'JavaScript, React, Node.js',
+    notes: 'Funcionário exemplar',
+    avatar: null,
+    createdAt: new Date('2023-01-15'),
+    updatedAt: new Date('2023-01-15'),
+    isActive: true,
+    status: 'Ativo',
+    nfcBadge: null
+  },
+  {
+    id: '2',
+    name: 'Maria Oliveira Costa',
+    cpf: '987.654.321-09',
+    registration: 'EMP002',
+    company: 'Empresa A',
+    position: 'Analista',
+    department: 'RH',
+    admissionDate: new Date('2023-02-01'),
+    salary: 4500,
+    email: 'maria.oliveira@empresa.com',
+    phone: '(11) 99999-5678',
+    address: 'Av. Paulista, 456',
+    city: 'São Paulo',
+    state: 'SP',
+    zipCode: '01310-100',
+    birthDate: new Date('1988-08-10'),
+    gender: 'Feminino',
+    maritalStatus: 'Casada',
+    education: 'Superior Completo',
+    experience: '7 anos',
+    skills: 'Gestão de Pessoas, Recrutamento',
+    notes: 'Especialista em RH',
+    avatar: null,
+    createdAt: new Date('2023-02-01'),
+    updatedAt: new Date('2023-02-01'),
+    isActive: true,
+    status: 'Ativo',
+    nfcBadge: null
+  },
+  {
+    id: '3',
+    name: 'João Carlos Lima',
+    cpf: '456.789.123-45',
+    registration: 'EMP003',
+    company: 'Empresa B',
+    position: 'Gerente',
+    department: 'Vendas',
+    admissionDate: new Date('2022-11-10'),
+    salary: 8000,
+    email: 'joao.lima@empresa.com',
+    phone: '(11) 99999-9012',
+    address: 'Rua Augusta, 789',
+    city: 'São Paulo',
+    state: 'SP',
+    zipCode: '01305-000',
+    birthDate: new Date('1985-03-15'),
+    gender: 'Masculino',
+    maritalStatus: 'Casado',
+    education: 'MBA',
+    experience: '10 anos',
+    skills: 'Liderança, Vendas, Negociação',
+    notes: 'Líder de equipe',
+    avatar: null,
+    createdAt: new Date('2022-11-10'),
+    updatedAt: new Date('2022-11-10'),
+    isActive: true,
+    status: 'Ativo',
+    nfcBadge: null
+  }
+];
+
+export const mockNFCBadges = [
+  {
+    id: '1',
+    badgeId: '66EEB44F',
+    status: 'ASSIGNED' as const,
+    assignedAt: new Date('2023-07-08').toISOString(),
+    assignedBy: null,
+    notes: 'Atribuído automaticamente durante criação - Teste',
+    createdAt: new Date('2023-07-08').toISOString(),
+    updatedAt: new Date('2023-07-08').toISOString(),
+    employeeId: '1',
+    employee: {
+      id: '1',
+      name: 'PEDRO SILVA SANTOS',
+      cpf: '10816233659',
+      registration: 'EMP001',
+      company: 'Empresa A',
+      avatar: null
+    }
+  }
+];
+
+export const mockFunctions = [
+  {
+    id: '1',
+    name: 'Desenvolvedor Frontend',
+    laborType: 'DIRETO' as const,
+    isActive: true,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
+    _count: { employees: 2 }
+  },
+  {
+    id: '2',
+    name: 'Analista de RH',
+    laborType: 'INDIRETA' as const,
+    isActive: true,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
+    _count: { employees: 1 }
+  }
+]; 

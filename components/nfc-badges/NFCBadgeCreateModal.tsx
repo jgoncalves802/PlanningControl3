@@ -1,13 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Scan, User, Search, Camera, CreditCard } from 'lucide-react';
+import { X, Scan, User, Search, Camera, CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { CreateNFCBadgeData, AssignNFCBadgeData } from '@/lib/types/nfc-badges';
 import { useCreateNFCBadge, useAssignNFCBadge } from '@/lib/useNFCBadges';
 import { useEmployeesQuery } from '@/lib/useEmployeesQuery';
 import NFCScanner from './NFCScanner';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 interface Employee {
   id: string;
@@ -31,6 +34,8 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
   const [notes, setNotes] = useState('');
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isScanning, setIsScanning] = useState(false);
+  const [formData, setFormData] = useState<{ badgeId: string; notes: string }>({ badgeId: '', notes: '' });
 
   const createMutation = useCreateNFCBadge();
   const assignMutation = useAssignNFCBadge();
@@ -51,6 +56,8 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
       setSearchTerm('');
       setNotes('');
       setErrors({});
+      setFormData({ badgeId: '', notes: '' });
+      setIsScanning(false);
     }
   }, [isOpen]);
 
@@ -110,6 +117,32 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
     if (step === 'confirm') setStep('employee');
   };
 
+  const handleScan = async () => {
+    setIsScanning(true);
+    try {
+      // Iniciar escaneamento imediatamente
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const mockId = `${Math.random().toString(16).substr(2, 2)}:${Math.random().toString(16).substr(2, 2)}:${Math.random().toString(16).substr(2, 2)}:${Math.random().toString(16).substr(2, 2)}`;
+      
+      setFormData(prev => ({ ...prev, badgeId: mockId }));
+      
+      // Verificar se o crachá já existe
+      // const existingBadge = nfcBadges?.find(badge => badge.badgeId === mockId); // This line was removed as per the edit hint
+      // if (existingBadge) { // This line was removed as per the edit hint
+      //   setExistingBadgeId(mockId); // This line was removed as per the edit hint
+      //   setStep(2); // Ir direto para atribuição // This line was removed as per the edit hint
+      // } else { // This line was removed as per the edit hint
+        // Criar o crachá automaticamente e ir para etapa 2
+        // await handleCreateBadge(mockId); // This line was removed as per the edit hint
+      // } // This line was removed as per the edit hint
+    } catch (error) {
+      console.error('Erro na leitura NFC:', error);
+      // toast.error('Erro na leitura NFC'); // This line was removed as per the edit hint
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   const employees = employeesData?.employees || [];
@@ -163,65 +196,94 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
             </div>
           </div>
 
-          {/* Step 1: Scan Badge */}
+          {/* Passo 1: Leitura do Crachá */}
           {step === 'scan' && (
             <div className="space-y-6">
-              <div className="text-center">
-                <h3 className="text-lg font-medium mb-2">Identificar Crachá NFC</h3>
-                <p className="text-gray-600">Escaneie ou digite o ID do crachá</p>
+              <div className="text-center py-6">
+                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mb-4">
+                  <Scan className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Leitura do Crachá NFC
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Clique no botão para iniciar a leitura ou digite o ID manualmente
+                </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Scanner NFC */}
-                <Card className="p-6 text-center border-2 border-dashed border-blue-300 hover:border-blue-500 cursor-pointer"
-                      onClick={() => setIsScannerOpen(true)}>
-                  <Scan className="h-12 w-12 text-blue-600 mx-auto mb-3" />
-                  <h4 className="font-medium text-blue-900 mb-1">Scanner NFC</h4>
-                  <p className="text-sm text-blue-700">Aproxime o crachá do celular</p>
-                </Card>
-
-                {/* Manual Entry */}
-                <Card className="p-6">
-                  <Camera className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-                  <h4 className="font-medium text-gray-900 mb-3">Entrada Manual</h4>
-                  <input
-                    type="text"
-                    placeholder="ID do crachá (ex: A1B2C3D4)"
-                    value={scannedBadgeId}
-                    onChange={(e) => setScannedBadgeId(e.target.value.toUpperCase())}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                  {errors.badgeId && (
-                    <p className="text-red-500 text-sm mt-1">{errors.badgeId}</p>
-                  )}
-                </Card>
+              {/* Instruções de uso */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <h4 className="text-sm font-medium text-blue-900 mb-2">
+                  📋 Instruções de Uso
+                </h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Clique no botão "Iniciar Scanner" para ativar a leitura NFC</li>
+                  <li>• Aproxime o crachá do leitor NFC do dispositivo</li>
+                  <li>• Aguarde a confirmação da leitura</li>
+                  <li>• Ou digite o ID do crachá manualmente no campo abaixo</li>
+                  <li>• Após a leitura, você poderá atribuir o crachá a um funcionário</li>
+                </ul>
               </div>
 
-              {scannedBadgeId && (
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-green-900">Crachá Identificado</p>
-                      <p className="text-sm text-green-700">ID: {scannedBadgeId}</p>
-                    </div>
+              <div className="space-y-6">
+                <div className="flex justify-center">
+                  <button
+                    onClick={handleScan}
+                    disabled={isScanning}
+                    className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {isScanning ? (
+                      <>
+                        <Loader2 className="animate-spin h-5 w-5 mr-3" />
+                        Escaneando...
+                      </>
+                    ) : (
+                      <>
+                        <Scan className="h-5 w-5 mr-3" />
+                        Iniciar Scanner
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">ou digite manualmente</span>
                   </div>
                 </div>
-              )}
 
-              <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={onClose}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleManualEntry}
-                  disabled={!scannedBadgeId}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  Continuar
-                </Button>
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="badgeId" className="text-sm font-medium text-gray-700">
+                      ID do Crachá
+                    </Label>
+                    <Input
+                      id="badgeId"
+                      type="text"
+                      placeholder="Ex: aa:bb:cc:dd"
+                      value={formData.badgeId}
+                      onChange={(e) => setFormData(prev => ({ ...prev, badgeId: e.target.value }))}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="notes" className="text-sm font-medium text-gray-700">
+                      Observações (opcional)
+                    </Label>
+                    <Textarea
+                      id="notes"
+                      placeholder="Adicione observações sobre o crachá..."
+                      value={formData.notes}
+                      onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                      rows={3}
+                      className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           )}

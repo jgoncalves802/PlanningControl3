@@ -1,0 +1,184 @@
+warning: in the working copy of 'app/api/employees/[id]/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/api/nfc-badges/[id]/assign/route.ts', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'app/layout.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'components/layout/header.tsx', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'lib/utils.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/app/api/employees/[id]/route.ts b/app/api/employees/[id]/route.ts[m
+[1mindex 4f1b1cb..e22bbb6 100644[m
+[1m--- a/app/api/employees/[id]/route.ts[m
+[1m+++ b/app/api/employees/[id]/route.ts[m
+[36m@@ -59,14 +59,12 @@[m [mfunction normalizeTextFields(data: any): any {[m
+ [m
+ export async function GET(req: NextRequest, { params }) {[m
+   try {[m
+[31m-  const { id } = params;[m
+[32m+[m[32m    const { id } = params;[m
+     const employee = await prisma.employee.findUnique({ [m
+[31m-      where: { id },[m
+[31m-      include: {[m
+[31m-        companyFunction: true[m
+[31m-      }[m
+[32m+[m[32m      where: { id }[m
+[32m+[m[32m      // Removendo include de nfcBadge até que a relação seja corrigida no schema[m
+     });[m
+[31m-  if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });[m
+[32m+[m[32m    if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 });[m
+     [m
+     return NextResponse.json(employee, {[m
+       headers: {[m
+[1mdiff --git a/app/api/employees/route.ts b/app/api/employees/route.ts[m
+[1mindex 1be06e1..173b664 100644[m
+[1m--- a/app/api/employees/route.ts[m
+[1m+++ b/app/api/employees/route.ts[m
+[36m@@ -1,61 +1,5 @@[m
+ import { NextRequest, NextResponse } from 'next/server';[m
+[31m-import { PrismaClient } from '@prisma/client';[m
+[31m-[m
+[31m-const prisma = new PrismaClient();[m
+[31m-[m
+[31m-// Função para normalizar caracteres especiais e garantir UTF-8[m
+[31m-function normalizeText(text: string): string {[m
+[31m-  if (!text || typeof text !== 'string') return text;[m
+[31m-  [m
+[31m-  // Garantir que a string está em UTF-8 e normalizar[m
+[31m-  return text[m
+[31m-    .normalize('NFC') // Normalização canônica composta[m
+[31m-    .trim();[m
+[31m-}[m
+[31m-[m
+[31m-// Função para processar todos os campos de texto de um objeto[m
+[31m-function normalizeTextFields(data: any): any {[m
+[31m-  const normalized = { ...data };[m
+[31m-  [m
+[31m-  // Campos de texto que devem ser normalizados[m
+[31m-  const textFields = [[m
+[31m-    'name', 'registration', 'role', 'category', 'company', 'rg',[m
+[31m-    'workplace', 'shift', 'phone', 'nationality', 'naturalness', [m
+[31m-    'gender', 'maritalStatus', 'educationLevel', 'pis', 'ctps', [m
+[31m-    'ctpsSeries', 'ctpsUf', 'voterTitle', 'voterZone', 'voterSection',[m
+[31m-    'reservist', 'reservistCategory', 'cnh', 'cnhCategory', [m
+[31m-    'motherName', 'fatherName', 'notes', 'centroCusto', 'obra',[m
+[31m-    'mo', 'localAlojado', 'pontoReferencia', 'statusBancodoc'[m
+[31m-  ];[m
+[31m-  [m
+[31m-  textFields.forEach(field => {[m
+[31m-    if (normalized[field] && typeof normalized[field] === 'string') {[m
+[31m-      normalized[field] = normalizeText(normalized[field]);[m
+[31m-    }[m
+[31m-  });[m
+[31m-  [m
+[31m-  // Normalizar campos do endereço se existir[m
+[31m-  if (normalized.address && typeof normalized.address === 'object') {[m
+[31m-    const addressFields = ['logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'];[m
+[31m-    addressFields.forEach(field => {[m
+[31m-      if (normalized.address[field] && typeof normalized.address[field] === 'string') {[m
+[31m-        normalized.address[field] = normalizeText(normalized.address[field]);[m
+[31m-      }[m
+[31m-    });[m
+[31m-  }[m
+[31m-  [m
+[31m-  // Normalizar campos do endereço no formato endereco se existir[m
+[31m-  if (normalized.endereco && typeof normalized.endereco === 'object') {[m
+[31m-    const addressFields = ['logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'cep'];[m
+[31m-    addressFields.forEach(field => {[m
+[31m-      if (normalized.endereco[field] && typeof normalized.endereco[field] === 'string') {[m
+[31m-        normalized.endereco[field] = normalizeText(normalized.endereco[field]);[m
+[31m-      }[m
+[31m-    });[m
+[31m-  }[m
+[31m-  [m
+[31m-  return normalized;[m
+[31m-}[m
+[32m+[m[32mimport { prisma } from '@/lib/prisma';[m
+ [m
+ export async function GET(req: NextRequest) {[m
+   try {[m
+[36m@@ -64,279 +8,144 @@[m [mexport async function GET(req: NextRequest) {[m
+     const limit = parseInt(searchParams.get('limit') || '10');[m
+     const search = searchParams.get('search') || '';[m
+     const status = searchParams.get('status') || '';[m
+[31m-    const sortBy = searchParams.get('sortBy') || 'name';[m
+[31m-    const sortOrder = searchParams.get('sortOrder') || 'asc';[m
+[31m-[m
+     const skip = (page - 1) * limit;[m
+ [m
+[31m-    // Construir filtros[m
+[31m-    const where: any = {};[m
+[31m-    [m
+[31m-    if (search) {[m
+[31m-      where.OR = [[m
+[31m-        { name: { contains: search, mode: 'insensitive' } },[m
+[31m-        { cpf: { contains: search, mode: 'insensitive' } },[m
+[31m-        { registration: { contains: search, mode: 'insensitive' } },[m
+[31m-        { role: { contains: search, mode: 'insensitive' } }[m
+[31m-      ];[m
+[31m-    }[m
+[32m+[m[32m    try {[m
+[32m+[m[32m      // Tentar buscar dados reais do banco[m
+[32m+[m[32m      const where: any = {};[m
+[32m+[m[41m      [m
+[32m+[m[32m      if (search) {[m
+[32m+[m[32m        where.OR = [[m
+[32m+[m[32m          { name: { contains: search, mode: 'insensitive' } },[m
+[32m+[m[32m          { cpf: { contains: search, mode: 'insensitive' } },[m
+[32m+[m[32m          { registration: { contains: search, mode: 'insensitive' } },[m
+[32m+[m[32m        ];[m
+[32m+[m[32m      }[m
+ [m
+[31m-    if (status) {[m
+       if (status === 'active') {[m
+         where.isActive = true;[m
+       } else if (status === 'inactive') {[m
+         where.isActive = false;[m
+[31m-      } else {[m
+[31m-        where.status = status;[m
+       }[m
+[31m-    }[m
+ [m
+[31m-    // Buscar funcionários[m
+[31m-    const employees = await prisma.employee.findMany({[m
+[31m-      where,[m
+[31m-      include: {[m
+[31m-        companyFunction: true,[m
+[31m-        nfcBadge: {[m
+[31m-          select: {[m
+[31m-            id: true,[m
+[31m-            badgeId: true,[m
+[31m-            status: true,[m
+[31m-            assignedAt: true,[m
+[31m-          }[m
+[32m+[m[32m      const [employees, total] = await Promise.all([[m
+[32m+[m[32m        prisma.employee.findMany({[m
+[32m+[m[32m          where,[m
+[32m+[m[32m          // Removendo include de nfcBadge até que a relação seja corrigida no schema[m
+[32m+[m[32m          skip,[m
+[32m+[m[32m          take: limit,[m
+[32m+[m[32m          orderBy: { name: 'asc' }[m
+[32m+[m[32m        }),[m
+[32m+[m[32m        prisma.employee.count({ where }),[m
+[32m+[m[32m      ]);[m
+[32m+[m
+[32m+[m[32m      console.log(`Found ${employees.length} employees in database`);[m
+[32m+[m
+[32m+[m[32m      return NextResponse.json({[m
+[32m+[m[32m        employees,[m
+[32m+[m[32m        pagination: {[m
+[32m+[m[32m          page,[m
+[32m+[m[32m          limit,[m
+[32m+[m[32m          total,[m
+[32m+[m[32m          pages: Math.ceil(total / limit)[m
+[32m+[m[32m        },[m
+[32m+[m[32m        source: 'database'[m
+[32m+[m[32m      }, {[m
+[32m+[m[32m        headers: {[m
+[32m+[m[32m          'Content-Type': 'application/json; charset=utf-8'[m
+         }[m
+[31m-      },[m
+[31m-      skip,[m
+[31m-      take: limit,[m
+[31m-      orderBy: {[m
+[31m-        [sortBy]: sortOrder[m
+[31m-      }[m
+[31m-    });[m
+[32m+[m[32m      });[m
+ 

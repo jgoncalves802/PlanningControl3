@@ -167,13 +167,13 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
                     </div>
 
                     {/* Employee Info */}
-                    {badge.employee && (
+                    {badge.assignedEmployee && (
                       <div className="ml-6 flex items-center">
                         <div className="flex-shrink-0">
-                          {badge.employee.avatar ? (
+                          {badge.assignedEmployee.avatar ? (
                             <img
-                              src={badge.employee.avatar}
-                              alt={badge.employee.name}
+                              src={badge.assignedEmployee.avatar}
+                              alt={badge.assignedEmployee.name}
                               className="h-8 w-8 rounded-full object-cover"
                             />
                           ) : (
@@ -184,11 +184,10 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
                         </div>
                         <div className="ml-3">
                           <p className="text-sm font-medium text-gray-900">
-                            {badge.employee.name}
+                            {badge.assignedEmployee.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {badge.employee.cpf}
-                            {badge.employee.registration && ` • ${badge.employee.registration}`}
+                            {badge.assignedEmployee.id}
                           </p>
                         </div>
                       </div>
@@ -274,26 +273,26 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
 
       {/* Modals */}
       <NFCBadgeCreateModal
-        isOpen={isCreateModalOpen}
+        open={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
 
       {selectedBadge && (
         <>
           <NFCBadgeAssignModal
+            badge={selectedBadge}
             isOpen={isAssignModalOpen}
             onClose={() => setIsAssignModalOpen(false)}
-            badge={selectedBadge}
           />
 
           <NFCBadgeRevokeModal
-            isOpen={isRevokeModalOpen}
+            open={isRevokeModalOpen}
             onClose={() => setIsRevokeModalOpen(false)}
             badge={selectedBadge}
           />
 
           <NFCBadgeViewModal
-            isOpen={isViewModalOpen}
+            open={isViewModalOpen}
             onClose={() => setIsViewModalOpen(false)}
             badge={selectedBadge}
           />
