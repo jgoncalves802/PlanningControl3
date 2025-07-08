@@ -30,7 +30,8 @@
     "react-hot-toast": "^2.5.2",
     "sonner": "^2.0.6",
     "tailwind-merge": "^2.0.0",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^3.25.75"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
