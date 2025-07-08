@@ -1,158 +1,152 @@
 'use client';
 
 import { useState } from 'react';
-import { Eye, Edit, Trash2, UserPlus, UserMinus, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Filter, MoreHorizontal, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { NFCBadge, NFCBadgeStatus, NFCBadgeStatusLabels, NFCBadgeStatusColors } from '@/lib/types/nfc-badges';
-import { formatNFCBadgeId } from '@/lib/types/nfc-badges';
+import { NFCBadge, NFCBadgeFilters as NFCBadgeFilterType, formatNFCBadgeId, getNFCBadgeStatusColor, getNFCBadgeStatusLabel } from '@/lib/types/nfc-badges';
+import { useNFCBadgesQuery } from '@/lib/useNFCBadges';
+import NFCBadgeCreateModal from './NFCBadgeCreateModal';
+import NFCBadgeAssignModal from './NFCBadgeAssignModal';
+import NFCBadgeRevokeModal from './NFCBadgeRevokeModal';
+import NFCBadgeViewModal from './NFCBadgeViewModal';
+import NFCBadgeFilters from './NFCBadgeFilters';
 
 interface NFCBadgesListProps {
-  badges: NFCBadge[];
-  isLoading: boolean;
-  onView: (badge: NFCBadge) => void;
-  onEdit: (badge: NFCBadge) => void;
-  onDelete: (badge: NFCBadge) => void;
-  onAssign: (badge: NFCBadge) => void;
-  onRevoke: (badge: NFCBadge) => void;
+  className?: string;
 }
 
-export default function NFCBadgesList({
-  badges,
-  isLoading,
-  onView,
-  onEdit,
-  onDelete,
-  onAssign,
-  onRevoke,
-}: NFCBadgesListProps) {
-  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
+export default function NFCBadgesList({ className }: NFCBadgesListProps) {
+  const [filters, setFilters] = useState<NFCBadgeFilterType>({
+    status: undefined,
+    search: '',
+    page: 1,
+    limit: 10,
+  });
 
-  if (isLoading) {
-    return (
-      <Card className="p-4">
-        <div className="space-y-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="animate-pulse">
-              <div className="h-16 bg-gray-200 rounded"></div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    );
-  }
+  const [selectedBadge, setSelectedBadge] = useState<NFCBadge | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
-  if (badges.length === 0) {
-    return (
-      <Card className="p-8 text-center">
-        <div className="text-gray-500">
-          <p className="text-lg font-medium">Nenhum crachá encontrado</p>
-          <p className="text-sm">Crie um novo crachá para começar</p>
-        </div>
-      </Card>
-    );
-  }
+  const { data, isLoading, error } = useNFCBadgesQuery(filters);
 
-  const getStatusBadge = (status: NFCBadgeStatus) => {
-    const color = NFCBadgeStatusColors[status];
-    const label = NFCBadgeStatusLabels[status];
-    
-    const colorClasses = {
-      green: 'bg-green-100 text-green-800',
-      blue: 'bg-blue-100 text-blue-800',
-      red: 'bg-red-100 text-red-800',
-      orange: 'bg-orange-100 text-orange-800',
-      yellow: 'bg-yellow-100 text-yellow-800',
-      gray: 'bg-gray-100 text-gray-800',
-    };
+  const handleFiltersChange = (newFilters: NFCBadgeFilterType) => {
+    setFilters(newFilters);
+  };
 
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClasses[color as keyof typeof colorClasses]}`}>
-        {label}
-      </span>
-    );
+  const handleCreateSuccess = () => {
+    setIsCreateModalOpen(false);
+  };
+
+  const handleAssignSuccess = () => {
+    setIsAssignModalOpen(false);
+    setSelectedBadge(null);
+  };
+
+  const handleRevokeSuccess = () => {
+    setIsRevokeModalOpen(false);
+    setSelectedBadge(null);
+  };
+
+  const handleViewBadge = (badge: NFCBadge) => {
+    setSelectedBadge(badge);
+    setIsViewModalOpen(true);
+  };
+
+  const handleAssignBadge = (badge: NFCBadge) => {
+    setSelectedBadge(badge);
+    setIsAssignModalOpen(true);
+  };
+
+  const handleRevokeBadge = (badge: NFCBadge) => {
+    setSelectedBadge(badge);
+    setIsRevokeModalOpen(true);
   };
 
   const canAssign = (badge: NFCBadge) => {
-    return badge.status === NFCBadgeStatus.AVAILABLE && badge.isActive;
+    return badge.status === 'AVAILABLE';
   };
 
   const canRevoke = (badge: NFCBadge) => {
-    return badge.status === NFCBadgeStatus.ASSIGNED && badge.isActive;
+    return badge.status === 'ASSIGNED';
   };
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return '-';
-    return new Date(date).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Erro ao carregar crachás NFC</p>
+      </div>
+    );
+  }
 
   return (
-    <Card className="overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  checked={selectedBadges.length === badges.length}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedBadges(badges.map(b => b.id));
-                    } else {
-                      setSelectedBadges([]);
-                    }
-                  }}
-                />
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                ID do Crachá
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Funcionário
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Atribuído em
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ações
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {badges.map((badge) => (
-              <tr key={badge.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <input
-                    type="checkbox"
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    checked={selectedBadges.includes(badge.id)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedBadges([...selectedBadges, badge.id]);
-                      } else {
-                        setSelectedBadges(selectedBadges.filter(id => id !== badge.id));
-                      }
-                    }}
-                  />
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10">
-                      <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                        <span className="text-blue-600 font-medium text-sm">
-                          {badge.badgeId.slice(-2)}
-                        </span>
+    <div className={className}>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">Crachás NFC</h2>
+          <p className="text-gray-600">Gerencie os crachás NFC da empresa</p>
+        </div>
+        <Button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="bg-blue-600 hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Crachá
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <NFCBadgeFilters
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
+        className="mb-6"
+      />
+
+      {/* Content */}
+      <Card className="overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-2 text-gray-600">Carregando crachás...</p>
+          </div>
+        ) : data?.badges.length === 0 ? (
+          <div className="p-8 text-center">
+            <CreditCard className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Nenhum crachá encontrado
+            </h3>
+            <p className="text-gray-600 mb-4">
+              {filters.search || filters.status
+                ? 'Tente ajustar os filtros de busca'
+                : 'Comece criando o primeiro crachá NFC'}
+            </p>
+            {!filters.search && !filters.status && (
+              <Button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Primeiro Crachá
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {data?.badges.map((badge) => (
+              <div key={badge.id} className="p-6 hover:bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    {/* Badge Icon */}
+                    <div className="flex-shrink-0">
+                      <div className="h-12 w-12 rounded-lg bg-blue-100 flex items-center justify-center">
+                        <CreditCard className="h-6 w-6 text-blue-600" />
                       </div>
                     </div>
+
+                    {/* Badge Info */}
                     <div className="ml-4">
                       <div className="text-sm font-medium text-gray-900">
                         {formatNFCBadgeId(badge.badgeId)}
@@ -160,92 +154,151 @@ export default function NFCBadgesList({
                       <div className="text-sm text-gray-500">
                         ID: {badge.badgeId}
                       </div>
+                      <div className="flex items-center mt-1">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getNFCBadgeStatusColor(badge.status)}`}>
+                          {getNFCBadgeStatusLabel(badge.status)}
+                        </span>
+                        {badge.assignedAt && (
+                          <span className="ml-2 text-xs text-gray-500">
+                            Atribuído em {new Date(badge.assignedAt).toLocaleDateString('pt-BR')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(badge.status)}
-                    {!badge.isActive && (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        Inativo
-                      </span>
+
+                    {/* Employee Info */}
+                    {badge.employee && (
+                      <div className="ml-6 flex items-center">
+                        <div className="flex-shrink-0">
+                          {badge.employee.avatar ? (
+                            <img
+                              src={badge.employee.avatar}
+                              alt={badge.employee.name}
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                              <User className="h-4 w-4 text-gray-500" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">
+                            {badge.employee.name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {badge.employee.cpf}
+                            {badge.employee.registration && ` • ${badge.employee.registration}`}
+                          </p>
+                        </div>
+                      </div>
                     )}
                   </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {badge.employee ? (
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {badge.employee.name}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {badge.employee.registration || badge.employee.cpf}
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-500">-</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {formatDate(badge.assignedAt)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex items-center gap-2">
+
+                  {/* Actions */}
+                  <div className="flex items-center space-x-2">
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      onClick={() => onView(badge)}
-                      className="text-blue-600 hover:text-blue-900"
+                      onClick={() => handleViewBadge(badge)}
                     >
-                      <Eye className="h-4 w-4" />
+                      Ver
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEdit(badge)}
-                      className="text-gray-600 hover:text-gray-900"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    
                     {canAssign(badge) && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => onAssign(badge)}
-                        className="text-green-600 hover:text-green-900"
-                        title="Atribuir a funcionário"
+                        onClick={() => handleAssignBadge(badge)}
+                        className="text-blue-600 border-blue-600 hover:bg-blue-50"
                       >
-                        <UserPlus className="h-4 w-4" />
+                        Atribuir
                       </Button>
                     )}
+                    
                     {canRevoke(badge) && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => onRevoke(badge)}
-                        className="text-orange-600 hover:text-orange-900"
-                        title="Revogar crachá"
+                        onClick={() => handleRevokeBadge(badge)}
+                        className="text-red-600 border-red-600 hover:bg-red-50"
                       >
-                        <UserMinus className="h-4 w-4" />
+                        Revogar
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDelete(badge)}
-                      className="text-red-600 hover:text-red-900"
-                      disabled={badge.status === NFCBadgeStatus.ASSIGNED}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                </td>
-              </tr>
+                </div>
+
+                {/* Notes */}
+                {badge.notes && (
+                  <div className="mt-3 pl-16">
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">Observações:</span> {badge.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
+          </div>
+        )}
+      </Card>
+
+      {/* Pagination */}
+      {data && data.pagination.pages > 1 && (
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-sm text-gray-700">
+            Mostrando {((data.pagination.page - 1) * data.pagination.limit) + 1} a{' '}
+            {Math.min(data.pagination.page * data.pagination.limit, data.pagination.total)} de{' '}
+            {data.pagination.total} crachás
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={data.pagination.page === 1}
+              onClick={() => setFilters(prev => ({ ...prev, page: prev.page! - 1 }))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={data.pagination.page === data.pagination.pages}
+              onClick={() => setFilters(prev => ({ ...prev, page: prev.page! + 1 }))}
+            >
+              Próxima
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      <NFCBadgeCreateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
+
+      {selectedBadge && (
+        <>
+          <NFCBadgeAssignModal
+            isOpen={isAssignModalOpen}
+            onClose={() => setIsAssignModalOpen(false)}
+            badge={selectedBadge}
+          />
+
+          <NFCBadgeRevokeModal
+            isOpen={isRevokeModalOpen}
+            onClose={() => setIsRevokeModalOpen(false)}
+            badge={selectedBadge}
+          />
+
+          <NFCBadgeViewModal
+            isOpen={isViewModalOpen}
+            onClose={() => setIsViewModalOpen(false)}
+            badge={selectedBadge}
+          />
+        </>
+      )}
+    </div>
   );
 } 

@@ -1,14 +1,23 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { NFCBadgeUpdateSchema, NFCBadgeStatus } from '@/lib/types/nfc-badges';
-import { z } from 'zod';
+import { UpdateNFCBadgeData } from '@/lib/types/nfc-badges';
+import { Prisma } from '@prisma/client';
 
-// GET /api/nfc-badges/[id] - Buscar crachá específico
 export async function GET(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Temporariamente removendo autenticação para testar
+    // const { userId } = await auth();
+    
+    // if (!userId) {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized' },
+    //     { status: 401 }
+    //   );
+    // }
+
     const badge = await prisma.nFCBadge.findUnique({
       where: { id: params.id },
       include: {
@@ -19,20 +28,7 @@ export async function GET(
             cpf: true,
             registration: true,
             company: true,
-          },
-        },
-        assignedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        revokedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+            avatar: true,
           },
         },
       },
@@ -40,43 +36,39 @@ export async function GET(
 
     if (!badge) {
       return NextResponse.json(
-        { error: 'Crachá não encontrado' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'NFC Badge not found' },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json(badge, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    });
+    return NextResponse.json(badge);
   } catch (error) {
-    console.error('Erro ao buscar crachá:', error);
+    console.error('Error fetching NFC badge:', error);
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-      }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
-// PUT /api/nfc-badges/[id] - Atualizar crachá
 export async function PUT(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Temporariamente removendo autenticação para testar
+    // const { userId } = await auth();
+    
+    // if (!userId) {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized' },
+    //     { status: 401 }
+    //   );
+    // }
+
     const body = await request.json();
-    const validatedData = NFCBadgeUpdateSchema.parse(body);
+    const { badgeId, notes, status } = body as UpdateNFCBadgeData;
 
     // Verificar se o crachá existe
     const existingBadge = await prisma.nFCBadge.findUnique({
@@ -85,31 +77,21 @@ export async function PUT(
 
     if (!existingBadge) {
       return NextResponse.json(
-        { error: 'Crachá não encontrado' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'NFC Badge not found' },
+        { status: 404 }
       );
     }
 
-    // Se está mudando o badgeId, verificar se não existe outro com o mesmo ID
-    if (validatedData.badgeId && validatedData.badgeId !== existingBadge.badgeId) {
+    // Verificar se o badgeId já existe (se estiver sendo alterado)
+    if (badgeId && badgeId !== existingBadge.badgeId) {
       const duplicateBadge = await prisma.nFCBadge.findUnique({
-        where: { badgeId: validatedData.badgeId },
+        where: { badgeId: badgeId.toUpperCase() },
       });
 
       if (duplicateBadge) {
         return NextResponse.json(
-          { error: 'Já existe um crachá com este ID' },
-          { 
-            status: 400,
-            headers: {
-              'Content-Type': 'application/json; charset=utf-8',
-            },
-          }
+          { error: 'Badge ID already exists' },
+          { status: 400 }
         );
       }
     }
@@ -117,7 +99,11 @@ export async function PUT(
     // Atualizar o crachá
     const updatedBadge = await prisma.nFCBadge.update({
       where: { id: params.id },
-      data: validatedData,
+      data: {
+        badgeId: badgeId ? badgeId.toUpperCase() : undefined,
+        notes: notes !== undefined ? notes : undefined,
+        status: status || undefined,
+      },
       include: {
         employee: {
           select: {
@@ -126,62 +112,47 @@ export async function PUT(
             cpf: true,
             registration: true,
             company: true,
-          },
-        },
-        assignedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        revokedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+            avatar: true,
           },
         },
       },
     });
 
-    return NextResponse.json(updatedBadge, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    });
+    return NextResponse.json(updatedBadge);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
-      );
-    }
-
-    console.error('Erro ao atualizar crachá:', error);
-    return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
+    console.error('Error updating NFC badge:', error);
+    
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2002') {
+        return NextResponse.json(
+          { error: 'Badge ID already exists' },
+          { status: 400 }
+        );
       }
+    }
+    
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 }
 
-// DELETE /api/nfc-badges/[id] - Deletar crachá
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Temporariamente removendo autenticação para testar
+    // const { userId } = await auth();
+    
+    // if (!userId) {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized' },
+    //     { status: 401 }
+    //   );
+    // }
+
     // Verificar se o crachá existe
     const existingBadge = await prisma.nFCBadge.findUnique({
       where: { id: params.id },
@@ -189,26 +160,16 @@ export async function DELETE(
 
     if (!existingBadge) {
       return NextResponse.json(
-        { error: 'Crachá não encontrado' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'NFC Badge not found' },
+        { status: 404 }
       );
     }
 
-    // Verificar se o crachá está atribuído a algum funcionário
-    if (existingBadge.employeeId) {
+    // Verificar se o crachá está atribuído
+    if (existingBadge.status === 'ASSIGNED') {
       return NextResponse.json(
-        { error: 'Não é possível deletar um crachá que está atribuído a um funcionário. Revogue primeiro.' },
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'Cannot delete assigned badge. Revoke assignment first.' },
+        { status: 400 }
       );
     }
 
@@ -217,24 +178,13 @@ export async function DELETE(
       where: { id: params.id },
     });
 
-    return NextResponse.json(
-      { message: 'Crachá deletado com sucesso' },
-      {
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-      }
-    );
+    return NextResponse.json({ message: 'NFC Badge deleted successfully' });
   } catch (error) {
-    console.error('Erro ao deletar crachá:', error);
+    console.error('Error deleting NFC badge:', error);
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-      }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 } 

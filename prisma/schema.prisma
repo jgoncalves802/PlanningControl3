@@ -48,22 +48,36 @@ enum PlanType {
 
 model User {
   id        String   @id @default(cuid())
+  clerkId   String   @unique // ID do Clerk
   email     String   @unique
-  name      String
-  cpf       String?  @unique
-  password  String   // Hash
-  role      UserRole
-  isActive  Boolean  @default(true)
+  name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  
+  // Relacionamentos
+  assignedBadges NFCBadge[] @relation("AssignedByUser")
+  
+  @@map("users")
+}
 
-  responsibleForContracts ContractResponsible[]
-  transferRequests        TransferRequest[]     @relation("RequestedBy")
-  transferApprovals       TransferRequest[]     @relation("ApprovedBy")
-  overtimeApprovals       OvertimeApproval[]    @relation("ApprovedBy")
-  auditLogs               AuditLog[]
-  badgesAssigned          NFCBadge[]            @relation("BadgeAssignedBy")
-  badgesRevoked           NFCBadge[]            @relation("BadgeRevokedBy")
+model NFCBadge {
+  id          String    @id @default(cuid())
+  badgeId     String    @unique
+  status      BadgeStatus @default(AVAILABLE)
+  assignedAt  DateTime?
+  assignedBy  String?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relacionamentos
+  employeeId  String?
+  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  
+  // Referência ao usuário que atribuiu
+  assignedByUser User? @relation("AssignedByUser", fields: [assignedBy], references: [id])
+  
+  @@map("nfc_badges")
 }
 
 enum UserRole {

@@ -77,9 +77,11 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
     try {
       // 1. Criar o crachá
       const createData: CreateNFCBadgeData = {
-        badgeId: scannedBadgeId,
-        notes: notes || undefined,
+        badgeId: scannedBadgeId.trim(), // Garantir que não há espaços
+        notes: notes.trim() || undefined, // Garantir que não há espaços
       };
+      
+      console.log('Creating badge with data:', createData); // Debug
       
       const createdBadge = await createMutation.mutateAsync(createData);
 
@@ -98,6 +100,7 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
 
       onClose();
     } catch (error) {
+      console.error('Error in handleSubmit:', error);
       // Erro já tratado pelos hooks
     }
   };

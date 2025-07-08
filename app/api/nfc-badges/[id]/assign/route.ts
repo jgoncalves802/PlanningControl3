@@ -1,110 +1,83 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { NFCBadgeAssignSchema, NFCBadgeStatus } from '@/lib/types/nfc-badges';
-import { z } from 'zod';
+import { AssignNFCBadgeData } from '@/lib/types/nfc-badges';
+import { Prisma } from '@prisma/client';
 
-// POST /api/nfc-badges/[id]/assign - Atribuir crachá a funcionário
 export async function POST(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Temporariamente removendo autenticação para testar
+    // const { userId } = await auth();
+    
+    // if (!userId) {
+    //   return NextResponse.json(
+    //     { error: 'Unauthorized' },
+    //     { status: 401 }
+    //   );
+    // }
+
     const body = await request.json();
-    const validatedData = NFCBadgeAssignSchema.parse(body);
+    const { employeeId, notes } = body as AssignNFCBadgeData;
 
-    // TODO: Obter ID do usuário atual do contexto de autenticação
-    const currentUserId = 'user-temp-id'; // Substituir por autenticação real
-
-    // Verificar se o crachá existe e está disponível
-    const badge = await prisma.nFCBadge.findUnique({
+    // Verificar se o crachá existe
+    const existingBadge = await prisma.nFCBadge.findUnique({
       where: { id: params.id },
       include: {
         employee: true,
       },
     });
 
-    if (!badge) {
+    if (!existingBadge) {
       return NextResponse.json(
-        { error: 'Crachá não encontrado' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'NFC Badge not found' },
+        { status: 404 }
       );
     }
 
-    if (badge.status !== NFCBadgeStatus.AVAILABLE) {
+    if (existingBadge.status === 'ASSIGNED') {
       return NextResponse.json(
-        { error: 'Crachá não está disponível para atribuição' },
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
-      );
-    }
-
-    if (!badge.isActive) {
-      return NextResponse.json(
-        { error: 'Crachá está inativo' },
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'Badge is already assigned' },
+        { status: 400 }
       );
     }
 
     // Verificar se o funcionário existe
     const employee = await prisma.employee.findUnique({
-      where: { id: validatedData.employeeId },
+      where: { id: employeeId },
     });
 
     if (!employee) {
       return NextResponse.json(
-        { error: 'Funcionário não encontrado' },
-        { 
-          status: 404,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'Employee not found' },
+        { status: 404 }
       );
     }
 
-    // Verificar se o funcionário já possui um crachá
-    const existingBadge = await prisma.nFCBadge.findFirst({
+    // Verificar se o funcionário já tem um crachá atribuído
+    const existingAssignment = await prisma.nFCBadge.findFirst({
       where: {
-        employeeId: validatedData.employeeId,
-        status: NFCBadgeStatus.ASSIGNED,
+        employeeId: employeeId,
+        status: 'ASSIGNED',
       },
     });
 
-    if (existingBadge) {
+    if (existingAssignment) {
       return NextResponse.json(
-        { error: 'Funcionário já possui um crachá atribuído' },
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
+        { error: 'Employee already has an assigned badge' },
+        { status: 400 }
       );
     }
 
-    // Atribuir o crachá
+    // Atualizar o crachá
     const updatedBadge = await prisma.nFCBadge.update({
       where: { id: params.id },
       data: {
-        employeeId: validatedData.employeeId,
-        status: NFCBadgeStatus.ASSIGNED,
+        employeeId: employeeId,
+        status: 'ASSIGNED',
         assignedAt: new Date(),
-        assignedBy: currentUserId,
-        notes: validatedData.notes,
+        notes: notes || undefined,
       },
       include: {
         employee: {
@@ -114,52 +87,19 @@ export async function POST(
             cpf: true,
             registration: true,
             company: true,
-          },
-        },
-        assignedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-        revokedByUser: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
+            avatar: true,
           },
         },
       },
     });
 
-    return NextResponse.json(updatedBadge, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8',
-      },
-    });
+    return NextResponse.json(updatedBadge);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Dados inválidos', details: error.errors },
-        { 
-          status: 400,
-          headers: {
-            'Content-Type': 'application/json; charset=utf-8',
-          },
-        }
-      );
-    }
-
-    console.error('Erro ao atribuir crachá:', error);
+    console.error('Error assigning NFC badge:', error);
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-      }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
 } 

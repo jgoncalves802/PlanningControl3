@@ -197,16 +197,24 @@ export function useCreateNFCBadge() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: api.createBadge,
-    onSuccess: (data) => {
-      // Invalidar queries relacionadas
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
-      
-      toast.success('Crachá criado com sucesso!');
+    mutationFn: async (data: CreateNFCBadgeData) => {
+      const response = await fetch('/api/nfc-badges', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create NFC badge');
+      }
+
+      return response.json();
     },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Erro ao criar crachá');
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['nfc-badges'] });
     },
   });
 }
