@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus, Download, Upload, Scan } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { NFCBadge, NFCBadgeFilters } from '@/lib/types/nfc-badges';
+import { NFCBadge, NFCBadgeFilters as NFCBadgeFiltersType } from '@/lib/types/nfc-badges';
 import { useNFCBadgesQuery, useDeleteNFCBadge, useNFCScan } from '@/lib/useNFCBadges';
 import NFCBadgeStats from '@/components/nfc-badges/NFCBadgeStats';
 import NFCBadgeFilters from '@/components/nfc-badges/NFCBadgeFilters';
@@ -16,7 +16,7 @@ import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
 import { toast } from 'react-hot-toast';
 
 export default function NFCManagementPage() {
-  const [filters, setFilters] = useState<NFCBadgeFilters>({});
+  const [filters, setFilters] = useState<NFCBadgeFiltersType>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);

@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { NFCBadgeStatus, NFCBadgeFilters, NFCBadgeStatusLabels } from '@/lib/types/nfc-badges';
+import { NFCBadgeStatus, NFCBadgeFilters as NFCBadgeFiltersType, NFCBadgeStatusLabels } from '@/lib/types/nfc-badges';
 
 interface NFCBadgeFiltersProps {
-  filters: NFCBadgeFilters;
-  onFiltersChange: (filters: NFCBadgeFilters) => void;
+  filters: NFCBadgeFiltersType;
+  onFiltersChange: (filters: NFCBadgeFiltersType) => void;
 }
 
 export default function NFCBadgeFilters({ filters, onFiltersChange }: NFCBadgeFiltersProps) {
