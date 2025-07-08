@@ -62,6 +62,8 @@ model User {
   transferApprovals       TransferRequest[]     @relation("ApprovedBy")
   overtimeApprovals       OvertimeApproval[]    @relation("ApprovedBy")
   auditLogs               AuditLog[]
+  badgesAssigned          NFCBadge[]            @relation("BadgeAssignedBy")
+  badgesRevoked           NFCBadge[]            @relation("BadgeRevokedBy")
 }
 
 enum UserRole {
@@ -207,6 +209,7 @@ model Employee {
   timeRecords       TimeRecord[]
   transferRequests  TransferRequest[] @relation("EmployeeTransferRequests")
   workforceEntries  WorkforceEntry[]  @relation("EmployeeWorkforceEntries")
+  nfcBadge          NFCBadge?         @relation("EmployeeNFCBadge")
   @@unique([registration, company]) // Matrícula única por empresa
 }
 
@@ -382,6 +385,41 @@ enum WorkforceStatus {
   ABSENT  
   LATE
   LEFT
+}
+
+// --- Gestão de Crachás NFC ---
+
+model NFCBadge {
+  id          String         @id @default(cuid())
+  badgeId     String         @unique // ID único do crachá NFC
+  employeeId  String?        @unique // Um funcionário pode ter apenas um crachá ativo
+  status      NFCBadgeStatus @default(AVAILABLE)
+  isActive    Boolean        @default(true)
+  assignedAt  DateTime?      // Data de atribuição
+  revokedAt   DateTime?      // Data de revogação
+  assignedBy  String?        // ID do usuário que atribuiu
+  revokedBy   String?        // ID do usuário que revogou
+  notes       String?        // Observações sobre o crachá
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  
+  // Relacionamentos
+  employee    Employee?      @relation("EmployeeNFCBadge", fields: [employeeId], references: [id])
+  assignedByUser User?       @relation("BadgeAssignedBy", fields: [assignedBy], references: [id])
+  revokedByUser  User?       @relation("BadgeRevokedBy", fields: [revokedBy], references: [id])
+  
+  @@index([badgeId])
+  @@index([employeeId])
+  @@index([status])
+}
+
+enum NFCBadgeStatus {
+  AVAILABLE   // Disponível para atribuição
+  ASSIGNED    // Atribuído a um funcionário
+  REVOKED     // Revogado/Bloqueado
+  LOST        // Perdido
+  DAMAGED     // Danificado
+  EXPIRED     // Expirado
 }
 
 // --- Logs ---

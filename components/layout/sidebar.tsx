@@ -16,7 +16,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UserCheck,
-  Calendar
+  Calendar,
+  CreditCard
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -31,6 +32,7 @@ const navigation = [
   { name: 'Contratos', href: '/dashboard/contracts', icon: FileText },
   { name: 'Planejamento', href: '/dashboard/planning', icon: Calendar },
   { name: 'Controle de Efetivo', href: '/dashboard/workforce-control', icon: UserCheck },
+  { name: 'Crachás NFC', href: '/dashboard/nfc-management', icon: CreditCard },
   { name: 'Transferências', href: '/dashboard/transfers', icon: ArrowLeftRight },
   { name: 'Segurança', href: '/dashboard/safety', icon: Shield },
   { name: 'Análises', href: '/dashboard/analytics', icon: BarChart3 },
