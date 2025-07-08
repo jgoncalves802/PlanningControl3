@@ -276,12 +276,12 @@ export default function EmployeesPage() {
     createEmployeeMutation.mutate(
       employeeData,
       {
-        onSuccess: () => {
+      onSuccess: () => {
           toast.success('Funcionário criado com sucesso!');
-          setShowAddModal(false);
+        setShowAddModal(false);
           refetch();
-        },
-        onError: (error: any) => {
+      },
+      onError: (error: any) => {
           console.error('Erro ao criar funcionário:', error);
           toast.error(error?.message || 'Erro ao criar funcionário');
         }

@@ -13,6 +13,7 @@ import NFCBadgeModal from '@/components/nfc-badges/NFCBadgeModal';
 import NFCBadgeViewModal from '@/components/nfc-badges/NFCBadgeViewModal';
 import NFCBadgeAssignModal from '@/components/nfc-badges/NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
+import NFCScanner from '@/components/nfc-badges/NFCScanner';
 import { toast } from 'react-hot-toast';
 
 export default function NFCManagementPage() {
@@ -23,8 +24,8 @@ export default function NFCManagementPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<NFCBadge | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
 
   const { data: badgesData, isLoading } = useNFCBadgesQuery({
     ...filters,
@@ -68,21 +69,18 @@ export default function NFCManagementPage() {
     setIsRevokeModalOpen(true);
   };
 
-  const handleScanNFC = async () => {
-    setIsScanning(true);
+  const handleScanNFC = () => {
+    setIsScannerOpen(true);
+  };
+
+  const handleBadgeDetected = async (badgeId: string) => {
     try {
-      // Simular leitura NFC - em produção, integrar com hardware NFC
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Gerar ID fictício para demonstração
-      const mockId = Math.random().toString(16).substr(2, 12).toUpperCase();
-      
-      // Processar o scan
-      await scanMutation.mutateAsync({ badgeId: mockId });
+      await scanMutation.mutateAsync({ 
+        badgeId,
+        location: 'Scanner Web NFC'
+      });
     } catch (error) {
-      toast.error('Erro ao processar scan NFC');
-    } finally {
-      setIsScanning(false);
+      console.error('Erro ao processar crachá:', error);
     }
   };
 
@@ -114,11 +112,11 @@ export default function NFCManagementPage() {
               <Button
                 variant="outline"
                 onClick={handleScanNFC}
-                disabled={isScanning}
+                disabled={isScannerOpen}
                 className="flex items-center gap-2"
               >
-                <Scan className={`h-4 w-4 ${isScanning ? 'animate-spin' : ''}`} />
-                {isScanning ? 'Lendo...' : 'Scan NFC'}
+                <Scan className={`h-4 w-4 ${isScannerOpen ? 'animate-spin' : ''}`} />
+                {isScannerOpen ? 'Lendo...' : 'Scan NFC'}
               </Button>
               <Button
                 variant="outline"
@@ -241,6 +239,12 @@ export default function NFCManagementPage() {
           setSelectedBadge(null);
         }}
         badge={selectedBadge}
+      />
+
+      <NFCScanner
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onBadgeDetected={handleBadgeDetected}
       />
     </div>
   );

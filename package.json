@@ -4,10 +4,15 @@
   "version": "3.0.0",
   "scripts": {
     "dev": "next dev",
+    "dev:https": "node scripts/dev-https.js",
+    "dev:setup": "npm run mkcert:install && npm run mkcert:create",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "mkcert:install": "npx -y mkcert -install",
+    "mkcert:create": "npx -y mkcert localhost",
+    "nfc:test": "echo 'Acesse https://localhost:3001/dashboard/nfc-management no Chrome Android'"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",
