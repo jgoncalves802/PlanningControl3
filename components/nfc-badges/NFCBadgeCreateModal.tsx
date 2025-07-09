@@ -11,6 +11,7 @@ import NFCScanner from './NFCScanner';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { toast } from 'react-hot-toast';
 
 interface Employee {
   id: string;
@@ -62,13 +63,22 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
   }, [isOpen]);
 
   const handleBadgeScanned = (badgeId: string) => {
-    setScannedBadgeId(badgeId);
-    setIsScannerOpen(false);
-    setStep('employee');
+    if (badgeId && badgeId.trim()) {
+      setScannedBadgeId(badgeId);
+      setFormData(prev => ({ ...prev, badgeId }));
+      setIsScannerOpen(false);
+      setStep('employee');
+    } else {
+      toast.error('Falha na leitura, tente novamente');
+    }
+  };
+
+  const handleScanError = () => {
+    toast.error('Falha na leitura, tente novamente');
   };
 
   const handleManualEntry = () => {
-    if (!scannedBadgeId.trim()) {
+    if (!formData.badgeId.trim()) {
       setErrors({ badgeId: 'ID do crachá é obrigatório' });
       return;
     }
@@ -83,8 +93,9 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
   const handleSubmit = async () => {
     try {
       // 1. Criar o crachá
+      const badgeId = scannedBadgeId || formData.badgeId;
       const createData: CreateNFCBadgeData = {
-        badgeId: scannedBadgeId.trim(), // Garantir que não há espaços
+        badgeId: badgeId.trim(), // Garantir que não há espaços
         notes: notes.trim() || undefined, // Garantir que não há espaços
       };
       
@@ -117,30 +128,8 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
     if (step === 'confirm') setStep('employee');
   };
 
-  const handleScan = async () => {
-    setIsScanning(true);
-    try {
-      // Iniciar escaneamento imediatamente
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const mockId = `${Math.random().toString(16).substr(2, 2)}:${Math.random().toString(16).substr(2, 2)}:${Math.random().toString(16).substr(2, 2)}:${Math.random().toString(16).substr(2, 2)}`;
-      
-      setFormData(prev => ({ ...prev, badgeId: mockId }));
-      
-      // Verificar se o crachá já existe
-      // const existingBadge = nfcBadges?.find(badge => badge.badgeId === mockId); // This line was removed as per the edit hint
-      // if (existingBadge) { // This line was removed as per the edit hint
-      //   setExistingBadgeId(mockId); // This line was removed as per the edit hint
-      //   setStep(2); // Ir direto para atribuição // This line was removed as per the edit hint
-      // } else { // This line was removed as per the edit hint
-        // Criar o crachá automaticamente e ir para etapa 2
-        // await handleCreateBadge(mockId); // This line was removed as per the edit hint
-      // } // This line was removed as per the edit hint
-    } catch (error) {
-      console.error('Erro na leitura NFC:', error);
-      // toast.error('Erro na leitura NFC'); // This line was removed as per the edit hint
-    } finally {
-      setIsScanning(false);
-    }
+  const handleScan = () => {
+    setIsScannerOpen(true);
   };
 
   if (!isOpen) return null;
@@ -176,11 +165,11 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
             <div className="flex items-center space-x-4">
               <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
                 step === 'scan' ? 'bg-blue-600 text-white' : 
-                scannedBadgeId ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+                (scannedBadgeId || formData.badgeId) ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
               }`}>
                 1
               </div>
-              <div className={`w-12 h-1 ${scannedBadgeId ? 'bg-green-600' : 'bg-gray-200'}`}></div>
+              <div className={`w-12 h-1 ${(scannedBadgeId || formData.badgeId) ? 'bg-green-600' : 'bg-gray-200'}`}></div>
               <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
                 step === 'employee' ? 'bg-blue-600 text-white' : 
                 selectedEmployee ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
@@ -229,20 +218,11 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
                 <div className="flex justify-center">
                   <button
                     onClick={handleScan}
-                    disabled={isScanning}
+                    disabled={isScannerOpen}
                     className="inline-flex items-center px-8 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
                   >
-                    {isScanning ? (
-                      <>
-                        <Loader2 className="animate-spin h-5 w-5 mr-3" />
-                        Escaneando...
-                      </>
-                    ) : (
-                      <>
-                        <Scan className="h-5 w-5 mr-3" />
-                        Iniciar Scanner
-                      </>
-                    )}
+                    <Scan className="h-5 w-5 mr-3" />
+                    Iniciar Scanner
                   </button>
                 </div>
 
@@ -283,6 +263,17 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
                       className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
+                  
+                  {formData.badgeId && (
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleManualEntry}
+                        className="bg-blue-600 hover:bg-blue-700"
+                      >
+                        Continuar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -416,7 +407,7 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
                       <CreditCard className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                      <p className="font-medium">ID: {scannedBadgeId}</p>
+                      <p className="font-medium">ID: {scannedBadgeId || formData.badgeId}</p>
                       <p className="text-sm text-gray-500">Status: Disponível</p>
                     </div>
                   </div>
@@ -490,8 +481,13 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
       {/* NFC Scanner Modal */}
       <NFCScanner
         isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
+        onClose={() => {
+          setIsScannerOpen(false);
+          setIsScanning(false);
+        }}
         onBadgeDetected={handleBadgeScanned}
+        onError={handleScanError}
+        autoStart={true}
       />
     </div>
   );

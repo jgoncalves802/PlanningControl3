@@ -16,9 +16,11 @@ interface NFCScannerProps {
   isOpen: boolean;
   onClose: () => void;
   onBadgeDetected?: (badgeId: string) => void;
+  onError?: (error: string) => void;
+  autoStart?: boolean;
 }
 
-export default function NFCScanner({ isOpen, onClose, onBadgeDetected }: NFCScannerProps) {
+export default function NFCScanner({ isOpen, onClose, onBadgeDetected, onError, autoStart = false }: NFCScannerProps) {
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<NFCReadResult | null>(null);
   const [nfcSupported, setNfcSupported] = useState(false);
@@ -48,6 +50,13 @@ export default function NFCScanner({ isOpen, onClose, onBadgeDetected }: NFCScan
     checkNFCSupport();
   }, []);
 
+  // Auto-start scanning when modal opens
+  useEffect(() => {
+    if (isOpen && autoStart && nfcSupported && !isScanning && !scanResult) {
+      handleStartScan();
+    }
+  }, [isOpen, autoStart, nfcSupported]);
+
   const handleStartScan = async () => {
     if (!nfcSupported) return;
 
@@ -62,11 +71,15 @@ export default function NFCScanner({ isOpen, onClose, onBadgeDetected }: NFCScan
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
         controller.abort();
+        const errorMsg = 'Timeout: Nenhum crachá detectado em 30 segundos';
         setScanResult({
           success: false,
-          error: 'Timeout: Nenhum crachá detectado em 30 segundos'
+          error: errorMsg
         });
         setIsScanning(false);
+        if (onError) {
+          onError(errorMsg);
+        }
       }, 30000);
 
       // Listener para leitura
@@ -92,11 +105,15 @@ export default function NFCScanner({ isOpen, onClose, onBadgeDetected }: NFCScan
       // Listener para erros
       ndef.addEventListener('readingerror', () => {
         clearTimeout(timeoutId);
+        const errorMsg = 'Erro ao ler crachá NFC';
         setScanResult({
           success: false,
-          error: 'Erro ao ler crachá NFC'
+          error: errorMsg
         });
         setIsScanning(false);
+        if (onError) {
+          onError(errorMsg);
+        }
       });
 
       // Iniciar escaneamento
@@ -118,6 +135,10 @@ export default function NFCScanner({ isOpen, onClose, onBadgeDetected }: NFCScan
         success: false,
         error: errorMessage
       });
+      
+      if (onError) {
+        onError(errorMessage);
+      }
     }
   };
 
