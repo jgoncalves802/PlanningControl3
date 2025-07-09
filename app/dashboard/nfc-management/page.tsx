@@ -15,6 +15,7 @@ import NFCBadgeAssignModal from '@/components/nfc-badges/NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
 import NFCBadgeCreateModal from '@/components/nfc-badges/NFCBadgeCreateModal';
 import NFCBadgeRealTimeUpdater from '@/components/nfc-badges/NFCBadgeRealTimeUpdater';
+import SSEDebugPanel from '@/components/debug/SSEDebugPanel';
 import { toast } from 'react-hot-toast';
 
 export default function NFCManagementPage() {
@@ -125,6 +126,9 @@ export default function NFCManagementPage() {
             </div>
           </div>
         </div>
+
+        {/* Debug Panel para testar SSE */}
+        <SSEDebugPanel />
 
         {/* Estatísticas */}
         <NFCBadgeStats />

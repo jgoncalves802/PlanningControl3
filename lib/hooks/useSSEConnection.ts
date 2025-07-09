@@ -35,7 +35,7 @@ export function useSSEConnection({
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = (event) => {
-      console.log('[SSE] Connection opened');
+      console.log('[SSE] Connection opened successfully');
       reconnectCountRef.current = 0; // Reset reconnect count on successful connection
       onOpen?.(event);
     };
@@ -77,10 +77,11 @@ export function useSSEConnection({
     eventSource.addEventListener('nfc-badge-update', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[SSE] NFC Badge update:', data);
+        console.log('[SSE] NFC Badge update received:', data.eventType, data.data?.badgeId);
         
-        // Invalidate relevant queries when badge updates are received
+        // Invalidate and refetch relevant queries immediately
         queryClient.invalidateQueries({ queryKey: ['nfc-badges'] });
+        queryClient.refetchQueries({ queryKey: ['nfc-badges'] });
         queryClient.invalidateQueries({ queryKey: ['employees'] });
         queryClient.invalidateQueries({ queryKey: ['workforce'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
