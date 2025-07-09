@@ -55,30 +55,18 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relacionamentos
-  assignedBadges NFCBadge[] @relation("AssignedByUser")
+  contractResponsibilities ContractResponsible[]
+  transferRequestsMade     TransferRequest[] @relation("RequestedBy")
+  transferRequestsApproved TransferRequest[] @relation("ApprovedBy")
+  overtimeApprovalsGiven   OvertimeApproval[] @relation("ApprovedBy")
+  badgesAssigned           NFCBadge[] @relation("BadgeAssignedBy")
+  badgesRevoked            NFCBadge[] @relation("BadgeRevokedBy")
+  auditLogs                AuditLog[]
   
   @@map("users")
 }
 
-model NFCBadge {
-  id          String    @id @default(cuid())
-  badgeId     String    @unique
-  status      BadgeStatus @default(AVAILABLE)
-  assignedAt  DateTime?
-  assignedBy  String?
-  notes       String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // Relacionamentos
-  employeeId  String?
-  employee    Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
-  
-  // Referência ao usuário que atribuiu
-  assignedByUser User? @relation("AssignedByUser", fields: [assignedBy], references: [id])
-  
-  @@map("nfc_badges")
-}
+
 
 enum UserRole {
   TENANT_ADMIN
@@ -207,13 +195,15 @@ model Employee {
   statusBancodoc             String?   // Status Bancário/Documental
   efetivoRDO                 Boolean?  // Efetivo Apontado em RDO
   
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  nfcCardId         String?           @unique
-  currentContractId String?
-  currentFunctionId String?
-  companyFunctionId String?
+  isActive              Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  nfcCardId             String?           @unique
+  currentContractId     String?
+  currentFunctionId     String?
+  companyFunctionId     String?
+  contractId            String?           // ID do contrato atual para vinculação
+  contractAssignmentDate DateTime?        // Data de vinculação ao contrato
   currentContract   Contract?         @relation(fields: [currentContractId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   currentFunction   ContractFunction? @relation(fields: [currentFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
   companyFunction   CompanyFunction?  @relation("EmployeeCompanyFunction", fields: [companyFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)

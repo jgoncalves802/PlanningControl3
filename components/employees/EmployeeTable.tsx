@@ -23,6 +23,7 @@ interface EmployeeTableProps {
   onViewEmployee: (employee: Employee) => void;
   onEditEmployee: (employee: Employee) => void;
   onShowHistory: (employee: Employee) => void;
+  selectedContractId?: string; // NOVO
 }
 
 const EmployeeTable = memo(function EmployeeTable({
@@ -34,7 +35,8 @@ const EmployeeTable = memo(function EmployeeTable({
   onSelectAll,
   onViewEmployee,
   onEditEmployee,
-  onShowHistory
+  onShowHistory,
+  selectedContractId // NOVO
 }: EmployeeTableProps) {
   const enabledColumns = columns.filter(col => col.enabled);
 
@@ -183,6 +185,14 @@ const EmployeeTable = memo(function EmployeeTable({
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.efetivoRDO ? 'Sim' : 'Não'}</span>;
       case 'dismissalDate':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.dismissalDate ? formatDateInput(employee.dismissalDate) : '-'}</span>;
+      case 'contractAssignmentDate':
+        return (
+          <span className="text-sm text-gray-900 dark:text-slate-100">
+            {employee['contractAssignmentDate']
+              ? formatDateInput(employee['contractAssignmentDate'])
+              : '-'}
+          </span>
+        );
       default:
         return <span className="text-sm text-gray-500 dark:text-slate-400">-</span>;
     }
@@ -216,76 +226,45 @@ const EmployeeTable = memo(function EmployeeTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
-          {employees.map((employee, index) => (
-            <tr 
-              key={employee.id} 
-              className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-150 ${
-                index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-gray-50/30 dark:bg-slate-800/50'
-              }`}
-            >
-              {canManageEmployees && (
+          {employees.map((employee, index) => {
+            const isLinkedToSelected = selectedContractId && employee.contractId === selectedContractId;
+            return (
+              <tr 
+                key={employee.id} 
+                className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-150 ${
+                  index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-gray-50/30 dark:bg-slate-800/50'
+                }`}
+              >
+                {canManageEmployees && (
+                  <td className="p-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployees.includes(employee.id)}
+                      onChange={() => onSelectEmployee(employee.id)}
+                      className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary focus:ring-offset-0"
+                      disabled={isLinkedToSelected}
+                    />
+                  </td>
+                )}
+                {enabledColumns.map((column) => (
+                  <td key={column.key} className="p-4">
+                    {renderCellContent(employee, column.key)}
+                  </td>
+                ))}
                 <td className="p-4">
-                  <input
-                    type="checkbox"
-                    checked={selectedEmployees.includes(employee.id)}
-                    onChange={() => onSelectEmployee(employee.id)}
-                    className="rounded border-gray-300 dark:border-slate-600 text-primary focus:ring-primary focus:ring-offset-0"
-                  />
+                  {/* Outras ações */}
+                  {isLinkedToSelected && (
+                    <button
+                      className="text-blue-600 hover:underline text-sm font-medium"
+                      onClick={() => alert('Solicitar transferência para gestor do contrato atual (implementar fluxo)')}
+                    >
+                      Solicitar transferência
+                    </button>
+                  )}
                 </td>
-              )}
-              {enabledColumns.map((column) => (
-                <td key={column.key} className="p-4">
-                  {renderCellContent(employee, column.key)}
-                </td>
-              ))}
-              <td className="p-4">
-                <div className="flex items-center space-x-1">
-                  <div className="group relative">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onViewEmployee(employee)}
-                      className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400 transition-all duration-200"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
-                      Visualizar detalhes
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
-                    </div>
-                  </div>
-                  <div className="group relative">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onEditEmployee(employee)}
-                      className="h-8 w-8 p-0 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-900/20 dark:hover:text-amber-400 transition-all duration-200"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
-                      Editar funcionário
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
-                    </div>
-                  </div>
-                  <div className="group relative">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => onShowHistory(employee)}
-                      className="h-8 w-8 p-0 hover:bg-purple-50 hover:text-purple-600 dark:hover:bg-purple-900/20 dark:hover:text-purple-400 transition-all duration-200"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-slate-700 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50 shadow-lg">
-                      Histórico de vínculos
-                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 dark:border-t-slate-700"></div>
-                    </div>
-                  </div>
-                </div>
-              </td>
-            </tr>
-          ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

@@ -17,7 +17,8 @@ import {
   ChevronRight,
   UserCheck,
   Calendar,
-  CreditCard
+  CreditCard,
+  UserPlus
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,6 +30,7 @@ interface SidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Funcionários', href: '/dashboard/employees', icon: Users },
+  { name: 'Alocação de Efetivo', href: '/dashboard/employee-assignment', icon: UserPlus },
   { name: 'Contratos', href: '/dashboard/contracts', icon: FileText },
   { name: 'Planejamento', href: '/dashboard/planning', icon: Calendar },
   { name: 'Controle de Efetivo', href: '/dashboard/workforce-control', icon: UserCheck },

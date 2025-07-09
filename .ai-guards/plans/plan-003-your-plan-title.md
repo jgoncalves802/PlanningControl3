@@ -13,9 +13,9 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 ## ✅ Functional Requirements
 
 ### 1. Migração de Dados Mock
-- Remover dependências de `lib/mock-data.ts` em todos os componentes e páginas
-- Substituir dados mock por chamadas de API reais
-- Migrar todas as interfaces TypeScript para tipos baseados no schema Prisma
+- Remover dependências de `lib/mock-data.ts` em todos os componentes e páginas ✅ CONCLUÍDO PARA NFC E WORKFORCE
+- Substituir dados mock por chamadas de API reais ✅ CONCLUÍDO PARA NFC E WORKFORCE
+- Migrar todas as interfaces TypeScript para tipos baseados no schema Prisma ✅ PARCIALMENTE CONCLUÍDO
 
 ### 2. APIs CRUD Faltantes
 - **Contratos (Contracts)**: Implementar CRUD completo ✅ CONCLUÍDO
@@ -52,10 +52,10 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - Relatórios de presença e horas trabalhadas ✅ CONCLUÍDO
 
 ### 7. Sistema de Controle de Efetivo ✅ IMPLEMENTADO - NECESSITA COMPLEMENTOS
-- **Vinculação de Crachás NFC**: Sistema para associar crachás NFC aos funcionários
+- **Vinculação de Crachás NFC**: Sistema para associar crachás NFC aos funcionários ✅ CONCLUÍDO (com validação de atribuição única e bloqueio de duplicidade)
 - **Gestão de Funcionários por Contrato**: Vinculação e transferência de funcionários entre contratos
 - **Validações de Acesso**: Verificar se funcionário pode registrar ponto em determinado contrato
-- **Interface de Gestão**: Telas para administrar vinculações e permissões
+- **Interface de Gestão**: Telas para administrar vinculações e permissões ✅ PARCIALMENTE CONCLUÍDO
 
 ### 8. Planejamento de Projetos
 - Gerenciamento de fases de projeto
@@ -67,24 +67,24 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 ### 8.1. Vinculação de Crachás NFC aos Funcionários
 
 #### APIs Necessárias:
-- **GET /api/nfc-badges** - Listar crachás disponíveis/em uso
-- **POST /api/nfc-badges** - Registrar novo crachá
-- **PUT /api/nfc-badges/[id]/assign** - Vincular crachá a funcionário
-- **DELETE /api/nfc-badges/[id]/unassign** - Desvincular crachá
-- **GET /api/employees/[id]/nfc-badge** - Verificar crachá do funcionário
+- **GET /api/nfc-badges** - Listar crachás disponíveis/em uso ✅
+- **POST /api/nfc-badges** - Registrar novo crachá ✅
+- **PUT /api/nfc-badges/[id]/assign** - Vincular crachá a funcionário ✅ (com validação de atribuição única)
+- **DELETE /api/nfc-badges/[id]/unassign** - Desvincular crachá ✅
+- **GET /api/employees/[id]/nfc-badge** - Verificar crachá do funcionário ✅
 
 #### Funcionalidades Frontend:
-- Modal de vinculação de crachá na página de funcionários
-- Scanner de crachá para identificação automática
-- Lista de crachás disponíveis/em uso
-- Histórico de vinculações por funcionário
-- Validação de crachás únicos por funcionário
+- Modal de vinculação de crachá na página de funcionários ✅
+- Scanner de crachá para identificação automática ✅
+- Lista de crachás disponíveis/em uso ✅
+- Histórico de vinculações por funcionário 🔄 EM ANDAMENTO
+- Validação de crachás únicos por funcionário ✅
 
 #### Validações:
-- Um crachá só pode estar vinculado a um funcionário por vez
-- Funcionário só pode ter um crachá ativo
-- Verificar se crachá existe antes de vincular
-- Log de auditoria para todas as vinculações/desvinculações
+- Um crachá só pode estar vinculado a um funcionário por vez ✅
+- Funcionário só pode ter um crachá ativo ✅
+- Verificar se crachá existe antes de vincular ✅
+- Log de auditoria para todas as vinculações/desvinculações 🔄 PENDENTE
 
 ### 8.2. Vinculação de Funcionários a Contratos
 
@@ -96,7 +96,7 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - **GET /api/employees/unassigned** - Funcionários sem contrato
 
 #### Funcionalidades Frontend:
-- Interface de gestão de funcionários por contrato
+- Interface de gestão de funcionários por contrato 🔄 EM ANDAMENTO
 - Drag & drop para mover funcionários entre contratos
 - Seleção múltipla para operações em lote
 - Filtros por status de vinculação
@@ -124,12 +124,12 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 ### 8.4. Interface de Gestão Administrativa
 
 #### Páginas Necessárias:
-- **Gestão de Crachás**: `/dashboard/nfc-management`
+- **Gestão de Crachás**: `/dashboard/nfc-management` ✅
 - **Atribuição de Funcionários**: `/dashboard/employee-assignment`
 - **Relatórios de Acesso**: `/dashboard/access-reports`
 
 #### Componentes:
-- `NFCBadgeManager` - Gestão de crachás
+- `NFCBadgeManager` - Gestão de crachás ✅
 - `EmployeeAssignment` - Atribuição a contratos
 - `AccessValidator` - Validação de acessos
 - `ContractEmployeeList` - Lista de funcionários por contrato
@@ -148,8 +148,8 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - Validação de entrada em todos os endpoints
 - Sanitização de dados para prevenir XSS/SQL Injection
 - Rate limiting (100 requests/min por usuário)
-- **Controle de acesso por crachá NFC**
-- **Logs de auditoria para vinculações de crachá**
+- **Controle de acesso por crachá NFC** ✅ PARCIALMENTE CONCLUÍDO
+- **Logs de auditoria para vinculações de crachá** 🔄 PENDENTE
 - **Validação de permissões por contrato**
 
 ### Scalability
@@ -160,11 +160,11 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 
 ### Data Integrity
 - Validações rigorosas no Prisma schema
-- Constraints de unicidade adequadas
+- Constraints de unicidade adequadas ✅ PARA NFC
 - Transações para operações complexas
 - Backup automático de dados críticos
-- **Integridade referencial entre funcionários, crachás e contratos**
-- **Constraints de unicidade para crachás NFC**
+- **Integridade referencial entre funcionários, crachás e contratos** ✅ PARA NFC
+- **Constraints de unicidade para crachás NFC** ✅
 
 ## 📚 Guidelines & Packages
 
@@ -263,16 +263,16 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
    - DELETE /api/employee-trainings/[id] (remover registro)
    - GET /api/employees/[id]/trainings (treinamentos do funcionário)
 
-### Fase 2.5: Complementos do Controle de Efetivo (2-3 dias) 🔄 NOVA FASE
-7. **Sistema de Gestão de Crachás NFC**
-   - GET /api/nfc-badges (listar crachás com status)
-   - POST /api/nfc-badges (registrar novo crachá)
-   - PUT /api/nfc-badges/[id]/assign (vincular a funcionário)
-   - DELETE /api/nfc-badges/[id]/unassign (desvincular)
-   - GET /api/nfc-badges/available (crachás disponíveis)
+### Fase 2.5: Complementos do Controle de Efetivo (2-3 dias) ✅ PARCIALMENTE CONCLUÍDO
+7. **Sistema de Gestão de Crachás NFC** ✅ CONCLUÍDO (real-time, atribuição única, SSE robusto, UI sem debug panel)
+   - GET /api/nfc-badges (listar crachás com status) ✅
+   - POST /api/nfc-badges (registrar novo crachá) ✅
+   - PUT /api/nfc-badges/[id]/assign (vincular a funcionário, com validação) ✅
+   - DELETE /api/nfc-badges/[id]/unassign (desvincular) ✅
+   - GET /api/nfc-badges/available (crachás disponíveis) ✅
    - POST /api/nfc-badges/bulk-import (importação em lote)
 
-8. **Sistema de Atribuição de Funcionários a Contratos**
+8. **Sistema de Atribuição de Funcionários a Contratos** 🔄 EM ANDAMENTO
    - PUT /api/employees/[id]/assign-contract (atribuir a contrato)
    - DELETE /api/employees/[id]/remove-contract (remover de contrato)
    - GET /api/contracts/[id]/employees (funcionários do contrato)
@@ -280,7 +280,7 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
    - GET /api/employees/unassigned (funcionários sem contrato)
    - POST /api/employee-assignments/transfer (transferir entre contratos)
 
-9. **Validações e Controle de Acesso**
+9. **Validações e Controle de Acesso** 🔄 EM ANDAMENTO
    - POST /api/workforce/validate-access (validar acesso por crachá)
    - GET /api/contracts/[id]/access-rules (regras de acesso)
    - PUT /api/contracts/[id]/access-rules (configurar regras)
@@ -360,35 +360,35 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
     - Funções/Cargos: já migrado, validar funcionamento ✅ CONCLUÍDO
 
 21. **Interfaces de Gestão de Controle de Efetivo** 🔄 NOVA SEÇÃO
-    - Página de gestão de crachás NFC
-    - Interface de atribuição de funcionários a contratos
+    - Página de gestão de crachás NFC ✅
+    - Interface de atribuição de funcionários a contratos 🔄 EM ANDAMENTO
     - Dashboard de controle de acesso
     - Relatórios de vinculações e acessos
 
 22. **Atualizar hooks e serviços**
-    - Criar hooks React Query para todas as entidades
+    - Criar hooks React Query para todas as entidades ✅ PARCIALMENTE
     - Implementar cache strategies adequadas
     - Adicionar error handling e retry logic
     - Implementar optimistic updates onde apropriado
 
 ### Fase 8: Logs de Auditoria e Finalização (2-3 dias)
-23. **Implementar Sistema de Auditoria**
+23. **Implementar Sistema de Auditoria** 🔄 EM ANDAMENTO
     - GET /api/audit-logs (logs com filtros)
     - Middleware automático para log de operações
     - Rastreamento de mudanças em dados críticos
-    - **Logs específicos para vinculações de crachá**
+    - **Logs específicos para vinculações de crachá** 🔄 PENDENTE
     - **Auditoria de mudanças de contrato**
 
-24. **Testes e Validação Final**
+24. **Testes e Validação Final** 🔄 EM ANDAMENTO
     - Testes de integração para todos os CRUDs
     - Validação de performance das APIs
     - Teste de segurança e autorização
-    - **Testes de vinculação de crachás**
-    - **Validação de controle de acesso**
-    - Migração de dados mock existentes para banco
+    - **Testes de vinculação de crachás** 🔄 EM ANDAMENTO
+    - **Validação de controle de acesso** 🔄 EM ANDAMENTO
+    - Migração de dados mock existentes para banco ✅ PARCIALMENTE
 
-25. **Limpeza e Otimização**
-    - Remover lib/mock-data.ts e dependências
+25. **Limpeza e Otimização** 🔄 EM ANDAMENTO
+    - Remover lib/mock-data.ts e dependências ✅ PARA NFC E WORKFORCE
     - Otimizar queries baseado em uso real
     - Documentar APIs criadas
     - Setup de monitoramento e logs
@@ -413,17 +413,17 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - Sistema de autenticação JWT
 - Middleware de autorização RBAC
 - Validação com Zod em todos os endpoints
-- **APIs de gestão de crachás NFC**
-- **APIs de atribuição de funcionários a contratos**
-- **Sistema de validação de acesso**
+- **APIs de gestão de crachás NFC** ✅
+- **APIs de atribuição de funcionários a contratos** 🔄 EM ANDAMENTO
+- **Sistema de validação de acesso** 🔄 EM ANDAMENTO
 
 ### Frontend Migrado
-- Todas as páginas usando dados reais
-- Hooks React Query para todas as entidades
+- Todas as páginas usando dados reais ✅ PARCIALMENTE
+- Hooks React Query para todas as entidades ✅ PARCIALMENTE
 - Loading states e error handling
 - Cache otimizado e sincronização
-- **Interface de gestão de crachás**
-- **Sistema de atribuição de funcionários**
+- **Interface de gestão de crachás** ✅
+- **Sistema de atribuição de funcionários** 🔄 EM ANDAMENTO
 - **Dashboard de controle de acesso**
 
 ### Documentação
@@ -431,16 +431,16 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - Guia de migração de dados
 - Manual de deployment
 - Documentação de segurança
-- **Manual de gestão de crachás NFC**
-- **Guia de atribuição de funcionários**
+- **Manual de gestão de crachás NFC** 🔄 EM ANDAMENTO
+- **Guia de atribuição de funcionários** 🔄 EM ANDAMENTO
 
 ### Infraestrutura
 - Schema de banco otimizado
 - Sistema de backup automático
 - Monitoramento e alertas
-- Logs de auditoria completos
-- **Controle de integridade de crachás**
-- **Validação de acessos em tempo real**
+- Logs de auditoria completos 🔄 EM ANDAMENTO
+- **Controle de integridade de crachás** ✅
+- **Validação de acessos em tempo real** 🔄 EM ANDAMENTO
 
 ## 🎯 Success Criteria
 
@@ -466,14 +466,21 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - Funcionários CRUD completo
 - Controle de Efetivo básico (workforce entries)
 - APIs de estatísticas em tempo real
+- Sistema de crachás NFC (real-time, atribuição única, SSE robusto, UI sem debug panel)
+- Validação de atribuição única de crachá por funcionário
+- Remoção do painel de debug SSE
+- Bloqueio de atribuição duplicada de crachá
 
 ### 🔄 Em Andamento:
-- Correção de bugs nas APIs de workforce
-- Debug e otimização das consultas
+- Histórico de vinculações de crachá por funcionário
+- Interface de atribuição de funcionários a contratos
+- Logs de auditoria para vinculações de crachá
+- Testes de integração e validação final
+- Otimização de queries e monitoramento
 
 ### 📋 Próximos Passos:
-1. **Finalizar correções do controle de efetivo**
-2. **Implementar gestão de crachás NFC**
-3. **Criar sistema de atribuição de funcionários a contratos**
-4. **Desenvolver interfaces de gestão**
-5. **Implementar validações de acesso**
+1. Finalizar histórico de vinculações de crachá
+2. Implementar logs de auditoria para vinculações
+3. Finalizar interface de atribuição de funcionários a contratos
+4. Testes finais e validação de segurança
+5. Otimização e documentação final
