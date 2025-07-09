@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Plus, Search, Filter, MoreHorizontal, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { NFCBadge, NFCBadgeFilters as NFCBadgeFilterType, formatNFCBadgeId, getNFCBadgeStatusColor, getNFCBadgeStatusLabel } from '@/lib/types/nfc-badges';
+import { NFCBadge, NFCBadgeFilterData, formatNFCBadgeId, getNFCBadgeStatusColor, getNFCBadgeStatusLabel } from '@/lib/types/nfc-badges';
 import { useNFCBadgesQuery } from '@/lib/useNFCBadges';
 import NFCBadgeCreateModal from './NFCBadgeCreateModal';
 import NFCBadgeAssignModal from './NFCBadgeAssignModal';
@@ -17,9 +17,10 @@ interface NFCBadgesListProps {
 }
 
 export default function NFCBadgesList({ className }: NFCBadgesListProps) {
-  const [filters, setFilters] = useState<NFCBadgeFilterType>({
+  const [filters, setFilters] = useState({
     status: undefined,
     search: '',
+    assignedEmployee: 'all',
     page: 1,
     limit: 10,
   });
@@ -32,7 +33,7 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
 
   const { data, isLoading, error } = useNFCBadgesQuery(filters);
 
-  const handleFiltersChange = (newFilters: NFCBadgeFilterType) => {
+  const handleFiltersChange = (newFilters: any) => {
     setFilters(newFilters);
   };
 
@@ -83,28 +84,6 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
 
   return (
     <div className={className}>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Crachás NFC</h2>
-          <p className="text-gray-600">Gerencie os crachás NFC da empresa</p>
-        </div>
-        <Button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Crachá
-        </Button>
-      </div>
-
-      {/* Filters */}
-      <NFCBadgeFilters
-        filters={filters}
-        onFiltersChange={handleFiltersChange}
-        className="mb-6"
-      />
-
       {/* Content */}
       <Card className="overflow-hidden">
         {isLoading ? (
@@ -273,7 +252,7 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
 
       {/* Modals */}
       <NFCBadgeCreateModal
-        open={isCreateModalOpen}
+        isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
       />
 
@@ -286,13 +265,13 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
           />
 
           <NFCBadgeRevokeModal
-            open={isRevokeModalOpen}
+            isOpen={isRevokeModalOpen}
             onClose={() => setIsRevokeModalOpen(false)}
             badge={selectedBadge}
           />
 
           <NFCBadgeViewModal
-            open={isViewModalOpen}
+            isOpen={isViewModalOpen}
             onClose={() => setIsViewModalOpen(false)}
             badge={selectedBadge}
           />

@@ -141,10 +141,9 @@ export interface NFCBadgeListResponse {
 
 // Tipos para filtros
 export interface NFCBadgeFilters {
-  status?: NFCBadgeStatus;
-  search?: string;
-  page?: number;
-  limit?: number;
+  search: string;
+  status: NFCBadgeStatus | 'all' | ''; // Permitir 'all' e string vazia
+  assignedEmployee: string;
 }
 
 // Tipos para criação e edição

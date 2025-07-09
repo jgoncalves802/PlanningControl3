@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Download, Upload, Scan } from 'lucide-react';
+import { Plus, Download, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { NFCBadge, NFCBadgeFilters as NFCBadgeFiltersType } from '@/lib/types/nfc-badges';
-import { useNFCBadgesQuery, useDeleteNFCBadge, useNFCScan } from '@/lib/useNFCBadges';
+import { useNFCBadgesQuery, useDeleteNFCBadge } from '@/lib/useNFCBadges';
 import NFCBadgeStats from '@/components/nfc-badges/NFCBadgeStats';
 import NFCBadgeFilters from '@/components/nfc-badges/NFCBadgeFilters';
 import NFCBadgesList from '@/components/nfc-badges/NFCBadgesList';
@@ -14,18 +14,20 @@ import NFCBadgeViewModal from '@/components/nfc-badges/NFCBadgeViewModal';
 import NFCBadgeAssignModal from '@/components/nfc-badges/NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
 import NFCBadgeCreateModal from '@/components/nfc-badges/NFCBadgeCreateModal';
-import NFCScanner from '@/components/nfc-badges/NFCScanner';
 import { toast } from 'react-hot-toast';
 
 export default function NFCManagementPage() {
-  const [filters, setFilters] = useState<NFCBadgeFiltersType>({});
+  const [filters, setFilters] = useState<NFCBadgeFiltersType>({
+    search: '',
+    status: 'AVAILABLE' as any, // Usar um status válido em vez de 'all'
+    assignedEmployee: 'all',
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [selectedBadge, setSelectedBadge] = useState<NFCBadge | null>(null);
 
   const { data: badgesData, isLoading } = useNFCBadgesQuery({
@@ -35,7 +37,6 @@ export default function NFCManagementPage() {
   });
 
   const deleteMutation = useDeleteNFCBadge();
-  const scanMutation = useNFCScan();
 
   const badges = badgesData?.badges || [];
   const pagination = badgesData?.pagination;
@@ -70,20 +71,7 @@ export default function NFCManagementPage() {
     setIsRevokeModalOpen(true);
   };
 
-  const handleScanNFC = () => {
-    setIsScannerOpen(true);
-  };
 
-  const handleBadgeDetected = async (badgeId: string) => {
-    try {
-      await scanMutation.mutateAsync({ 
-        badgeId,
-        location: 'Scanner Web NFC'
-      });
-    } catch (error) {
-      console.error('Erro ao processar crachá:', error);
-    }
-  };
 
   const handleExport = () => {
     // Implementar exportação de dados
@@ -110,15 +98,6 @@ export default function NFCManagementPage() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={handleScanNFC}
-                disabled={isScannerOpen}
-                className="flex items-center gap-2"
-              >
-                <Scan className={`h-4 w-4 ${isScannerOpen ? 'animate-spin' : ''}`} />
-                {isScannerOpen ? 'Lendo...' : 'Scan NFC'}
-              </Button>
               <Button
                 variant="outline"
                 onClick={handleExport}
@@ -156,15 +135,7 @@ export default function NFCManagementPage() {
         />
 
         {/* Lista de Crachás */}
-        <NFCBadgesList
-          badges={badges}
-          isLoading={isLoading}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAssign={handleAssign}
-          onRevoke={handleRevoke}
-        />
+        <NFCBadgesList className="mt-6" />
 
         {/* Paginação */}
         {pagination && pagination.totalPages > 1 && (
@@ -224,12 +195,12 @@ export default function NFCManagementPage() {
       />
 
       <NFCBadgeAssignModal
+        badge={selectedBadge}
         isOpen={isAssignModalOpen}
         onClose={() => {
           setIsAssignModalOpen(false);
           setSelectedBadge(null);
         }}
-        badge={selectedBadge}
       />
 
       <NFCBadgeRevokeModal
@@ -241,11 +212,6 @@ export default function NFCManagementPage() {
         badge={selectedBadge}
       />
 
-      <NFCScanner
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onBadgeDetected={handleBadgeDetected}
-      />
     </div>
   );
 } 
