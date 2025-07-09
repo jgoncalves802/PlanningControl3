@@ -15,13 +15,12 @@ import NFCBadgeAssignModal from '@/components/nfc-badges/NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
 import NFCBadgeCreateModal from '@/components/nfc-badges/NFCBadgeCreateModal';
 import NFCBadgeRealTimeUpdater from '@/components/nfc-badges/NFCBadgeRealTimeUpdater';
-import SSEDebugPanel from '@/components/debug/SSEDebugPanel';
 import { toast } from 'react-hot-toast';
 
 export default function NFCManagementPage() {
   const [filters, setFilters] = useState<NFCBadgeFiltersType>({
     search: '',
-    status: 'AVAILABLE' as any, // Usar um status válido em vez de 'all'
+    status: undefined, // Não aplicar filtro de status por padrão
     assignedEmployee: 'all',
   });
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,9 +125,6 @@ export default function NFCManagementPage() {
             </div>
           </div>
         </div>
-
-        {/* Debug Panel para testar SSE */}
-        <SSEDebugPanel />
 
         {/* Estatísticas */}
         <NFCBadgeStats />
