@@ -38,11 +38,19 @@ export default function NFCBadgeAssignModal({ isOpen, onClose, badge }: NFCBadge
     }
   }, [isOpen]);
 
+  const employees = employeesData?.employees || [];
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!selectedEmployeeId) {
       newErrors.employeeId = 'Selecione um funcionário';
+    }
+
+    // Nova validação: impedir atribuição duplicada
+    const selectedEmployee = employees.find(emp => emp.id === selectedEmployeeId);
+    if (selectedEmployee && selectedEmployee.nfcBadge && selectedEmployee.nfcBadge.status === 'ASSIGNED') {
+      newErrors.employeeId = 'Este funcionário já possui um crachá atribuído.';
     }
 
     if (notes && notes.length > 500) {
@@ -72,7 +80,6 @@ export default function NFCBadgeAssignModal({ isOpen, onClose, badge }: NFCBadge
 
   if (!isOpen || !badge) return null;
 
-  const employees = employeesData?.employees || [];
   const filteredEmployees = employees.filter(emp => 
     !emp.nfcBadge || emp.nfcBadge.status !== 'ASSIGNED'
   );
