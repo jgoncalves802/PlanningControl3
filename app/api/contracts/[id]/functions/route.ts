@@ -130,7 +130,11 @@ export async function POST(
 
     // Criar função
     const contractFunction = await prisma.contractFunction.create({
-      data: validatedData,
+      data: {
+        name: validatedData.name,
+        isActive: validatedData.isActive,
+        contractId: validatedData.contractId,
+      },
       include: {
         _count: {
           select: { employees: true }

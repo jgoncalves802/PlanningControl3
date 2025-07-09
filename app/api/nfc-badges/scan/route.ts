@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { NFCBadgeStatus } from '@/lib/types/nfc-badges';
+// Removido import não usado
 import { z } from 'zod';
 
 // Schema para validar dados de scan
@@ -27,6 +27,7 @@ export async function POST(request: NextRequest) {
             cpf: true,
             registration: true,
             company: true,
+            isActive: true,
             currentContract: {
               select: {
                 id: true,
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (badge.status !== NFCBadgeStatus.ASSIGNED) {
+    if (badge.status !== 'ASSIGNED') {
       return NextResponse.json(
         { 
           error: 'Crachá não está atribuído a nenhum funcionário',

@@ -98,6 +98,18 @@ export function getNFCBadgeStatusIcon(status: NFCBadgeStatus): string {
   return NFCBadgeStatusIcons[status] || 'help-circle';
 }
 
+// Função para validar ID do crachá NFC
+export function validateNFCBadgeId(badgeId: string): boolean {
+  if (!badgeId || typeof badgeId !== 'string') return false;
+  
+  // Remover espaços e converter para maiúsculas
+  const cleanId = badgeId.replace(/\s/g, '').toUpperCase();
+  
+  // Verificar se tem entre 8 e 16 caracteres hexadecimais
+  const hexPattern = /^[0-9A-F]{8,16}$/;
+  return hexPattern.test(cleanId);
+}
+
 // Tipos de resposta da API
 export interface NFCBadge {
   id: string;

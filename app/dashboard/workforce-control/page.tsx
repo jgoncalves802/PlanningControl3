@@ -471,8 +471,9 @@ export default function WorkforceControlPage() {
               
               {nfcStatus === 'idle' && (
                 <NFCReader 
-                  onNFCRead={handleNFCRead}
-                  onClose={() => setShowNFCReader(false)}
+                  onRead={handleNFCRead}
+                  onStatusChange={(status) => console.log('NFC Status:', status)}
+                  isActive={true}
                 />
               )}
               
