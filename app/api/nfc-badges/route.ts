@@ -200,6 +200,14 @@ export async function POST(request: Request) {
       assignedEmployee: badge.employee
     };
 
+    // Broadcast update via SSE
+    try {
+      const { broadcastNFCBadgeUpdate } = await import('./events/route');
+      await broadcastNFCBadgeUpdate('create', transformedBadge);
+    } catch (sseError) {
+      console.warn('Failed to broadcast SSE update:', sseError);
+    }
+
     return NextResponse.json(transformedBadge, {
       status: 201,
       headers: {

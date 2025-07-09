@@ -118,6 +118,14 @@ export async function PUT(
       },
     });
 
+    // Broadcast update via SSE
+    try {
+      const { broadcastNFCBadgeUpdate } = await import('../events/route');
+      await broadcastNFCBadgeUpdate('update', updatedBadge);
+    } catch (sseError) {
+      console.warn('Failed to broadcast SSE update:', sseError);
+    }
+
     return NextResponse.json(updatedBadge);
   } catch (error) {
     console.error('Error updating NFC badge:', error);

@@ -171,12 +171,11 @@ export default function NFCManagementPage() {
         )}
       </div>
 
-      {/* Componente de atualização em tempo real */}
+      {/* Componente de atualização em tempo real via SSE */}
       <NFCBadgeRealTimeUpdater
-        updateInterval={30000} // 30 segundos
         updateOnFocus={true}
         updateOnOnline={true}
-        onUpdate={() => console.log('NFC badges updated in real-time')}
+        onUpdate={() => console.log('NFC badges updated via SSE')}
       />
 
       {/* Modais */}

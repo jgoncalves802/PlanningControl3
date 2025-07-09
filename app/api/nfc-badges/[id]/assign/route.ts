@@ -93,6 +93,28 @@ export async function POST(
       },
     });
 
+    // Broadcast update via SSE
+    try {
+      const { broadcastNFCBadgeUpdate, broadcastStatsUpdate } = await import('../../events/route');
+      await broadcastNFCBadgeUpdate('assign', updatedBadge);
+      
+      // Broadcast stats update
+      const stats = await prisma.nFCBadge.groupBy({
+        by: ['status'],
+        _count: { status: true },
+      });
+      const formattedStats = {
+        total: stats.reduce((acc, stat) => acc + stat._count.status, 0),
+        available: stats.find(s => s.status === 'AVAILABLE')?._count.status || 0,
+        assigned: stats.find(s => s.status === 'ASSIGNED')?._count.status || 0,
+        lost: stats.find(s => s.status === 'LOST')?._count.status || 0,
+        damaged: stats.find(s => s.status === 'DAMAGED')?._count.status || 0,
+      };
+      await broadcastStatsUpdate(formattedStats);
+    } catch (sseError) {
+      console.warn('Failed to broadcast SSE update:', sseError);
+    }
+
     return NextResponse.json(updatedBadge);
   } catch (error) {
     console.error('Error assigning NFC badge:', error);

@@ -163,11 +163,11 @@ export function useNFCBadgesQuery(filters: NFCBadgeFilters & { page?: number; li
   return useQuery({
     queryKey: QUERY_KEYS.badgesList(filters),
     queryFn: () => api.getBadges(filters),
-    staleTime: 30 * 1000, // 30 segundos - mais agressivo para atualizações
-    gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchOnWindowFocus: true, // Atualiza quando a janela recebe foco
-    refetchInterval: 60 * 1000, // Auto-refresh a cada 60 segundos
-    refetchIntervalInBackground: false, // Não atualiza em background
+    staleTime: 5 * 60 * 1000, // 5 minutos - menos agressivo pois SSE cuida das atualizações
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: true, // Manter para casos onde SSE falha
+    // ❌ REMOVIDO: refetchInterval - substituído por SSE
+    // ❌ REMOVIDO: refetchIntervalInBackground - substituído por SSE
   });
 }
 
@@ -186,11 +186,11 @@ export function useNFCBadgeStatsQuery() {
   return useQuery({
     queryKey: QUERY_KEYS.stats,
     queryFn: api.getStats,
-    staleTime: 30 * 1000, // 30 segundos - mais agressivo para estatísticas
-    gcTime: 2 * 60 * 1000, // 2 minutos
-    refetchInterval: 30 * 1000, // Auto-refresh a cada 30 segundos
-    refetchIntervalInBackground: false, // Não atualiza em background
-    refetchOnWindowFocus: true, // Atualiza quando a janela recebe foco
+    staleTime: 5 * 60 * 1000, // 5 minutos - menos agressivo pois SSE cuida das atualizações
+    gcTime: 10 * 60 * 1000, // 10 minutos
+    refetchOnWindowFocus: true, // Manter para casos onde SSE falha
+    // ❌ REMOVIDO: refetchInterval - substituído por SSE
+    // ❌ REMOVIDO: refetchIntervalInBackground - substituído por SSE
   });
 }
 

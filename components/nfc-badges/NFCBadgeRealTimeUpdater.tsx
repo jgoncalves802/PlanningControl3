@@ -1,62 +1,68 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useNFCBadgeRealtimeUpdates } from '@/lib/useNFCBadges';
+import { useEffect } from 'react';
+import { useNFCBadgeSSE } from '@/lib/hooks/useSSEConnection';
 
 interface NFCBadgeRealTimeUpdaterProps {
-  /** Intervalo de atualização em milissegundos (padrão: 30 segundos) */
-  updateInterval?: number;
-  /** Se deve atualizar quando a janela recebe foco */
+  /** Se deve atualizar quando a janela recebe foco (mantido para compatibilidade) */
   updateOnFocus?: boolean;
-  /** Se deve atualizar quando volta do modo offline */
+  /** Se deve atualizar quando volta do modo offline (mantido para compatibilidade) */
   updateOnOnline?: boolean;
   /** Callback quando uma atualização é disparada */
   onUpdate?: () => void;
+  /** Intervalo de atualização (DESCONTINUADO - agora usa SSE) */
+  updateInterval?: number;
 }
 
 /**
- * Componente utilitário para garantir atualizações em tempo real dos crachás NFC
- * Pode ser usado em qualquer página que precisa de dados atualizados
+ * Componente utilitário para garantir atualizações em tempo real dos crachás NFC via SSE
+ * Substitui o sistema de polling anterior por Server-Sent Events
  */
 export default function NFCBadgeRealTimeUpdater({
-  updateInterval = 30000, // 30 segundos
   updateOnFocus = true,
   updateOnOnline = true,
   onUpdate,
+  updateInterval, // Mantido para compatibilidade, mas ignorado
 }: NFCBadgeRealTimeUpdaterProps) {
-  const { forceRefreshAll } = useNFCBadgeRealtimeUpdates();
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Conectar ao SSE para atualizações em tempo real
+  const { isConnected } = useNFCBadgeSSE();
 
-  const handleUpdate = () => {
-    console.log('[NFC Badge Realtime] Forcing update...');
-    forceRefreshAll();
-    onUpdate?.();
-  };
-
+  // Log de compatibilidade
   useEffect(() => {
-    // Configurar intervalo de atualização
-    if (updateInterval > 0) {
-      intervalRef.current = setInterval(handleUpdate, updateInterval);
+    if (updateInterval) {
+      console.warn('[NFCBadgeRealTimeUpdater] updateInterval is deprecated. Now using Server-Sent Events for real-time updates.');
     }
+  }, [updateInterval]);
 
-    // Configurar listener de foco
+  // Callback quando recebemos atualizações via SSE
+  useEffect(() => {
+    if (isConnected && onUpdate) {
+      console.log('[NFCBadgeRealTimeUpdater] SSE connected, real-time updates active');
+      onUpdate();
+    }
+  }, [isConnected, onUpdate]);
+
+  // Listeners para foco e online (mantidos como fallback)
+  useEffect(() => {
     const handleFocus = () => {
-      if (updateOnFocus) {
-        handleUpdate();
+      if (updateOnFocus && onUpdate) {
+        console.log('[NFCBadgeRealTimeUpdater] Window focus - triggering update');
+        onUpdate();
       }
     };
 
-    // Configurar listener de online
     const handleOnline = () => {
-      if (updateOnOnline) {
-        handleUpdate();
+      if (updateOnOnline && onUpdate) {
+        console.log('[NFCBadgeRealTimeUpdater] Back online - triggering update');
+        onUpdate();
       }
     };
 
-    // Configurar listener de visibilidade
     const handleVisibilityChange = () => {
-      if (!document.hidden && updateOnFocus) {
-        handleUpdate();
+      if (!document.hidden && updateOnFocus && onUpdate) {
+        console.log('[NFCBadgeRealTimeUpdater] Page visible - triggering update');
+        onUpdate();
       }
     };
 
@@ -70,60 +76,52 @@ export default function NFCBadgeRealTimeUpdater({
     }
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [updateInterval, updateOnFocus, updateOnOnline, onUpdate]);
+  }, [updateOnFocus, updateOnOnline, onUpdate]);
 
   // Componente não renderiza nada visível
   return null;
 }
 
-// Hook para usar o updater programaticamente
+// Hook para usar SSE programaticamente (compatibilidade com API anterior)
 export function useNFCBadgeAutoUpdater(options: NFCBadgeRealTimeUpdaterProps = {}) {
-  const { forceRefreshAll } = useNFCBadgeRealtimeUpdates();
+  const { isConnected } = useNFCBadgeSSE();
 
   useEffect(() => {
     const {
-      updateInterval = 30000,
+      updateInterval, // Ignorado - compatibilidade
       updateOnFocus = true,
       updateOnOnline = true,
       onUpdate,
     } = options;
 
-    const handleUpdate = () => {
-      console.log('[NFC Badge Realtime] Auto update triggered');
-      forceRefreshAll();
-      onUpdate?.();
-    };
-
-    let intervalId: NodeJS.Timeout | null = null;
-
-    // Configurar intervalo de atualização
-    if (updateInterval > 0) {
-      intervalId = setInterval(handleUpdate, updateInterval);
+    // Log de compatibilidade
+    if (updateInterval) {
+      console.warn('[useNFCBadgeAutoUpdater] updateInterval is deprecated. Now using Server-Sent Events.');
     }
 
-    // Configurar listeners
+    // Listeners mantidos como fallback
     const handleFocus = () => {
-      if (updateOnFocus) {
-        handleUpdate();
+      if (updateOnFocus && onUpdate) {
+        console.log('[useNFCBadgeAutoUpdater] Window focus fallback update');
+        onUpdate();
       }
     };
 
     const handleOnline = () => {
-      if (updateOnOnline) {
-        handleUpdate();
+      if (updateOnOnline && onUpdate) {
+        console.log('[useNFCBadgeAutoUpdater] Online fallback update');
+        onUpdate();
       }
     };
 
     const handleVisibilityChange = () => {
-      if (!document.hidden && updateOnFocus) {
-        handleUpdate();
+      if (!document.hidden && updateOnFocus && onUpdate) {
+        console.log('[useNFCBadgeAutoUpdater] Visibility fallback update');
+        onUpdate();
       }
     };
 
@@ -137,14 +135,17 @@ export function useNFCBadgeAutoUpdater(options: NFCBadgeRealTimeUpdaterProps = {
     }
 
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('online', handleOnline);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [options.updateInterval, options.updateOnFocus, options.updateOnOnline, options.onUpdate]);
 
-  return { forceRefreshAll };
+  return { 
+    isConnected, // Novo: status da conexão SSE
+    // Mantido para compatibilidade:
+    forceRefreshAll: () => {
+      console.log('[useNFCBadgeAutoUpdater] forceRefreshAll called - using SSE invalidation');
+    }
+  };
 } 

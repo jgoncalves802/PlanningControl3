@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Search, Filter, MoreHorizontal, User, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -34,12 +34,16 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
 
   const { data, isLoading, error } = useNFCBadgesQuery(filters);
   
-  // Ativar atualizações automáticas para este componente
-  useNFCBadgeAutoUpdater({
-    updateInterval: 30000, // 30 segundos
+  // Ativar atualizações automáticas via SSE para este componente
+  const { isConnected } = useNFCBadgeAutoUpdater({
     updateOnFocus: true,
     updateOnOnline: true,
   });
+
+  // Log do status da conexão SSE
+  useEffect(() => {
+    console.log('[NFCBadgesList] SSE connection status:', isConnected ? 'connected' : 'disconnected');
+  }, [isConnected]);
 
   const handleFiltersChange = (newFilters: any) => {
     setFilters(newFilters);
