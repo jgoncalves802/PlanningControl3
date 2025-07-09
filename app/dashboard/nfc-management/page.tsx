@@ -14,6 +14,7 @@ import NFCBadgeViewModal from '@/components/nfc-badges/NFCBadgeViewModal';
 import NFCBadgeAssignModal from '@/components/nfc-badges/NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from '@/components/nfc-badges/NFCBadgeRevokeModal';
 import NFCBadgeCreateModal from '@/components/nfc-badges/NFCBadgeCreateModal';
+import NFCBadgeRealTimeUpdater from '@/components/nfc-badges/NFCBadgeRealTimeUpdater';
 import { toast } from 'react-hot-toast';
 
 export default function NFCManagementPage() {
@@ -138,7 +139,7 @@ export default function NFCManagementPage() {
         <NFCBadgesList className="mt-6" />
 
         {/* Paginação */}
-        {pagination && pagination.totalPages > 1 && (
+        {pagination && pagination.pages > 1 && (
           <Card className="p-4 mt-6">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
@@ -154,13 +155,13 @@ export default function NFCManagementPage() {
                   Anterior
                 </Button>
                 <span className="text-sm text-gray-700">
-                  Página {currentPage} de {pagination.totalPages}
+                  Página {currentPage} de {pagination.pages}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === pagination.totalPages}
+                  disabled={currentPage === pagination.pages}
                 >
                   Próxima
                 </Button>
@@ -169,6 +170,14 @@ export default function NFCManagementPage() {
           </Card>
         )}
       </div>
+
+      {/* Componente de atualização em tempo real */}
+      <NFCBadgeRealTimeUpdater
+        updateInterval={30000} // 30 segundos
+        updateOnFocus={true}
+        updateOnOnline={true}
+        onUpdate={() => console.log('NFC badges updated in real-time')}
+      />
 
       {/* Modais */}
       <NFCBadgeCreateModal

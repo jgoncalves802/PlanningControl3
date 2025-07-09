@@ -11,6 +11,7 @@ import NFCBadgeAssignModal from './NFCBadgeAssignModal';
 import NFCBadgeRevokeModal from './NFCBadgeRevokeModal';
 import NFCBadgeViewModal from './NFCBadgeViewModal';
 import NFCBadgeFilters from './NFCBadgeFilters';
+import { useNFCBadgeAutoUpdater } from './NFCBadgeRealTimeUpdater';
 
 interface NFCBadgesListProps {
   className?: string;
@@ -32,6 +33,13 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
   const { data, isLoading, error } = useNFCBadgesQuery(filters);
+  
+  // Ativar atualizações automáticas para este componente
+  useNFCBadgeAutoUpdater({
+    updateInterval: 30000, // 30 segundos
+    updateOnFocus: true,
+    updateOnOnline: true,
+  });
 
   const handleFiltersChange = (newFilters: any) => {
     setFilters(newFilters);
@@ -146,13 +154,13 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
                     </div>
 
                     {/* Employee Info */}
-                    {badge.assignedEmployee && (
+                    {badge.employee && (
                       <div className="ml-6 flex items-center">
                         <div className="flex-shrink-0">
-                          {badge.assignedEmployee.avatar ? (
+                          {badge.employee.avatar ? (
                             <img
-                              src={badge.assignedEmployee.avatar}
-                              alt={badge.assignedEmployee.name}
+                              src={badge.employee.avatar}
+                              alt={badge.employee.name}
                               className="h-8 w-8 rounded-full object-cover"
                             />
                           ) : (
@@ -163,10 +171,10 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
                         </div>
                         <div className="ml-3">
                           <p className="text-sm font-medium text-gray-900">
-                            {badge.assignedEmployee.name}
+                            {badge.employee.name}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {badge.assignedEmployee.id}
+                            {badge.employee.id}
                           </p>
                         </div>
                       </div>

@@ -4,7 +4,7 @@ import {
   NFCBadge, 
   NFCBadgeFilters, 
   NFCBadgeStats, 
-  NFCBadgesResponse,
+  NFCBadgeListResponse,
   CreateNFCBadgeData,
   UpdateNFCBadgeData,
   AssignNFCBadgeData,
@@ -22,16 +22,14 @@ const QUERY_KEYS = {
 // Funções de API
 const api = {
   // Listar crachás
-  async getBadges(filters: NFCBadgeFilters & { page?: number; limit?: number }): Promise<NFCBadgesResponse> {
+  async getBadges(filters: NFCBadgeFilters & { page?: number; limit?: number }): Promise<NFCBadgeListResponse> {
     const params = new URLSearchParams();
     
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.limit) params.append('limit', filters.limit.toString());
     if (filters.search) params.append('search', filters.search);
-    if (filters.status) params.append('status', filters.status);
-    if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
-    if (filters.employeeId) params.append('employeeId', filters.employeeId);
-    if (filters.assignedBy) params.append('assignedBy', filters.assignedBy);
+    if (filters.status && filters.status !== 'all') params.append('status', filters.status);
+    if (filters.assignedEmployee && filters.assignedEmployee !== 'all') params.append('assignedEmployee', filters.assignedEmployee);
 
     const response = await fetch(`/api/nfc-badges?${params}`);
     if (!response.ok) {
@@ -165,9 +163,11 @@ export function useNFCBadgesQuery(filters: NFCBadgeFilters & { page?: number; li
   return useQuery({
     queryKey: QUERY_KEYS.badgesList(filters),
     queryFn: () => api.getBadges(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 segundos - mais agressivo para atualizações
+    gcTime: 5 * 60 * 1000, // 5 minutos
+    refetchOnWindowFocus: true, // Atualiza quando a janela recebe foco
+    refetchInterval: 60 * 1000, // Auto-refresh a cada 60 segundos
+    refetchIntervalInBackground: false, // Não atualiza em background
   });
 }
 
@@ -186,10 +186,11 @@ export function useNFCBadgeStatsQuery() {
   return useQuery({
     queryKey: QUERY_KEYS.stats,
     queryFn: api.getStats,
-    staleTime: 1 * 60 * 1000, // 1 minuto
-    gcTime: 5 * 60 * 1000, // 5 minutos
-    refetchInterval: 2 * 60 * 1000, // Auto-refresh a cada 2 minutos
-    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000, // 30 segundos - mais agressivo para estatísticas
+    gcTime: 2 * 60 * 1000, // 2 minutos
+    refetchInterval: 30 * 1000, // Auto-refresh a cada 30 segundos
+    refetchIntervalInBackground: false, // Não atualiza em background
+    refetchOnWindowFocus: true, // Atualiza quando a janela recebe foco
   });
 }
 
@@ -213,8 +214,29 @@ export function useCreateNFCBadge() {
 
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['nfc-badges'] });
+    onSuccess: (data) => {
+      // Invalidar todas as queries relacionadas a crachás para atualização imediata
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badge(data.id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
+      
+      // Invalidar queries de funcionários também
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // Invalidar queries de workforce (controle de ponto)
+      queryClient.invalidateQueries({ queryKey: ['workforce'] });
+      
+      // Invalidar queries de dashboard
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      // Forçar refetch imediato para todas as listas de crachás
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.badges });
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
+      
+      toast.success('Crachá criado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erro ao criar crachá');
     },
   });
 }
@@ -226,10 +248,23 @@ export function useUpdateNFCBadge() {
     mutationFn: ({ id, data }: { id: string; data: UpdateNFCBadgeData }) => 
       api.updateBadge(id, data),
     onSuccess: (data) => {
-      // Invalidar queries relacionadas
+      // Invalidar todas as queries relacionadas a crachás para atualização imediata
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badge(data.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
+      
+      // Invalidar queries de funcionários também
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // Invalidar queries de workforce (controle de ponto)
+      queryClient.invalidateQueries({ queryKey: ['workforce'] });
+      
+      // Invalidar queries de dashboard
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      // Forçar refetch imediato para todas as listas de crachás
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.badges });
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
       
       toast.success('Crachá atualizado com sucesso!');
     },
@@ -245,9 +280,22 @@ export function useDeleteNFCBadge() {
   return useMutation({
     mutationFn: api.deleteBadge,
     onSuccess: () => {
-      // Invalidar queries relacionadas
+      // Invalidar todas as queries relacionadas a crachás para atualização imediata
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
+      
+      // Invalidar queries de funcionários também
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // Invalidar queries de workforce (controle de ponto)
+      queryClient.invalidateQueries({ queryKey: ['workforce'] });
+      
+      // Invalidar queries de dashboard
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      // Forçar refetch imediato para todas as listas de crachás
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.badges });
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
       
       toast.success('Crachá deletado com sucesso!');
     },
@@ -264,13 +312,23 @@ export function useAssignNFCBadge() {
     mutationFn: ({ id, data }: { id: string; data: AssignNFCBadgeData }) => 
       api.assignBadge(id, data),
     onSuccess: (data) => {
-      // Invalidar queries relacionadas
+      // Invalidar todas as queries relacionadas a crachás para atualização imediata
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badge(data.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
       
       // Invalidar queries de funcionários também
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // Invalidar queries de workforce (controle de ponto)
+      queryClient.invalidateQueries({ queryKey: ['workforce'] });
+      
+      // Invalidar queries de dashboard
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      // Forçar refetch imediato para todas as listas de crachás
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.badges });
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
       
       toast.success('Crachá atribuído com sucesso!');
     },
@@ -287,13 +345,23 @@ export function useRevokeNFCBadge() {
     mutationFn: ({ id, data }: { id: string; data: RevokeNFCBadgeData }) => 
       api.revokeBadge(id, data),
     onSuccess: (data) => {
-      // Invalidar queries relacionadas
+      // Invalidar todas as queries relacionadas a crachás para atualização imediata
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badge(data.id) });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
       
       // Invalidar queries de funcionários também
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      
+      // Invalidar queries de workforce (controle de ponto)
+      queryClient.invalidateQueries({ queryKey: ['workforce'] });
+      
+      // Invalidar queries de dashboard
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      
+      // Forçar refetch imediato para todas as listas de crachás
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.badges });
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
       
       toast.success('Crachá revogado com sucesso!');
     },
@@ -319,4 +387,65 @@ export function useNFCScan() {
       toast.error(error.message || 'Erro ao processar scan');
     },
   });
+} 
+
+// Hook utilitário para forçar atualizações em tempo real
+export function useForceNFCBadgeUpdates() {
+  const queryClient = useQueryClient();
+
+  const forceRefreshAll = () => {
+    // Invalidar e refetch todas as queries relacionadas a crachás
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badges });
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
+    
+    // Invalidar queries relacionadas
+    queryClient.invalidateQueries({ queryKey: ['employees'] });
+    queryClient.invalidateQueries({ queryKey: ['workforce'] });
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    
+    // Forçar refetch imediato
+    queryClient.refetchQueries({ queryKey: QUERY_KEYS.badges });
+    queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
+  };
+
+  const forceRefreshBadge = (badgeId: string) => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badge(badgeId) });
+    queryClient.refetchQueries({ queryKey: QUERY_KEYS.badge(badgeId) });
+  };
+
+  const forceRefreshStats = () => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEYS.stats });
+    queryClient.refetchQueries({ queryKey: QUERY_KEYS.stats });
+  };
+
+  return {
+    forceRefreshAll,
+    forceRefreshBadge,
+    forceRefreshStats,
+  };
+}
+
+// Hook para monitorar e atualizar automaticamente quando necessário
+export function useNFCBadgeRealtimeUpdates() {
+  const queryClient = useQueryClient();
+  const { forceRefreshAll } = useForceNFCBadgeUpdates();
+
+  // Função para ser chamada quando um evento externo indica que os dados mudaram
+  const handleExternalUpdate = (eventType: 'assign' | 'revoke' | 'create' | 'update' | 'delete', badgeId?: string) => {
+    console.log(`[NFC Badge Realtime] External update detected: ${eventType}`, badgeId);
+    
+    // Forçar atualização imediata
+    forceRefreshAll();
+    
+    // Se temos um badge específico, também atualizar ele
+    if (badgeId) {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.badge(badgeId) });
+      queryClient.refetchQueries({ queryKey: QUERY_KEYS.badge(badgeId) });
+    }
+  };
+
+  return {
+    handleExternalUpdate,
+    forceRefreshAll,
+  };
 } 
