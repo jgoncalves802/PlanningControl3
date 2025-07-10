@@ -5,6 +5,9 @@ CREATE TYPE "PlanType" AS ENUM ('BASIC', 'PROFESSIONAL', 'ENTERPRISE');
 CREATE TYPE "UserRole" AS ENUM ('TENANT_ADMIN', 'HR', 'PLANNING', 'SAFETY', 'CONTRACT_MANAGER', 'SUPERVISOR', 'OPERATOR');
 
 -- CreateEnum
+CREATE TYPE "LaborType" AS ENUM ('DIRETO', 'INDIRETO');
+
+-- CreateEnum
 CREATE TYPE "TransferStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'COMPLETED');
 
 -- CreateEnum
@@ -18,6 +21,12 @@ CREATE TYPE "ApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateEnum
 CREATE TYPE "RecordSource" AS ENUM ('NFC_PROCESSED', 'PAYROLL_IMPORTED');
+
+-- CreateEnum
+CREATE TYPE "WorkforceStatus" AS ENUM ('PRESENT', 'ABSENT', 'LATE', 'LEFT');
+
+-- CreateEnum
+CREATE TYPE "NFCBadgeStatus" AS ENUM ('AVAILABLE', 'ASSIGNED', 'REVOKED', 'LOST', 'DAMAGED', 'EXPIRED');
 
 -- CreateTable
 CREATE TABLE "Tenant" (
@@ -38,18 +47,15 @@ CREATE TABLE "Tenant" (
 );
 
 -- CreateTable
-CREATE TABLE "User" (
+CREATE TABLE "users" (
     "id" TEXT NOT NULL,
+    "clerkId" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "cpf" TEXT,
-    "password" TEXT NOT NULL,
-    "role" "UserRole" NOT NULL,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "name" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -86,14 +92,83 @@ CREATE TABLE "ContractFunction" (
 );
 
 -- CreateTable
+CREATE TABLE "CompanyFunction" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "laborType" "LaborType" NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "CompanyFunction_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "Employee" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "registration" TEXT,
+    "role" TEXT,
+    "category" TEXT,
+    "company" TEXT,
     "cpf" TEXT NOT NULL,
+    "rg" TEXT,
+    "birthDate" TIMESTAMP(3),
+    "admissionDate" TIMESTAMP(3),
+    "dismissalDate" TIMESTAMP(3),
+    "status" TEXT,
+    "workplace" TEXT,
+    "shift" TEXT,
+    "phone" TEXT,
+    "email" TEXT,
+    "address" JSONB,
+    "nationality" TEXT,
+    "naturalness" TEXT,
+    "gender" TEXT,
+    "maritalStatus" TEXT,
+    "sexo" TEXT,
+    "estadoCivil" TEXT,
+    "educationLevel" TEXT,
+    "pis" TEXT,
+    "ctps" TEXT,
+    "ctpsSeries" TEXT,
+    "ctpsUf" TEXT,
+    "voterTitle" TEXT,
+    "voterZone" TEXT,
+    "voterSection" TEXT,
+    "reservist" TEXT,
+    "reservistCategory" TEXT,
+    "cnh" TEXT,
+    "cnhCategory" TEXT,
+    "cnhValidity" TIMESTAMP(3),
+    "motherName" TEXT,
+    "fatherName" TEXT,
+    "dependents" JSONB,
+    "notes" TEXT,
+    "employmentHistory" JSONB,
+    "avatar" TEXT,
+    "centroCusto" TEXT,
+    "obra" TEXT,
+    "primeiraExperiencia" TIMESTAMP(3),
+    "segundaExperiencia" TIMESTAMP(3),
+    "previsaoObra" TIMESTAMP(3),
+    "mo" TEXT,
+    "horasNormaisTrabalhadas" DOUBLE PRECISION,
+    "horasExtrasTrabalhadas" DOUBLE PRECISION,
+    "horasNoturnasTrabalhadas" DOUBLE PRECISION,
+    "localAlojado" TEXT,
+    "pontoReferencia" TEXT,
+    "statusBancodoc" TEXT,
+    "efetivoRDO" BOOLEAN,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
     "nfcCardId" TEXT,
     "currentContractId" TEXT,
     "currentFunctionId" TEXT,
-    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "companyFunctionId" TEXT,
+    "contractId" TEXT,
+    "contractAssignmentDate" TIMESTAMP(3),
 
     CONSTRAINT "Employee_pkey" PRIMARY KEY ("id")
 );
@@ -223,6 +298,41 @@ CREATE TABLE "TimeRecord" (
 );
 
 -- CreateTable
+CREATE TABLE "WorkforceEntry" (
+    "id" TEXT NOT NULL,
+    "employeeId" TEXT NOT NULL,
+    "checkInTime" TIMESTAMP(3),
+    "checkOutTime" TIMESTAMP(3),
+    "status" "WorkforceStatus" NOT NULL DEFAULT 'PRESENT',
+    "location" TEXT,
+    "isLate" BOOLEAN NOT NULL DEFAULT false,
+    "hoursWorked" DOUBLE PRECISION DEFAULT 0,
+    "contractName" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "WorkforceEntry_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NFCBadge" (
+    "id" TEXT NOT NULL,
+    "badgeId" TEXT NOT NULL,
+    "employeeId" TEXT,
+    "status" "NFCBadgeStatus" NOT NULL DEFAULT 'AVAILABLE',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "assignedAt" TIMESTAMP(3),
+    "revokedAt" TIMESTAMP(3),
+    "assignedBy" TEXT,
+    "revokedBy" TEXT,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "NFCBadge_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "AuditLog" (
     "id" TEXT NOT NULL,
     "userId" TEXT,
@@ -241,10 +351,10 @@ CREATE UNIQUE INDEX "Tenant_subdomain_key" ON "Tenant"("subdomain");
 CREATE UNIQUE INDEX "Tenant_customDomain_key" ON "Tenant"("customDomain");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+CREATE UNIQUE INDEX "users_clerkId_key" ON "users"("clerkId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "User_cpf_key" ON "User"("cpf");
+CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Contract_code_key" ON "Contract"("code");
@@ -253,10 +363,16 @@ CREATE UNIQUE INDEX "Contract_code_key" ON "Contract"("code");
 CREATE UNIQUE INDEX "ContractFunction_contractId_name_key" ON "ContractFunction"("contractId", "name");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "CompanyFunction_name_key" ON "CompanyFunction"("name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Employee_cpf_key" ON "Employee"("cpf");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Employee_nfcCardId_key" ON "Employee"("nfcCardId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Employee_registration_company_key" ON "Employee"("registration", "company");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Training_name_key" ON "Training"("name");
@@ -267,11 +383,29 @@ CREATE UNIQUE INDEX "HourPlanning_contractId_date_key" ON "HourPlanning"("contra
 -- CreateIndex
 CREATE UNIQUE INDEX "TimeRecord_employeeId_date_source_key" ON "TimeRecord"("employeeId", "date", "source");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "WorkforceEntry_employeeId_createdAt_key" ON "WorkforceEntry"("employeeId", "createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NFCBadge_badgeId_key" ON "NFCBadge"("badgeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NFCBadge_employeeId_key" ON "NFCBadge"("employeeId");
+
+-- CreateIndex
+CREATE INDEX "NFCBadge_badgeId_idx" ON "NFCBadge"("badgeId");
+
+-- CreateIndex
+CREATE INDEX "NFCBadge_employeeId_idx" ON "NFCBadge"("employeeId");
+
+-- CreateIndex
+CREATE INDEX "NFCBadge_status_idx" ON "NFCBadge"("status");
+
 -- AddForeignKey
 ALTER TABLE "ContractResponsible" ADD CONSTRAINT "ContractResponsible_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ContractResponsible" ADD CONSTRAINT "ContractResponsible_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ContractResponsible" ADD CONSTRAINT "ContractResponsible_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ContractFunction" ADD CONSTRAINT "ContractFunction_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -283,13 +417,16 @@ ALTER TABLE "Employee" ADD CONSTRAINT "Employee_currentContractId_fkey" FOREIGN 
 ALTER TABLE "Employee" ADD CONSTRAINT "Employee_currentFunctionId_fkey" FOREIGN KEY ("currentFunctionId") REFERENCES "ContractFunction"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
 
 -- AddForeignKey
+ALTER TABLE "Employee" ADD CONSTRAINT "Employee_companyFunctionId_fkey" FOREIGN KEY ("companyFunctionId") REFERENCES "CompanyFunction"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- AddForeignKey
 ALTER TABLE "TransferRequest" ADD CONSTRAINT "TransferRequest_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TransferRequest" ADD CONSTRAINT "TransferRequest_requestedById_fkey" FOREIGN KEY ("requestedById") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "TransferRequest" ADD CONSTRAINT "TransferRequest_requestedById_fkey" FOREIGN KEY ("requestedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "TransferRequest" ADD CONSTRAINT "TransferRequest_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "TransferRequest" ADD CONSTRAINT "TransferRequest_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TransferHistory" ADD CONSTRAINT "TransferHistory_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -313,7 +450,7 @@ ALTER TABLE "EmployeeTraining" ADD CONSTRAINT "EmployeeTraining_trainingId_fkey"
 ALTER TABLE "HourPlanning" ADD CONSTRAINT "HourPlanning_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "OvertimeApproval" ADD CONSTRAINT "OvertimeApproval_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "OvertimeApproval" ADD CONSTRAINT "OvertimeApproval_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "NFCCollection" ADD CONSTRAINT "NFCCollection_contractId_fkey" FOREIGN KEY ("contractId") REFERENCES "Contract"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -325,4 +462,16 @@ ALTER TABLE "NFCRecord" ADD CONSTRAINT "NFCRecord_collectionId_fkey" FOREIGN KEY
 ALTER TABLE "TimeRecord" ADD CONSTRAINT "TimeRecord_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "WorkforceEntry" ADD CONSTRAINT "WorkforceEntry_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NFCBadge" ADD CONSTRAINT "NFCBadge_employeeId_fkey" FOREIGN KEY ("employeeId") REFERENCES "Employee"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NFCBadge" ADD CONSTRAINT "NFCBadge_assignedBy_fkey" FOREIGN KEY ("assignedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NFCBadge" ADD CONSTRAINT "NFCBadge_revokedBy_fkey" FOREIGN KEY ("revokedBy") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;

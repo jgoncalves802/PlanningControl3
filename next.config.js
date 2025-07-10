@@ -25,6 +25,10 @@ module.exports = withNextIntl({
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin-allow-popups',
           },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
     ];
@@ -33,5 +37,32 @@ module.exports = withNextIntl({
   // Configuração experimental para HTTPS local
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client'],
+  },
+
+  // Configuração para resolver problemas de preload
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Configurar para resolver problemas de preload
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+      };
+    }
+    return config;
+  },
+
+  // Configuração para melhorar performance
+  poweredByHeader: false,
+  
+  // Configuração para resolver problemas de CORS
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: '/api/:path*',
+      },
+    ];
   },
 })

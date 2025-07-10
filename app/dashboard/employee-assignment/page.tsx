@@ -11,7 +11,7 @@ import { toast } from 'react-hot-toast';
 
 export default function EmployeeAssignmentPage() {
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  const { data: contractsData, isLoading: contractsLoading } = useContractsQuery({ isActive: true });
+  const { data: contractsData, isLoading: contractsLoading, error: contractsError } = useContractsQuery({ isActive: true });
 
   // Filtros controlados
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,7 +27,7 @@ export default function EmployeeAssignmentPage() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
 
   // Buscar funcionários
-  const { data: employeesData, isLoading: employeesLoading } = useEmployeesQuery({
+  const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useEmployeesQuery({
     search: searchTerm,
     isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
   });
@@ -151,6 +151,49 @@ export default function EmployeeAssignmentPage() {
       setIsLinking(false);
     }
   };
+
+  // Mostrar erros se houver
+  if (contractsError) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h2 className="text-red-800 font-semibold mb-2">Erro ao carregar contratos</h2>
+            <p className="text-red-600">
+              {contractsError?.message || 'Erro desconhecido ao carregar contratos'}
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (employeesError) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <h2 className="text-red-800 font-semibold mb-2">Erro ao carregar funcionários</h2>
+            <p className="text-red-600">
+              {employeesError?.message || 'Erro desconhecido ao carregar funcionários'}
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
