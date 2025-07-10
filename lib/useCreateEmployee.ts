@@ -16,9 +16,14 @@ export function useUpdateEmployee() {
   const queryClient = useQueryClient();
   return useMutation<{ id: string; updates: any }, any, { id: string; updates: any }>({
     mutationFn: ({ id, updates }) => updateEmployee(id, updates),
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
+      // Invalidar todas as queries de employees de forma mais agressiva
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.refetchQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['functions'] });
+      
+      // Remover dados específicos do cache para forçar reload
+      queryClient.removeQueries({ queryKey: ['employees'] });
     },
     onError: (error, variables) => {
       console.error('Erro na mutação de atualização:', error);

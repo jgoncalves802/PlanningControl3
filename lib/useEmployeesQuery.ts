@@ -44,6 +44,7 @@ async function fetchEmployees(filters: EmployeeFilters = {}): Promise<EmployeesR
   if (!response.ok) {
     throw new Error('Erro ao buscar funcionários');
   }
+  
   return response.json();
 }
 
@@ -51,9 +52,11 @@ export function useEmployeesQuery(filters: EmployeeFilters = {}) {
   return useQuery({
     queryKey: ['employees', filters],
     queryFn: () => fetchEmployees(filters),
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos
-    refetchOnWindowFocus: false,
+    staleTime: 0, // Sem cache - sempre buscar dados frescos
+    gcTime: 0, // Sem cache - não manter dados em memória
+    refetchOnWindowFocus: true, // Refetch quando a janela ganhar foco
+    refetchOnMount: true, // Sempre refetch ao montar
+    refetchOnReconnect: true, // Refetch quando reconectar
   });
 }
 

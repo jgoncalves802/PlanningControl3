@@ -57,6 +57,9 @@ export default function EmployeeAssignmentPage() {
 
   // Seleção múltipla
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  
+  // Estado para forçar re-render após atualizações
+  const [lastUpdate, setLastUpdate] = useState(Date.now());
 
   // Buscar funcionários
   const { data: employeesData, isLoading: employeesLoading, error: employeesError, refetch: refetchEmployees } = useEmployeesQuery({
@@ -185,7 +188,19 @@ export default function EmployeeAssignmentPage() {
       setSelectedEmployeeIds([]);
       
       // Recarregar dados dos funcionários para refletir as mudanças
-      refetchEmployees();
+      await refetchEmployees();
+      
+      // Forçar múltiplos refetches para garantir que os dados sejam atualizados
+      setTimeout(async () => {
+        await refetchEmployees();
+      }, 500);
+      
+      setTimeout(async () => {
+        await refetchEmployees();
+        // Forçar re-render da interface
+        setLastUpdate(Date.now());
+      }, 1500);
+      
     } catch (err) {
       toast.dismiss();
       toast.error('Erro inesperado durante a vinculação.');
@@ -249,21 +264,42 @@ export default function EmployeeAssignmentPage() {
         </div>
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-1">Selecione um contrato</label>
-          <select
-            className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2"
-            value={selectedContractId}
-            onChange={e => setSelectedContractId(e.target.value)}
-            disabled={contractsLoading || isLinking}
-          >
-            <option value="">
-              {contractsLoading ? 'Carregando contratos...' : 'Selecione...'}
-            </option>
-            {activeContracts.map(contract => (
-              <option key={contract.id} value={contract.id}>
-                {contract.name} ({contract.code})
+          <div className="flex items-center gap-4">
+            <select
+              className="flex-1 max-w-md border border-gray-300 rounded-lg px-3 py-2"
+              value={selectedContractId}
+              onChange={e => setSelectedContractId(e.target.value)}
+              disabled={contractsLoading || isLinking}
+            >
+              <option value="">
+                {contractsLoading ? 'Carregando contratos...' : 'Selecione...'}
               </option>
-            ))}
-          </select>
+              {activeContracts.map(contract => (
+                <option key={contract.id} value={contract.id}>
+                  {contract.name} ({contract.code})
+                </option>
+              ))}
+            </select>
+            
+            {/* Botão de teste temporário */}
+            <button
+              onClick={async () => {
+                console.log('=== TESTE MANUAL ===');
+                console.log('Employees data:', employeesData);
+                console.log('Contracts:', contracts);
+                console.log('Active contracts:', activeContracts);
+                console.log('Selected contract ID:', selectedContractId);
+                console.log('Available employees:', availableEmployees.length);
+                console.log('Linked employees:', linkedEmployees.length);
+                await refetchEmployees();
+                console.log('Refetch completed');
+              }}
+              className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+            >
+              Debug
+            </button>
+          </div>
+          
           {/* Status info */}
           {!contractsLoading && (
             <div className="mt-2 text-sm text-gray-500">
