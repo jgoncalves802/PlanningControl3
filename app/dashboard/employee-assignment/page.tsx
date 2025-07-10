@@ -35,10 +35,8 @@ export default function EmployeeAssignmentPage() {
         }
         
         const data = await response.json();
-        console.log('Manual fetch result:', data);
         setManualContracts(data.contracts || []);
       } catch (error) {
-        console.error('Manual fetch error:', error);
         setManualError(error.message);
       } finally {
         setManualLoading(false);
@@ -48,16 +46,7 @@ export default function EmployeeAssignmentPage() {
     fetchContractsManually();
   }, []);
 
-  // Debug: log dos dados recebidos
-  useEffect(() => {
-    console.log('=== CONTRACTS DEBUG ===');
-    console.log('React Query - Loading:', contractsLoading);
-    console.log('React Query - Error:', contractsError);
-    console.log('React Query - Data:', contractsData);
-    console.log('Manual - Loading:', manualLoading);
-    console.log('Manual - Error:', manualError);
-    console.log('Manual - Contracts:', manualContracts);
-  }, [contractsLoading, contractsError, contractsData, manualLoading, manualError, manualContracts]);
+
 
   // Usar dados manuais como fallback
   const finalContractsData = contractsData || { contracts: manualContracts };
@@ -290,29 +279,7 @@ export default function EmployeeAssignmentPage() {
               )}
             </div>
           )}
-          
-          {/* Debug visual */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
-              <strong>Debug Info:</strong>
-              <br />React Query Loading: {contractsLoading ? 'true' : 'false'}
-              <br />React Query Error: {contractsError ? contractsError.message : 'none'}
-              <br />React Query Data: {contractsData ? 'exists' : 'null'}
-              <br />Manual Loading: {manualLoading ? 'true' : 'false'}
-              <br />Manual Error: {manualError || 'none'}
-              <br />Manual Contracts: {manualContracts.length}
-              <br />Final Contracts count: {finalContractsData?.contracts?.length || 0}
-              <br />Active Contracts: {finalContractsData?.contracts?.filter(c => c.isActive).length || 0}
-              {finalContractsData?.contracts && (
-                <div className="mt-2">
-                  <strong>Final Contracts Data:</strong>
-                  <pre className="mt-1 text-xs overflow-auto max-h-32">
-                    {JSON.stringify(finalContractsData.contracts, null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-          )}
+
         </div>
         {/* Filtros controlados */}
         <div className="mb-4">

@@ -4,7 +4,7 @@ import React, { memo } from 'react';
 import { Search, Filter, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { mockContracts } from '@/lib/mock-data';
+import { useContractsQuery } from '@/lib/hooks/useContracts';
 
 interface EmployeeFiltersProps {
   searchTerm: string;
@@ -45,6 +45,13 @@ const EmployeeFilters = memo(function EmployeeFilters({
   setFilterDismissal,
   onClearFilters
 }: EmployeeFiltersProps) {
+  // Buscar contratos reais
+  const { data: contractsData } = useContractsQuery({ limit: 100 });
+  const contracts = contractsData?.contracts || [];
+  
+  // Buscar funções do contrato selecionado
+  const selectedContract = contracts.find(c => c.id === filterContract);
+  const contractFunctions = selectedContract?.functions || [];
   return (
     <Card>
       <CardContent className="p-6">
@@ -104,7 +111,7 @@ const EmployeeFilters = memo(function EmployeeFilters({
                           onChange={e => { setFilterContract(e.target.value); setFilterFunction(''); }}
                         >
                           <option value="">Todos os contratos</option>
-                          {mockContracts.map(contract => (
+                          {contracts.map(contract => (
                             <option key={contract.id} value={contract.id}>{contract.name}</option>
                           ))}
                         </select>
@@ -120,7 +127,7 @@ const EmployeeFilters = memo(function EmployeeFilters({
                           disabled={!filterContract}
                         >
                           <option value="">Todas as funções</option>
-                          {filterContract && mockContracts.find(c => c.id === filterContract)?.functions.map(func => (
+                          {contractFunctions.map(func => (
                             <option key={func.id} value={func.id}>{func.name}</option>
                           ))}
                         </select>
