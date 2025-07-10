@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react';
-import { useContractsQuery } from '@/lib/useContracts';
+import { useState, useEffect } from 'react';
+import { useContractsQuery } from '@/lib/hooks/useContracts';
 import { useEmployeesQuery } from '@/lib/useEmployeesQuery';
 import { useUpdateEmployee } from '@/lib/useCreateEmployee';
 import EmployeeTable from '@/components/employees/EmployeeTable';
@@ -11,7 +11,14 @@ import { toast } from 'react-hot-toast';
 
 export default function EmployeeAssignmentPage() {
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  const { data: contractsData, isLoading: contractsLoading, error: contractsError } = useContractsQuery({ isActive: true });
+  const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery({ isActive: true, limit: 100 });
+
+  // Force refetch if no data and not loading
+  useEffect(() => {
+    if (!contractsLoading && !contractsData && !contractsError) {
+      refetch();
+    }
+  }, [contractsLoading, contractsData, contractsError, refetch]);
 
   // Filtros controlados
   const [searchTerm, setSearchTerm] = useState('');
@@ -213,13 +220,32 @@ export default function EmployeeAssignmentPage() {
             onChange={e => setSelectedContractId(e.target.value)}
             disabled={contractsLoading || isLinking}
           >
-            <option value="">Selecione...</option>
-            {contractsData?.contracts.map(contract => (
+            <option value="">
+              {contractsLoading ? 'Carregando contratos...' : 'Selecione...'}
+            </option>
+            {contractsData?.contracts?.map(contract => (
               <option key={contract.id} value={contract.id}>
                 {contract.name} ({contract.code})
               </option>
             ))}
           </select>
+          {/* Status info */}
+          {!contractsLoading && (
+            <div className="mt-2 text-sm text-gray-500">
+              {contractsData?.contracts?.length || 0} contratos ativos encontrados
+              {contractsError && (
+                <div className="text-red-600 mt-1">
+                  Erro ao carregar contratos.{' '}
+                  <button 
+                    onClick={() => refetch()} 
+                    className="underline hover:no-underline"
+                  >
+                    Tentar novamente
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         {/* Filtros controlados */}
         <div className="mb-4">
