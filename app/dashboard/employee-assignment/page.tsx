@@ -11,28 +11,58 @@ import { toast } from 'react-hot-toast';
 
 export default function EmployeeAssignmentPage() {
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  // Buscar todos os contratos sem filtro e filtrar no frontend
+  // Estados para contratos (implementação manual como backup)
+  const [manualContracts, setManualContracts] = useState([]);
+  const [manualLoading, setManualLoading] = useState(true);
+  const [manualError, setManualError] = useState(null);
+
+  // Buscar contratos usando React Query
   const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery({ 
     limit: 100,
     page: 1
   });
 
+  // Fetch manual como backup
+  useEffect(() => {
+    const fetchContractsManually = async () => {
+      try {
+        setManualLoading(true);
+        setManualError(null);
+        
+        const response = await fetch('/api/contracts?limit=100');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('Manual fetch result:', data);
+        setManualContracts(data.contracts || []);
+      } catch (error) {
+        console.error('Manual fetch error:', error);
+        setManualError(error.message);
+      } finally {
+        setManualLoading(false);
+      }
+    };
+
+    fetchContractsManually();
+  }, []);
+
   // Debug: log dos dados recebidos
   useEffect(() => {
     console.log('=== CONTRACTS DEBUG ===');
-    console.log('Loading:', contractsLoading);
-    console.log('Error:', contractsError);
-    console.log('Data:', contractsData);
-    console.log('Contracts array:', contractsData?.contracts);
-  }, [contractsLoading, contractsError, contractsData]);
+    console.log('React Query - Loading:', contractsLoading);
+    console.log('React Query - Error:', contractsError);
+    console.log('React Query - Data:', contractsData);
+    console.log('Manual - Loading:', manualLoading);
+    console.log('Manual - Error:', manualError);
+    console.log('Manual - Contracts:', manualContracts);
+  }, [contractsLoading, contractsError, contractsData, manualLoading, manualError, manualContracts]);
 
-  // Force refetch if no data and not loading
-  useEffect(() => {
-    if (!contractsLoading && !contractsData && !contractsError) {
-      console.log('Forcing refetch...');
-      refetch();
-    }
-  }, [contractsLoading, contractsData, contractsError, refetch]);
+  // Usar dados manuais como fallback
+  const finalContractsData = contractsData || { contracts: manualContracts };
+  const finalLoading = contractsLoading && manualLoading;
+  const finalError = contractsError || manualError;
 
   // Filtros controlados
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,7 +148,7 @@ export default function EmployeeAssignmentPage() {
     if (!selectedContractId || selectedEmployeeIds.length === 0) return;
     setIsLinking(true);
     
-    const selectedContract = contractsData?.contracts.find(c => c.id === selectedContractId);
+    const selectedContract = finalContractsData?.contracts.find(c => c.id === selectedContractId);
     const contractName = selectedContract ? selectedContract.name : 'contrato selecionado';
     
     toast.loading(`Vinculando ${selectedEmployeeIds.length} funcionário(s) ao ${contractName}...`);
@@ -174,14 +204,14 @@ export default function EmployeeAssignmentPage() {
   };
 
   // Mostrar erros se houver
-  if (contractsError) {
+  if (finalError && finalLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h2 className="text-red-800 font-semibold mb-2">Erro ao carregar contratos</h2>
             <p className="text-red-600">
-              {contractsError?.message || 'Erro desconhecido ao carregar contratos'}
+              {finalError || 'Erro desconhecido ao carregar contratos'}
             </p>
             <button 
               onClick={() => window.location.reload()} 
@@ -232,26 +262,26 @@ export default function EmployeeAssignmentPage() {
             className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2"
             value={selectedContractId}
             onChange={e => setSelectedContractId(e.target.value)}
-            disabled={contractsLoading || isLinking}
+            disabled={finalLoading || isLinking}
           >
             <option value="">
-              {contractsLoading ? 'Carregando contratos...' : 'Selecione...'}
+              {finalLoading ? 'Carregando contratos...' : 'Selecione...'}
             </option>
-            {contractsData?.contracts?.filter(contract => contract.isActive).map(contract => (
+            {finalContractsData?.contracts?.filter(contract => contract.isActive).map(contract => (
               <option key={contract.id} value={contract.id}>
                 {contract.name} ({contract.code})
               </option>
             ))}
           </select>
           {/* Status info */}
-          {!contractsLoading && (
+          {!finalLoading && (
             <div className="mt-2 text-sm text-gray-500">
-              {contractsData?.contracts?.filter(contract => contract.isActive).length || 0} contratos ativos encontrados
-              {contractsError && (
+              {finalContractsData?.contracts?.filter(contract => contract.isActive).length || 0} contratos ativos encontrados
+              {finalError && (
                 <div className="text-red-600 mt-1">
-                  Erro ao carregar contratos: {contractsError?.message}{' '}
+                  Erro ao carregar contratos: {finalError}{' '}
                   <button 
-                    onClick={() => refetch()} 
+                    onClick={() => window.location.reload()} 
                     className="underline hover:no-underline"
                   >
                     Tentar novamente
@@ -265,15 +295,19 @@ export default function EmployeeAssignmentPage() {
           {process.env.NODE_ENV === 'development' && (
             <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
               <strong>Debug Info:</strong>
-              <br />Loading: {contractsLoading ? 'true' : 'false'}
-              <br />Error: {contractsError ? contractsError.message : 'none'}
-              <br />Data: {contractsData ? 'exists' : 'null'}
-              <br />Contracts count: {contractsData?.contracts?.length || 0}
-              {contractsData?.contracts && (
+              <br />React Query Loading: {contractsLoading ? 'true' : 'false'}
+              <br />React Query Error: {contractsError ? contractsError.message : 'none'}
+              <br />React Query Data: {contractsData ? 'exists' : 'null'}
+              <br />Manual Loading: {manualLoading ? 'true' : 'false'}
+              <br />Manual Error: {manualError || 'none'}
+              <br />Manual Contracts: {manualContracts.length}
+              <br />Final Contracts count: {finalContractsData?.contracts?.length || 0}
+              <br />Active Contracts: {finalContractsData?.contracts?.filter(c => c.isActive).length || 0}
+              {finalContractsData?.contracts && (
                 <div className="mt-2">
-                  <strong>Contracts:</strong>
+                  <strong>Final Contracts Data:</strong>
                   <pre className="mt-1 text-xs overflow-auto max-h-32">
-                    {JSON.stringify(contractsData.contracts, null, 2)}
+                    {JSON.stringify(finalContractsData.contracts, null, 2)}
                   </pre>
                 </div>
               )}
