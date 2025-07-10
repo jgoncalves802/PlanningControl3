@@ -110,11 +110,19 @@ export default function ContractsPage() {
   })
 
   // Hooks para APIs
-  const { data: contractsData, isLoading: contractsLoading, error: contractsError } = useContractsQuery(filters)
+  const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery(filters)
   const { data: stats, isLoading: statsLoading } = useContractStatsQuery()
   const createContractMutation = useCreateContract()
   const updateContractMutation = useUpdateContract()
   const deleteContractMutation = useDeleteContract()
+
+  // Debug: forçar refetch se não houver dados
+  useEffect(() => {
+    if (!contractsLoading && !contractsData && !contractsError) {
+      console.log('Forçando refetch dos contratos...')
+      refetch()
+    }
+  }, [contractsLoading, contractsData, contractsError, refetch])
 
   // Inicializar usuário e permissões
   useEffect(() => {
