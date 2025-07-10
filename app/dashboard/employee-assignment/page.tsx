@@ -11,11 +11,25 @@ import { toast } from 'react-hot-toast';
 
 export default function EmployeeAssignmentPage() {
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery({ isActive: true, limit: 100 });
+  // Buscar todos os contratos sem filtro e filtrar no frontend
+  const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery({ 
+    limit: 100,
+    page: 1
+  });
+
+  // Debug: log dos dados recebidos
+  useEffect(() => {
+    console.log('=== CONTRACTS DEBUG ===');
+    console.log('Loading:', contractsLoading);
+    console.log('Error:', contractsError);
+    console.log('Data:', contractsData);
+    console.log('Contracts array:', contractsData?.contracts);
+  }, [contractsLoading, contractsError, contractsData]);
 
   // Force refetch if no data and not loading
   useEffect(() => {
     if (!contractsLoading && !contractsData && !contractsError) {
+      console.log('Forcing refetch...');
       refetch();
     }
   }, [contractsLoading, contractsData, contractsError, refetch]);
@@ -223,7 +237,7 @@ export default function EmployeeAssignmentPage() {
             <option value="">
               {contractsLoading ? 'Carregando contratos...' : 'Selecione...'}
             </option>
-            {contractsData?.contracts?.map(contract => (
+            {contractsData?.contracts?.filter(contract => contract.isActive).map(contract => (
               <option key={contract.id} value={contract.id}>
                 {contract.name} ({contract.code})
               </option>
@@ -232,16 +246,35 @@ export default function EmployeeAssignmentPage() {
           {/* Status info */}
           {!contractsLoading && (
             <div className="mt-2 text-sm text-gray-500">
-              {contractsData?.contracts?.length || 0} contratos ativos encontrados
+              {contractsData?.contracts?.filter(contract => contract.isActive).length || 0} contratos ativos encontrados
               {contractsError && (
                 <div className="text-red-600 mt-1">
-                  Erro ao carregar contratos.{' '}
+                  Erro ao carregar contratos: {contractsError?.message}{' '}
                   <button 
                     onClick={() => refetch()} 
                     className="underline hover:no-underline"
                   >
                     Tentar novamente
                   </button>
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Debug visual */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-4 bg-gray-100 rounded text-xs">
+              <strong>Debug Info:</strong>
+              <br />Loading: {contractsLoading ? 'true' : 'false'}
+              <br />Error: {contractsError ? contractsError.message : 'none'}
+              <br />Data: {contractsData ? 'exists' : 'null'}
+              <br />Contracts count: {contractsData?.contracts?.length || 0}
+              {contractsData?.contracts && (
+                <div className="mt-2">
+                  <strong>Contracts:</strong>
+                  <pre className="mt-1 text-xs overflow-auto max-h-32">
+                    {JSON.stringify(contractsData.contracts, null, 2)}
+                  </pre>
                 </div>
               )}
             </div>
