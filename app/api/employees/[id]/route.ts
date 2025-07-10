@@ -159,6 +159,8 @@ export async function PUT(req: NextRequest, { params }) {
       'cnh', 'cnhCategory', 'cnhValidity', 'motherName', 'fatherName', 
       'dependents', 'notes', 'employmentHistory', 'isActive', 'nfcCardId',
       'avatar', 'email', 'sexo', 'estadoCivil', 'companyFunctionId',
+      // Campos de vinculação de contratos
+      'contractId', 'contractAssignmentDate', 'currentContractId', 'currentFunctionId',
       // Novos campos adicionados
       'centroCusto', 'obra', 'primeiraExperiencia', 'segundaExperiencia', 
       'previsaoObra', 'mo', 'horasNormaisTrabalhadas', 'horasExtrasTrabalhadas', 
@@ -173,8 +175,6 @@ export async function PUT(req: NextRequest, { params }) {
     });
     
     // Remover campos problemáticos que podem causar erro de chave estrangeira
-    delete filteredUpdates.currentContractId;
-    delete filteredUpdates.currentFunctionId;
     delete filteredUpdates.currentContract;
     delete filteredUpdates.currentFunction;
     delete filteredUpdates.contrato;
@@ -184,7 +184,7 @@ export async function PUT(req: NextRequest, { params }) {
     delete filteredUpdates.dataNascimento;
     
     // Tratar campos de data
-    ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'].forEach(field => {
+    ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra', 'contractAssignmentDate'].forEach(field => {
       if (filteredUpdates[field] !== undefined) {
         if (!filteredUpdates[field] || filteredUpdates[field] === '') {
           filteredUpdates[field] = null;

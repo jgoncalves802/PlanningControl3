@@ -11,47 +11,39 @@ import { toast } from 'react-hot-toast';
 
 export default function EmployeeAssignmentPage() {
   const [selectedContractId, setSelectedContractId] = useState<string>('');
-  // Estados para contratos (implementação manual como backup)
-  const [manualContracts, setManualContracts] = useState([]);
-  const [manualLoading, setManualLoading] = useState(true);
-  const [manualError, setManualError] = useState(null);
+  // Estado simples para contratos
+  const [contracts, setContracts] = useState([]);
+  const [contractsLoading, setContractsLoading] = useState(true);
+  const [contractsError, setContractsError] = useState(null);
 
-  // Buscar contratos usando React Query
-  const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery({ 
-    limit: 100,
-    page: 1
-  });
-
-  // Fetch manual como backup
+  // Buscar contratos diretamente
   useEffect(() => {
-    const fetchContractsManually = async () => {
+    const fetchContracts = async () => {
       try {
-        setManualLoading(true);
-        setManualError(null);
+        setContractsLoading(true);
+        setContractsError(null);
         
         const response = await fetch('/api/contracts?limit=100');
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`Erro ${response.status}: ${response.statusText}`);
         }
         
         const data = await response.json();
-        setManualContracts(data.contracts || []);
+        console.log('Contratos carregados:', data);
+        setContracts(data.contracts || []);
       } catch (error) {
-        setManualError(error.message);
+        console.error('Erro ao buscar contratos:', error);
+        setContractsError(error.message);
       } finally {
-        setManualLoading(false);
+        setContractsLoading(false);
       }
     };
 
-    fetchContractsManually();
+    fetchContracts();
   }, []);
 
-
-
-  // Usar dados manuais como fallback
-  const finalContractsData = contractsData || { contracts: manualContracts };
-  const finalLoading = contractsLoading && manualLoading;
-  const finalError = contractsError || manualError;
+  // Filtrar apenas contratos ativos
+  const activeContracts = contracts.filter(contract => contract.isActive);
 
   // Filtros controlados
   const [searchTerm, setSearchTerm] = useState('');
@@ -67,18 +59,25 @@ export default function EmployeeAssignmentPage() {
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
 
   // Buscar funcionários
-  const { data: employeesData, isLoading: employeesLoading, error: employeesError } = useEmployeesQuery({
+  const { data: employeesData, isLoading: employeesLoading, error: employeesError, refetch: refetchEmployees } = useEmployeesQuery({
     search: searchTerm,
     isActive: statusFilter === 'all' ? undefined : statusFilter === 'active',
   });
 
   // Mapear para formato esperado pela tabela
-  const employees = (employeesData?.employees || []).map(emp => ({
-    ...emp,
-    status: emp.isActive ? 'active' : 'dismissed',
-    contractAssignmentDate: emp['contractAssignmentDate'] || '',
-    contractId: emp['contractId'] || null,
-  }));
+  const employees = (employeesData?.employees || []).map(emp => {
+    // Buscar o contrato pelo ID para obter o nome
+    const contract = contracts.find(c => c.id === emp['contractId']);
+    
+    return {
+      ...emp,
+      status: emp.isActive ? 'active' : 'dismissed',
+      contractAssignmentDate: emp['contractAssignmentDate'] || '',
+      contractId: emp['contractId'] || null,
+      // Adicionar informações do contrato
+      currentContract: contract ? { id: contract.id, name: contract.name, code: contract.code } : null,
+    };
+  });
 
   // Colunas padrão
   const columns = [
@@ -137,7 +136,7 @@ export default function EmployeeAssignmentPage() {
     if (!selectedContractId || selectedEmployeeIds.length === 0) return;
     setIsLinking(true);
     
-    const selectedContract = finalContractsData?.contracts.find(c => c.id === selectedContractId);
+    const selectedContract = contracts.find(c => c.id === selectedContractId);
     const contractName = selectedContract ? selectedContract.name : 'contrato selecionado';
     
     toast.loading(`Vinculando ${selectedEmployeeIds.length} funcionário(s) ao ${contractName}...`);
@@ -184,6 +183,9 @@ export default function EmployeeAssignmentPage() {
       }
       
       setSelectedEmployeeIds([]);
+      
+      // Recarregar dados dos funcionários para refletir as mudanças
+      refetchEmployees();
     } catch (err) {
       toast.dismiss();
       toast.error('Erro inesperado durante a vinculação.');
@@ -193,14 +195,14 @@ export default function EmployeeAssignmentPage() {
   };
 
   // Mostrar erros se houver
-  if (finalError && finalLoading) {
+  if (contractsError && !contractsLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <h2 className="text-red-800 font-semibold mb-2">Erro ao carregar contratos</h2>
             <p className="text-red-600">
-              {finalError || 'Erro desconhecido ao carregar contratos'}
+              {contractsError || 'Erro desconhecido ao carregar contratos'}
             </p>
             <button 
               onClick={() => window.location.reload()} 
@@ -251,24 +253,24 @@ export default function EmployeeAssignmentPage() {
             className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2"
             value={selectedContractId}
             onChange={e => setSelectedContractId(e.target.value)}
-            disabled={finalLoading || isLinking}
+            disabled={contractsLoading || isLinking}
           >
             <option value="">
-              {finalLoading ? 'Carregando contratos...' : 'Selecione...'}
+              {contractsLoading ? 'Carregando contratos...' : 'Selecione...'}
             </option>
-            {finalContractsData?.contracts?.filter(contract => contract.isActive).map(contract => (
+            {activeContracts.map(contract => (
               <option key={contract.id} value={contract.id}>
                 {contract.name} ({contract.code})
               </option>
             ))}
           </select>
           {/* Status info */}
-          {!finalLoading && (
+          {!contractsLoading && (
             <div className="mt-2 text-sm text-gray-500">
-              {finalContractsData?.contracts?.filter(contract => contract.isActive).length || 0} contratos ativos encontrados
-              {finalError && (
+              {activeContracts.length} contratos ativos encontrados
+              {contractsError && (
                 <div className="text-red-600 mt-1">
-                  Erro ao carregar contratos: {finalError}{' '}
+                  Erro ao carregar contratos: {contractsError}{' '}
                   <button 
                     onClick={() => window.location.reload()} 
                     className="underline hover:no-underline"
