@@ -135,8 +135,8 @@ export default function WorkforceControlPage() {
         nome: entry.employeeName,
         contrato: entry.contractName,
         funcao: entry.functionName,
-        entrada: entry.checkInTime?.toLocaleString('pt-BR') || 'Não registrada',
-        saida: entry.checkOutTime?.toLocaleString('pt-BR') || 'Não registrada',
+        entrada: formatTime(entry.checkInTime) || 'Não registrada',
+        saida: formatTime(entry.checkOutTime) || 'Não registrada',
         status: entry.status,
         local: entry.location || 'Não informado',
         horasTrabalhadas: entry.hoursWorked?.toFixed(1) || '0.0',
@@ -188,6 +188,32 @@ export default function WorkforceControlPage() {
       case UserRole.SUPERVISOR: return 'Supervisor'
       case UserRole.OPERATOR: return 'Operador'
       default: return role
+    }
+  }
+
+  const formatTime = (dateValue: any): string => {
+    if (!dateValue || dateValue === 'null' || dateValue === null || dateValue === undefined) {
+      return ''
+    }
+    
+    try {
+      // Se já é um objeto Date
+      if (dateValue instanceof Date) {
+        return isNaN(dateValue.getTime()) ? '' : dateValue.toLocaleTimeString('pt-BR', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        })
+      }
+      
+      // Se é uma string, tentar converter
+      const date = new Date(dateValue)
+      return isNaN(date.getTime()) ? '' : date.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })
+    } catch (error) {
+      console.warn('Erro ao formatar horário:', error, dateValue)
+      return ''
     }
   }
 
@@ -415,29 +441,27 @@ export default function WorkforceControlPage() {
                         {entry.functionName || 'Não definida'}
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-600">
-                        {entry.checkInTime ? (
-                          <div>
-                            <div>{entry.checkInTime.toLocaleTimeString('pt-BR', { 
-                              hour: '2-digit', 
-                              minute: '2-digit' 
-                            })}</div>
-                            {entry.isLate && (
-                              <div className="text-xs text-red-600 font-medium">ATRASADO</div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">Não registrada</span>
-                        )}
+                        {(() => {
+                          const formattedTime = formatTime(entry.checkInTime)
+                          return formattedTime ? (
+                            <div>
+                              <div>{formattedTime}</div>
+                              {entry.isLate && (
+                                <div className="text-xs text-red-600 font-medium">ATRASADO</div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400">Não registrada</span>
+                          )
+                        })()}
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-600">
-                        {entry.checkOutTime ? (
-                          entry.checkOutTime.toLocaleTimeString('pt-BR', { 
-                            hour: '2-digit', 
-                            minute: '2-digit' 
-                          })
-                        ) : (
-                          <span className="text-gray-400">Não registrada</span>
-                        )}
+                        {(() => {
+                          const formattedTime = formatTime(entry.checkOutTime)
+                          return formattedTime ? formattedTime : (
+                            <span className="text-gray-400">Não registrada</span>
+                          )
+                        })()}
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-600">
                         {entry.hoursWorked ? `${entry.hoursWorked.toFixed(1)}h` : '-'}

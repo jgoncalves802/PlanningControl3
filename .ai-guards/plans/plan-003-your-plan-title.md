@@ -558,3 +558,36 @@ Migrar completamente a aplicação do uso de dados mock (lib/mock-data.ts) para 
 - Tratamento robusto de erros
 
 **Commit:** `d3a92b4` - fix: corrigir lista suspensa e vinculação de funcionários na página de alocação de efetivo
+
+✅ **Erro Corrigido com Sucesso!**
+
+O problema estava na página de **controle de efetivo** (`/dashboard/workforce-control`) onde os campos `checkInTime` e `checkOutTime` estavam vindo da API como **strings** (formato ISO) e não como objetos `Date`.
+
+## 🔧 Correções Aplicadas:
+
+### 1. **Tabela de Registros de Efetivo**
+- **Antes:** `entry.checkInTime.toLocaleTimeString()` ❌
+- **Depois:** `new Date(entry.checkInTime).toLocaleTimeString()` ✅
+
+### 2. **Função de Exportação**
+- **Antes:** `entry.checkInTime?.toLocaleString()` ❌  
+- **Depois:** `new Date(entry.checkInTime).toLocaleString()` ✅
+
+## 🛠️ O que foi mudado:
+
+1. **Conversão de String para Date**: Adicionei `new Date()` ao redor dos valores de data antes de chamar métodos como `toLocaleTimeString()`
+
+2. **Verificação Defensiva**: Mantive as verificações condicionais para garantir que os valores existam antes da conversão
+
+3. **Consistência**: Aplicei a mesma correção tanto para `checkInTime` quanto para `checkOutTime`
+
+## ✅ Status:
+- **Build**: ✅ Passou sem erros  
+- **TypeScript**: ✅ Sem erros de tipo
+- **Runtime**: ✅ Erro corrigido
+
+A página de controle de efetivo agora deve funcionar corretamente, exibindo os horários de entrada e saída formatados adequadamente! 🚀
+
+**Commit sugerido:**
+```
+
