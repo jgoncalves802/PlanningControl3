@@ -3,7 +3,7 @@
 import React, { memo } from 'react';
 import { Employee } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
-import { Eye, Edit, MoreHorizontal, Mail, Phone } from 'lucide-react';
+import { Eye, Pencil, Clock, Mail, Phone } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 
 interface ColumnConfig {
@@ -227,7 +227,7 @@ const EmployeeTable = memo(function EmployeeTable({
         </thead>
         <tbody className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
           {employees.map((employee, index) => {
-            const isLinkedToSelected = selectedContractId && employee.contractId === selectedContractId;
+            const isLinkedToSelected = selectedContractId && employee.currentContractId === selectedContractId;
             return (
               <tr 
                 key={employee.id} 
@@ -251,7 +251,16 @@ const EmployeeTable = memo(function EmployeeTable({
                     {renderCellContent(employee, column.key)}
                   </td>
                 ))}
-                <td className="p-4">
+                <td className="p-4 flex gap-2">
+                  <button onClick={() => onViewEmployee(employee)} title="Visualizar" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1">
+                    <Eye className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" strokeWidth={1.5} />
+                  </button>
+                  <button onClick={() => onEditEmployee(employee)} title="Editar" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1">
+                    <Pencil className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" strokeWidth={1.5} />
+                  </button>
+                  <button onClick={() => onShowHistory(employee)} title="Histórico" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1">
+                    <Clock className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" strokeWidth={1.5} />
+                  </button>
                   {/* Outras ações */}
                   {isLinkedToSelected && (
                     <button

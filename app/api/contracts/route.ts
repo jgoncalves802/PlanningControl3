@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { PrismaClient } from '@prisma/client'
-
-const prisma = new PrismaClient()
+import { prisma } from '@/lib/prisma'
 
 // Função para normalizar caracteres especiais e garantir UTF-8
 function normalizeText(text: string): string {
@@ -36,14 +34,12 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10')
     const search = searchParams.get('search') || ''
     const isActive = searchParams.get('isActive')
-    const includesWeekends = searchParams.get('includesWeekends')
-    const includesHolidays = searchParams.get('includesHolidays')
-    const sortBy = searchParams.get('sortBy') || 'name'
-    const sortOrder = searchParams.get('sortOrder') || 'asc'
-
+    
     const skip = (page - 1) * limit
+    
+    console.log('Parâmetros:', { page, limit, search, isActive, skip })
 
-    // Construir filtros
+    // Construir where clause
     const where: any = {}
     
     if (search) {
@@ -52,90 +48,84 @@ export async function GET(request: NextRequest) {
         { code: { contains: search, mode: 'insensitive' } }
       ]
     }
-
+    
     if (isActive !== null && isActive !== undefined) {
       where.isActive = isActive === 'true'
     }
 
-    if (includesWeekends !== null && includesWeekends !== undefined) {
-      where.includesWeekends = includesWeekends === 'true'
-    }
+    console.log('Where clause:', JSON.stringify(where, null, 2))
 
-    if (includesHolidays !== null && includesHolidays !== undefined) {
-      where.includesHolidays = includesHolidays === 'true'
-    }
-
-    // Buscar contratos com relacionamentos
-    const contracts = await prisma.contract.findMany({
-      where,
-      include: {
-        responsibles: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true
-              }
+    // Buscar contratos com paginação simples
+    const [contracts, totalCount] = await Promise.all([
+      prisma.contract.findMany({
+        where,
+        take: limit,
+        skip: skip,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: {
+            select: {
+              employees: true,
+              functions: true
             }
-          }
-        },
-        functions: {
-          include: {
-            _count: {
-              select: {
-                employees: true
-              }
-            }
-          }
-        },
-        _count: {
-          select: {
-            employees: true,
-            functions: true
           }
         }
-      },
-      skip,
-      take: limit,
-      orderBy: {
-        [sortBy]: sortOrder
+      }),
+      prisma.contract.count({ where })
+    ])
+
+    console.log(`Encontrados ${contracts.length} contratos de ${totalCount} total`)
+
+    // Normalizar dados dos contratos
+    const normalizedContracts = contracts.map((contract) => {
+      const normalized = normalizeContractFields(contract)
+      return {
+        ...normalized,
+        employeeCount: contract._count?.employees || 0,
+        functionCount: contract._count?.functions || 0
       }
     })
 
-    // Contar total
-    const total = await prisma.contract.count({ where })
+    const totalPages = Math.ceil(totalCount / limit)
 
-    // Formatar resposta com campos calculados
-    const formattedContracts = contracts.map(contract => ({
-      ...contract,
-      employeeCount: contract._count.employees,
-      functionCount: contract._count.functions,
-      functions: contract.functions.map(func => ({
-        ...func,
-        employeeCount: func._count.employees
-      }))
-    }))
-
-    console.log(`Encontrados ${contracts.length} contratos`)
-
-    return NextResponse.json({
-      contracts: formattedContracts,
+    const response = {
+      contracts: normalizedContracts,
       pagination: {
         page,
         limit,
-        total,
-        pages: Math.ceil(total / limit)
-      }
-    }, {
+        total: totalCount,
+        pages: totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1
+      },
+      timestamp: new Date().toISOString()
+    }
+
+    console.log('Resposta preparada:', {
+      contractsCount: response.contracts.length,
+      pagination: response.pagination
+    })
+
+    return NextResponse.json(response, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       }
     })
-  } catch (error) {
+    
+  } catch (error: any) {
     console.error('Erro ao buscar contratos:', error)
+    if (error instanceof Error) {
+      console.error('Mensagem:', error.message)
+      console.error('Stack:', error.stack)
+    }
+    // Logar headers da request para debug
+    try {
+      console.log('Request headers:', Object.fromEntries(request.headers.entries()))
+    } catch (e) {
+      console.log('Não foi possível logar os headers da request')
+    }
     return NextResponse.json(
-      { error: 'Erro interno do servidor', details: error.message },
+      { error: 'Erro interno do servidor', details: error.message, stack: error.stack },
       { 
         status: 500,
         headers: {
