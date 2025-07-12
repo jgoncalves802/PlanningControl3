@@ -14,21 +14,26 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit
 
     // Montar filtro
-    const where: any = {}
-    if (contractId) {
-      where.employee = { currentContractId: contractId }
-    }
+    let where: any = {}
     if (date) {
-      // Filtrar por data (considerando apenas o dia) usando checkInTime
       const from = new Date(date)
       from.setHours(0, 0, 0, 0)
       const to = new Date(date)
       to.setHours(23, 59, 59, 999)
-      // Busca registros cujo checkInTime OU checkOutTime está no dia
-      where.OR = [
-        { checkInTime: { gte: from, lte: to } },
-        { checkOutTime: { gte: from, lte: to } }
-      ]
+      // Filtro de contrato dentro do OR
+      if (contractId) {
+        where.OR = [
+          { checkInTime: { gte: from, lte: to }, employee: { currentContractId: contractId } },
+          { checkOutTime: { gte: from, lte: to }, employee: { currentContractId: contractId } }
+        ]
+      } else {
+        where.OR = [
+          { checkInTime: { gte: from, lte: to } },
+          { checkOutTime: { gte: from, lte: to } }
+        ]
+      }
+    } else if (contractId) {
+      where.employee = { currentContractId: contractId }
     }
     if (search) {
       where.OR = [
@@ -54,6 +59,9 @@ export async function GET(request: NextRequest) {
             nfcCardId: true,
             companyFunction: {
               select: { name: true }
+            },
+            currentContract: {
+              select: { name: true }
             }
           }
         }
@@ -62,33 +70,96 @@ export async function GET(request: NextRequest) {
       take: limit,
     })
 
-    const entries = workforceEntries.map(entry => ({
-      id: entry.id,
-      employeeId: entry.employeeId,
-      employeeName: entry.employee.name,
-      contractId: entry.employee.currentContractId || '',
-      contractName: entry.contractName || '',
-      functionId: entry.employee.companyFunctionId || '',
-      functionName: entry.employee.companyFunction?.name || '',
-      checkInTime: entry.checkInTime,
-      checkOutTime: entry.checkOutTime,
-      status: entry.status,
-      location: entry.location,
-      nfcCardId: entry.employee.nfcCardId,
-      isLate: entry.isLate,
-      hoursWorked: entry.hoursWorked,
-      createdAt: entry.createdAt,
-      updatedAt: entry.updatedAt
-    }))
+    // Agrupar por contrato
+    const contractGroups = new Map()
+    
+    workforceEntries.forEach(entry => {
+      const contractName = entry.contractName || entry.employee.currentContract?.name || 'Sem Contrato'
+      const contractId = entry.employee.currentContractId || 'no-contract'
+      
+      if (!contractGroups.has(contractId)) {
+        contractGroups.set(contractId, {
+          contractId,
+          contractName,
+          entries: [],
+          stats: {
+            total: 0,
+            present: 0,
+            absent: 0,
+            late: 0,
+            left: 0
+          }
+        })
+      }
+      
+      const group = contractGroups.get(contractId)
+      const formattedEntry = {
+        id: entry.id,
+        employeeId: entry.employeeId,
+        employeeName: entry.employee.name,
+        contractId: entry.employee.currentContractId || '',
+        contractName: contractName,
+        functionId: entry.employee.companyFunctionId || '',
+        functionName: entry.employee.companyFunction?.name || '',
+        checkInTime: entry.checkInTime,
+        checkOutTime: entry.checkOutTime,
+        status: entry.status,
+        location: entry.location,
+        nfcCardId: entry.employee.nfcCardId,
+        isLate: entry.isLate,
+        hoursWorked: entry.hoursWorked,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt
+      }
+      
+      group.entries.push(formattedEntry)
+      group.stats.total++
+      
+      // Calcular estatísticas por status
+      switch (entry.status) {
+        case 'PRESENT':
+          group.stats.present++
+          break
+        case 'ABSENT':
+          group.stats.absent++
+          break
+        case 'LATE':
+          group.stats.late++
+          break
+        case 'LEFT':
+          group.stats.left++
+          break
+      }
+    })
 
+    const contractGroupsArray = Array.from(contractGroups.values())
     const totalPages = Math.ceil(total / limit)
 
     return NextResponse.json({
-      entries,
+      contractGroups: contractGroupsArray,
       total,
       page,
       totalPages,
-      limit
+      limit,
+      // Manter compatibilidade com formato antigo
+      entries: workforceEntries.map(entry => ({
+        id: entry.id,
+        employeeId: entry.employeeId,
+        employeeName: entry.employee.name,
+        contractId: entry.employee.currentContractId || '',
+        contractName: entry.contractName || entry.employee.currentContract?.name || '',
+        functionId: entry.employee.companyFunctionId || '',
+        functionName: entry.employee.companyFunction?.name || '',
+        checkInTime: entry.checkInTime,
+        checkOutTime: entry.checkOutTime,
+        status: entry.status,
+        location: entry.location,
+        nfcCardId: entry.employee.nfcCardId,
+        isLate: entry.isLate,
+        hoursWorked: entry.hoursWorked,
+        createdAt: entry.createdAt,
+        updatedAt: entry.updatedAt
+      }))
     }, {
       status: 200,
       headers: {

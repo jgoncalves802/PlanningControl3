@@ -3,14 +3,12 @@ import './globals.css'
 import ReactQueryProvider from '@/lib/ReactQueryProvider'
 
 export const metadata: Metadata = {
-  title: 'PlanningControl - Workforce Management Platform',
-  description: 'Complete multi-tenant workforce and operations management solution',
-  robots: {
-    index: true,
-    follow: true,
-  },
+  title: 'Planning Control',
+  description: 'Sistema de controle de planejamento e efetivo',
   icons: {
     icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
   },
 }
 

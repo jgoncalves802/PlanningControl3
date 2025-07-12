@@ -19,7 +19,17 @@ const fetchWorkforceEntries = async (filters: WorkforceFilters = {}, page = 1, l
     throw new Error('Falha ao carregar dados de efetivo')
   }
   
-  return response.json()
+  // Verificar se a resposta é JSON válido
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error('Resposta inválida do servidor (não é JSON)')
+  }
+ 
+  try {
+    return await response.json()
+  } catch (error) {
+    throw new Error('Erro ao processar resposta do servidor')
+  }
 }
 
 // Buscar estatísticas de efetivo
@@ -35,7 +45,17 @@ const fetchWorkforceStats = async (filters: WorkforceFilters = {}): Promise<Work
     throw new Error('Falha ao carregar estatísticas de efetivo')
   }
   
-  return response.json()
+  // Verificar se a resposta é JSON válido
+  const contentType = response.headers.get('content-type')
+  if (!contentType || !contentType.includes('application/json')) {
+    throw new Error('Resposta inválida do servidor (não é JSON)')
+  }
+ 
+  try {
+    return await response.json()
+  } catch (error) {
+    throw new Error('Erro ao processar resposta do servidor')
+  }
 }
 
 // Criar entrada de efetivo
@@ -163,22 +183,22 @@ export const useWorkforceRealTime = (filters: WorkforceFilters = {}, page = 1, l
   const entriesQuery = useWorkforceEntries(filters, page, limit)
   const statsQuery = useWorkforceStats(filters)
 
-  // Adaptar para novo formato paginado
-  const paginated = entriesQuery.data || { entries: [], total: 0, page: 1, totalPages: 1, limit }
+  // Adaptar para novo formato paginado e agrupado
+  const paginated = entriesQuery.data || { entries: [], contractGroups: [], total: 0, page: 1, totalPages: 1, limit }
 
   return {
-    entries: paginated.entries,
+    entries: paginated, // Retorna o objeto completo com contractGroups
+    stats: statsQuery.data,
+    isLoading: entriesQuery.isLoading || statsQuery.isLoading,
+    error: entriesQuery.error || statsQuery.error,
+    refetch: () => {
+      entriesQuery.refetch()
+      statsQuery.refetch()
+    },
+    // Manter compatibilidade com formato antigo
     total: paginated.total,
     page: paginated.page,
     totalPages: paginated.totalPages,
     limit: paginated.limit,
-    stats: statsQuery.data,
-    isLoading: entriesQuery.isLoading || statsQuery.isLoading,
-    error: entriesQuery.error || statsQuery.error,
-    isRefetching: entriesQuery.isRefetching || statsQuery.isRefetching,
-    refetch: () => {
-      entriesQuery.refetch()
-      statsQuery.refetch()
-    }
   }
 } 

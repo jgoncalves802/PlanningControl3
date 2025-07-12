@@ -74,6 +74,9 @@ export default function WorkforceControlPage() {
   const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, safePage, pageSize)
   const processNFCMutation = useProcessNFC()
 
+  // Acessar dados agrupados por contrato
+  const contractGroups = entries?.contractGroups || []
+
   // Contratos acessíveis baseado nas permissões
   const accessibleContracts = currentUser ? getAccessibleContracts(currentUser, contracts) : []
 
@@ -110,12 +113,23 @@ export default function WorkforceControlPage() {
   }
 
   // [2] Só depois dos hooks, os returns condicionais:
-  if (!currentUser || !userPermissions || isLoading) {
+  if (!currentUser || !userPermissions) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <span className="text-gray-600">Carregando controle de efetivo...</span>
+          <span className="text-gray-600">Carregando usuário...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <span className="text-gray-600">Carregando dados de efetivo...</span>
         </div>
       </div>
     )
@@ -127,11 +141,25 @@ export default function WorkforceControlPage() {
         <div className="text-center">
           <AlertTriangle className="h-8 w-8 mx-auto mb-4 text-red-500" />
           <p className="text-red-600">Erro ao carregar dados de efetivo</p>
-          <p className="text-sm text-gray-500 mt-2">Tente recarregar a página</p>
+          <p className="text-sm text-gray-500 mt-2">
+            {error?.message || 'Erro desconhecido'}
+          </p>
           <Button onClick={refreshData} className="mt-4">
             <RefreshCw className="h-4 w-4 mr-2" />
             Tentar Novamente
           </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Teste simples para debug
+  if (!entries) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600">DEBUG: entries é undefined</p>
+          <pre className="text-xs mt-2">{JSON.stringify({ entries, stats, isLoading, error }, null, 2)}</pre>
         </div>
       </div>
     )
@@ -149,7 +177,7 @@ export default function WorkforceControlPage() {
         location: `Setor ${Math.floor(Math.random() * 5) + 1}`,
         action: 'check_in' // A API determinará se é check-in ou check-out
       })
-      
+   
       setNfcStatus('success')
       
       setTimeout(() => {
@@ -178,16 +206,18 @@ export default function WorkforceControlPage() {
         taxaPresenca: `${stats.presenceRate}%`,
         horaMediaEntrada: stats.averageCheckInTime
       },
-      funcionarios: entries.map(entry => ({
-        nome: entry.employeeName,
-        contrato: entry.contractName,
-        funcao: entry.functionName,
-        entrada: formatTime(entry.checkInTime) || 'Não registrada',
-        saida: formatTime(entry.checkOutTime) || 'Não registrada',
-        status: entry.status,
-        local: entry.location || 'Não informado',
-        horasTrabalhadas: entry.hoursWorked?.toFixed(1) || '0.0',
-        atrasado: entry.isLate ? 'Sim' : 'Não'
+      contratos: contractGroups.map(group => ({
+        contrato: group.contractName,
+        funcionarios: group.entries.map(entry => ({
+          nome: entry.employeeName,
+          funcao: entry.functionName,
+          entrada: formatTime(entry.checkInTime) || 'Não registrada',
+          saida: formatTime(entry.checkOutTime) || 'Não registrada',
+          status: entry.status,
+          local: entry.location || 'Não informado',
+          horasTrabalhadas: entry.hoursWorked?.toFixed(1) || '0.0',
+          atrasado: entry.isLate ? 'Sim' : 'Não'
+        }))
       }))
     }
     
@@ -197,11 +227,11 @@ export default function WorkforceControlPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'PRESENT': return 'bg-green-100 text-green-800'
-      case 'ABSENT': return 'bg-red-100 text-red-800'
-      case 'LATE': return 'bg-yellow-100 text-yellow-800'
-      case 'LEFT': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
+      case 'PRESENT': return 'bg-green-100 text-green-800 border-green-200'
+      case 'ABSENT': return 'bg-red-100 text-red-800 border-red-200'
+      case 'LATE': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'LEFT': return 'bg-gray-100 text-gray-800 border-gray-200'
+      default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
   }
 
@@ -286,13 +316,13 @@ export default function WorkforceControlPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header com Informações de Permissão */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Controle do Efetivo</h1>
           <div className="flex items-center gap-4">
-            <p className="text-gray-600">Apropriação simultânea e independente por contrato</p>
+            <p className="text-gray-600">Controle organizado por contrato</p>
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
               <Shield className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-900">
@@ -362,7 +392,7 @@ export default function WorkforceControlPage() {
               key={stat.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: index * 0.1 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
             >
               <Card>
                 <CardContent className="p-6">
@@ -424,165 +454,121 @@ export default function WorkforceControlPage() {
         </CardContent>
       </Card>
 
-      {/* Workforce Entries Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Registros de Efetivo
-            {stats && (
-              <span className="text-sm font-normal text-gray-500">
-                ({total} registros) - Página {page} de {totalPages} - Taxa de presença: {stats.presenceRate}%
-              </span>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {entries.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Nenhum registro de efetivo encontrado</p>
-              <p className="text-sm text-gray-500 mt-1">
+      {/* Contract Groups */}
+      {contractGroups.length === 0 ? (
+        <Card>
+          <CardContent className="p-12">
+            <div className="text-center">
+              <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum registro encontrado</h3>
+              <p className="text-gray-600 mb-4">
                 {searchTerm || selectedContract !== 'all' 
                   ? 'Tente ajustar os filtros de busca'
                   : 'Os funcionários ainda não registraram ponto hoje'
                 }
               </p>
+              <Button onClick={refreshData} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Recarregar
+              </Button>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Funcionário</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Contrato</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Função</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Entrada</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Saída</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Horas</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-900">Local</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map((entry) => (
-                    <tr key={entry.id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-gray-900">{entry.employeeName}</div>
-                        {entry.nfcCardId && (
-                          <div className="text-sm text-gray-500">NFC: {entry.nfcCardId}</div>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {entry.contractName || 'Não definido'}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {entry.functionName || 'Não definida'}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {(() => {
-                          const formattedTime = formatTime(entry.checkInTime)
-                          return formattedTime ? (
-                            <div>
-                              <div>{formattedTime}</div>
-                              {entry.isLate && (
-                                <div className="text-xs text-red-600 font-medium">ATRASADO</div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">Não registrada</span>
-                          )
-                        })()}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {(() => {
-                          const formattedTime = formatTime(entry.checkOutTime)
-                          return formattedTime ? formattedTime : (
-                            <span className="text-gray-400">Não registrada</span>
-                          )
-                        })()}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {entry.hoursWorked ? `${entry.hoursWorked.toFixed(1)}h` : '-'}
-                      </td>
-                      <td className="py-3 px-4">
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {contractGroups.map((group, index) => (
+            <motion.div
+              key={group.contractId}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.1 }}
+            >
+              <Card className="h-full">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <Building className="h-5 w-5 text-blue-600" />
+                        {group.contractName}
+                      </CardTitle>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {group.stats.total} funcionário{group.stats.total !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {group.stats.present > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          {group.stats.present} presentes
+                        </span>
+                      )}
+                      {group.stats.late > 0 && (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          {group.stats.late} atrasados
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {group.entries.map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-shrink-0">
+                            {getStatusIcon(entry.status)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {entry.employeeName}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {entry.functionName || 'Função não definida'}
+                            </p>
+                            {entry.nfcCardId && (
+                              <p className="text-xs text-gray-400">
+                                NFC: {entry.nfcCardId}
+                              </p>
+                            )}
+                          </div>
+                        </div>
                         <div className="flex items-center gap-2">
-                          {getStatusIcon(entry.status)}
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(entry.status)}`}>
+                          <div className="text-right">
+                            <div className="text-xs text-gray-600">
+                              {formatTime(entry.checkInTime) || 'Não registrada'}
+                            </div>
+                            {entry.checkOutTime && (
+                              <div className="text-xs text-gray-500">
+                                Saída: {formatTime(entry.checkOutTime)}
+                              </div>
+                            )}
+                            {entry.hoursWorked && entry.hoursWorked > 0 && (
+                              <div className="text-xs text-gray-500">
+                                {entry.hoursWorked.toFixed(1)}h
+                              </div>
+                            )}
+                          </div>
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(entry.status)}`}>
                             {getStatusText(entry.status)}
                           </span>
                         </div>
-                      </td>
-                      <td className="py-3 px-4 text-sm text-gray-600">
-                        {entry.location || 'Não informado'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {/* Paginação */}
-          <div className="flex justify-between items-center mt-4">
-            <span className="text-sm text-gray-500">
-              Mostrando página {page} de {totalPages} ({total} registros)
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                disabled={page <= 1}
-              >
-                Anterior
-              </Button>
-              <span className="text-sm text-gray-700">Página {page}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => prev + 1)}
-                disabled={page >= totalPages || totalPages <= 1}
-              >
-                Próxima
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* NFC Reader Modal */}
       <NFCReadModal
         isOpen={showNFCReader}
         onClose={() => setShowNFCReader(false)}
         onBadgeDetected={handleNFCRead}
-        title="Leitura NFC para Registro de Efetivo"
-        description="Aproxime o crachá do dispositivo para registrar o ponto."
+        title="Registro de Ponto"
+        description="Aproxime o crachá NFC do leitor para registrar entrada/saída"
       />
-
-      {/* Feedback visual após leitura NFC */}
-      {(processNFCMutation.isSuccess || processNFCMutation.isError) && (
-        <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className={`rounded-lg shadow-lg px-8 py-6 text-center bg-white border-2
-              ${processNFCMutation.isSuccess ? 'border-green-400' : 'border-red-400'}`}
-          >
-            {processNFCMutation.isSuccess ? (
-              <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
-            ) : (
-              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-2" />
-            )}
-            <div className="text-lg font-semibold mb-1">
-              {getNFCFeedback(processNFCMutation)?.message}
-            </div>
-            {processNFCMutation.isSuccess && processNFCMutation.data?.isLate && (
-              <div className="text-yellow-700 text-sm font-medium">Atenção: registro atrasado!</div>
-            )}
-          </motion.div>
-        </div>
-      )}
     </div>
   )
 }
