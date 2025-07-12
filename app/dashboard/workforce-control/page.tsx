@@ -454,7 +454,7 @@ export default function WorkforceControlPage() {
         </CardContent>
       </Card>
 
-      {/* Contract Groups */}
+      {/* Contract Groups - Tabela Detalhada */}
       {contractGroups.length === 0 ? (
         <Card>
           <CardContent className="p-12">
@@ -462,10 +462,9 @@ export default function WorkforceControlPage() {
               <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum registro encontrado</h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm || selectedContract !== 'all' 
-                  ? 'Tente ajustar os filtros de busca'
-                  : 'Os funcionários ainda não registraram ponto hoje'
-                }
+                {searchTerm || selectedContract !== 'all'
+                  ? 'Tente ajustar os filtros de busca.'
+                  : 'Nenhum registro de efetivo para o filtro atual.'}
               </p>
               <Button onClick={refreshData} variant="outline">
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -475,88 +474,64 @@ export default function WorkforceControlPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {contractGroups.map((group, index) => (
-            <motion.div
-              key={group.contractId}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
-            >
-              <Card className="h-full">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <Building className="h-5 w-5 text-blue-600" />
-                        {group.contractName}
-                      </CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {group.stats.total} funcionário{group.stats.total !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {group.stats.present > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          {group.stats.present} presentes
-                        </span>
-                      )}
-                      {group.stats.late > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          {group.stats.late} atrasados
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-3">
+        <div className="space-y-8">
+          {contractGroups.map((group) => (
+            <Card key={group.contractId} className="shadow-md border border-gray-200">
+              <CardHeader className="bg-blue-50 border-b border-blue-200 rounded-t-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <Building className="h-6 w-6 text-blue-600" />
+                  <span className="text-lg font-bold text-blue-900">{group.contractName}</span>
+                  <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">{group.entries.length} funcionário(s)</span>
+                </div>
+                <div className="flex gap-4 text-sm text-gray-700">
+                  <span><UserCheck className="inline h-4 w-4 text-green-600 mr-1" />Presentes: <b>{group.stats.present}</b></span>
+                  <span><AlertTriangle className="inline h-4 w-4 text-yellow-600 mr-1" />Atrasados: <b>{group.stats.late}</b></span>
+                  <span><UserX className="inline h-4 w-4 text-red-600 mr-1" />Ausentes: <b>{group.stats.absent}</b></span>
+                  <span><CheckCircle className="inline h-4 w-4 text-gray-600 mr-1" />Saíram: <b>{group.stats.left}</b></span>
+                </div>
+              </CardHeader>
+              <CardContent className="overflow-x-auto p-0">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Nome</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Matrícula</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Função</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Check-in</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Check-out</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Horas</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Local</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">NFC</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Observações</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
                     {group.entries.map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            {getStatusIcon(entry.status)}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {entry.employeeName}
-                            </p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {entry.functionName || 'Função não definida'}
-                            </p>
-                            {entry.nfcCardId && (
-                              <p className="text-xs text-gray-400">
-                                NFC: {entry.nfcCardId}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <div className="text-xs text-gray-600">
-                              {formatTime(entry.checkInTime) || 'Não registrada'}
-                            </div>
-                            {entry.checkOutTime && (
-                              <div className="text-xs text-gray-500">
-                                Saída: {formatTime(entry.checkOutTime)}
-                              </div>
-                            )}
-                            {entry.hoursWorked && entry.hoursWorked > 0 && (
-                              <div className="text-xs text-gray-500">
-                                {entry.hoursWorked.toFixed(1)}h
-                              </div>
-                            )}
-                          </div>
-                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(entry.status)}`}>
-                            {getStatusText(entry.status)}
-                          </span>
-                        </div>
-                      </div>
+                      <tr key={entry.id} className="hover:bg-blue-50 transition-colors">
+                        <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-900">{entry.employeeName}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.employeeRegistration || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.functionName || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-semibold ${getStatusColor(entry.status)}`}>{getStatusIcon(entry.status)} {getStatusText(entry.status)}</span>
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{formatTime(entry.checkInTime) || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{formatTime(entry.checkOutTime) || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.hoursWorked?.toFixed(1) || '0.0'}h</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.location || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.nfcCardId || '-'}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-gray-700">-</td>
+                        <td className="px-4 py-2 whitespace-nowrap flex gap-2">
+                          <Button size="sm" variant="ghost" title="Visualizar histórico"><Clock className="h-4 w-4 text-gray-500" /></Button>
+                          <Button size="sm" variant="ghost" title="Editar"><Settings className="h-4 w-4 text-gray-500" /></Button>
+                        </td>
+                      </tr>
                     ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
