@@ -3,64 +3,87 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== DEBUG: Iniciando API workforce ===')
-    
-    // Teste básico do Prisma
-    console.log('=== DEBUG: Testando conexão Prisma ===')
-    const employeeCount = await prisma.employee.count()
-    console.log('=== DEBUG: Funcionários encontrados:', employeeCount, '===')
-    
-    // Verificar se a tabela workforceEntry existe
-    console.log('=== DEBUG: Testando tabela WorkforceEntry ===')
-    let entries = []
-    try {
-      const workforceEntries = await prisma.workforceEntry.findMany({
-        take: 10, // Limitando para teste
-        include: {
-          employee: {
-            select: {
-              name: true,
-              currentContractId: true,
-              companyFunctionId: true,
-              nfcCardId: true,
-              companyFunction: {
-                select: {
-                  name: true
-                }
-              }
+    // Parse query params
+    const { searchParams } = new URL(request.url)
+    const contractId = searchParams.get('contractId')
+    const date = searchParams.get('date') // formato yyyy-mm-dd
+    const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const limit = parseInt(searchParams.get('limit') || '20', 10)
+    const skip = (page - 1) * limit
+
+    // Montar filtro
+    const where: any = {}
+    if (contractId) {
+      where.employee = { currentContractId: contractId }
+    }
+    if (date) {
+      // Filtrar por data (considerando apenas o dia)
+      const from = new Date(date)
+      const to = new Date(date)
+      to.setHours(23, 59, 59, 999)
+      where.createdAt = { gte: from, lte: to }
+    }
+    if (search) {
+      where.OR = [
+        { employee: { name: { contains: search, mode: 'insensitive' } } },
+        { contractName: { contains: search, mode: 'insensitive' } },
+        { employee: { companyFunction: { name: { contains: search, mode: 'insensitive' } } } },
+      ]
+    }
+
+    // Buscar total de registros
+    const total = await prisma.workforceEntry.count({ where })
+
+    // Buscar registros paginados
+    const workforceEntries = await prisma.workforceEntry.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        employee: {
+          select: {
+            name: true,
+            currentContractId: true,
+            companyFunctionId: true,
+            nfcCardId: true,
+            companyFunction: {
+              select: { name: true }
             }
           }
         }
-      })
-      
-      console.log('=== DEBUG: Registros de efetivo encontrados:', workforceEntries.length, '===')
-      
-      entries = workforceEntries.map(entry => ({
-        id: entry.id,
-        employeeId: entry.employeeId,
-        employeeName: entry.employee.name,
-        contractId: entry.employee.currentContractId || '',
-        contractName: entry.contractName || '',
-        functionId: entry.employee.companyFunctionId || '',
-        functionName: entry.employee.companyFunction?.name || '',
-        checkInTime: entry.checkInTime,
-        checkOutTime: entry.checkOutTime,
-        status: entry.status,
-        location: entry.location,
-        nfcCardId: entry.employee.nfcCardId,
-        isLate: entry.isLate,
-        hoursWorked: entry.hoursWorked,
-        createdAt: entry.createdAt,
-        updatedAt: entry.updatedAt
-      }))
-      
-    } catch (error) {
-      console.error('=== DEBUG: Erro ao acessar WorkforceEntry:', error)
-    }
+      },
+      skip,
+      take: limit,
+    })
 
-    console.log('=== DEBUG: Retornando', entries.length, 'registros ===')
+    const entries = workforceEntries.map(entry => ({
+      id: entry.id,
+      employeeId: entry.employeeId,
+      employeeName: entry.employee.name,
+      contractId: entry.employee.currentContractId || '',
+      contractName: entry.contractName || '',
+      functionId: entry.employee.companyFunctionId || '',
+      functionName: entry.employee.companyFunction?.name || '',
+      checkInTime: entry.checkInTime,
+      checkOutTime: entry.checkOutTime,
+      status: entry.status,
+      location: entry.location,
+      nfcCardId: entry.employee.nfcCardId,
+      isLate: entry.isLate,
+      hoursWorked: entry.hoursWorked,
+      createdAt: entry.createdAt,
+      updatedAt: entry.updatedAt
+    }))
 
-    return NextResponse.json(entries, {
+    const totalPages = Math.ceil(total / limit)
+
+    return NextResponse.json({
+      entries,
+      total,
+      page,
+      totalPages,
+      limit
+    }, {
       status: 200,
       headers: {
         'Content-Type': 'application/json; charset=utf-8',

@@ -43,20 +43,22 @@ import {
 import { toast } from 'react-hot-toast'
 
 export default function WorkforceControlPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [userPermissions, setUserPermissions] = useState<any>(null)
+  // Inicialize diretamente, sem useState/useEffect
+  const currentUser = getCurrentUser()
+  const userPermissions = getUserPermissions(currentUser)
+
   const [selectedContract, setSelectedContract] = useState<string>('all')
   const [showNFCReader, setShowNFCReader] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [nfcStatus, setNfcStatus] = useState('idle')
   const [nfcReadValue, setNfcReadValue] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20 // ou outro valor desejado
 
-  // Hooks para dados
   const { data: contractsData } = useContractsQuery()
   const contracts = contractsData?.contracts || []
   
-  // Filtros para workforce
   const filters: WorkforceFilters = {
     contractId: selectedContract === 'all' ? undefined : selectedContract,
     search: searchTerm || undefined,
@@ -66,30 +68,71 @@ export default function WorkforceControlPage() {
     }
   }
 
-  // Hook principal para dados de efetivo
-  const { entries, stats, isLoading, error, refetch } = useWorkforceRealTime(filters)
-  
-  // Hook para processar NFC
+  const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, currentPage, pageSize)
   const processNFCMutation = useProcessNFC()
-
-  // Inicializar usuário e permissões
-  useEffect(() => {
-    const user = getCurrentUser()
-    setCurrentUser(user)
-    
-    const permissions = getUserPermissions(user)
-    setUserPermissions(permissions)
-  }, [])
 
   // Contratos acessíveis baseado nas permissões
   const accessibleContracts = currentUser ? getAccessibleContracts(currentUser, contracts) : []
 
-  // Auto-selecionar contrato se usuário só tem acesso a um
   useEffect(() => {
     if (accessibleContracts.length === 1 && selectedContract === 'all') {
       setSelectedContract(accessibleContracts[0].id)
     }
   }, [accessibleContracts, selectedContract])
+
+  useEffect(() => {
+    if (processNFCMutation.isError) {
+      console.error('[NFC] Erro na mutação:', processNFCMutation.error)
+    }
+    if (processNFCMutation.isSuccess) {
+      console.log('[NFC] Mutação de registro de ponto bem-sucedida:', processNFCMutation.data)
+      refetch(); // Atualiza a tabela após registro
+    }
+  }, [processNFCMutation.isError, processNFCMutation.isSuccess])
+
+  // Fechar feedback automaticamente após sucesso/erro
+  useEffect(() => {
+    if (processNFCMutation.isSuccess || processNFCMutation.isError) {
+      const timeout = setTimeout(() => {
+        processNFCMutation.reset()
+        setShowNFCReader(false)
+      }, 2000)
+      return () => clearTimeout(timeout)
+    }
+  }, [processNFCMutation.isSuccess, processNFCMutation.isError])
+
+  // Função precisa estar antes dos returns condicionais
+  const refreshData = () => {
+    refetch()
+  }
+
+  // [2] Só depois dos hooks, os returns condicionais:
+  if (!currentUser || !userPermissions || isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <span className="text-gray-600">Carregando controle de efetivo...</span>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 mx-auto mb-4 text-red-500" />
+          <p className="text-red-600">Erro ao carregar dados de efetivo</p>
+          <p className="text-sm text-gray-500 mt-2">Tente recarregar a página</p>
+          <Button onClick={refreshData} className="mt-4">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Tentar Novamente
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   const handleNFCRead = async (nfcData: string) => {
     try {
@@ -116,21 +159,6 @@ export default function WorkforceControlPage() {
       setNfcStatus('error')
       setTimeout(() => setNfcStatus('idle'), 3000)
     }
-  }
-
-  // Adicionar log na mutação
-  useEffect(() => {
-    if (processNFCMutation.isError) {
-      console.error('[NFC] Erro na mutação:', processNFCMutation.error)
-    }
-    if (processNFCMutation.isSuccess) {
-      console.log('[NFC] Mutação de registro de ponto bem-sucedida:', processNFCMutation.data)
-      refetch(); // Atualiza a tabela após registro
-    }
-  }, [processNFCMutation.isError, processNFCMutation.isSuccess])
-
-  const refreshData = () => {
-    refetch()
   }
 
   const exportData = () => {
@@ -233,35 +261,6 @@ export default function WorkforceControlPage() {
     }
   }
 
-  // Loading state
-  if (!currentUser || !userPermissions || isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-          <span className="text-gray-600">Carregando controle de efetivo...</span>
-        </div>
-      </div>
-    )
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <AlertTriangle className="h-8 w-8 mx-auto mb-4 text-red-500" />
-          <p className="text-red-600">Erro ao carregar dados de efetivo</p>
-          <p className="text-sm text-gray-500 mt-2">Tente recarregar a página</p>
-          <Button onClick={refreshData} className="mt-4">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Tentar Novamente
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
   // Feedback visual customizado para NFC
   const getNFCFeedback = (mutation) => {
     if (mutation.isSuccess && mutation.data) {
@@ -282,17 +281,6 @@ export default function WorkforceControlPage() {
     }
     return null
   }
-
-  // Fechar feedback automaticamente após sucesso/erro
-  useEffect(() => {
-    if (processNFCMutation.isSuccess || processNFCMutation.isError) {
-      const timeout = setTimeout(() => {
-        processNFCMutation.reset()
-        setShowNFCReader(false)
-      }, 2000)
-      return () => clearTimeout(timeout)
-    }
-  }, [processNFCMutation.isSuccess, processNFCMutation.isError])
 
   return (
     <div className="space-y-6">
@@ -441,7 +429,7 @@ export default function WorkforceControlPage() {
             Registros de Efetivo
             {stats && (
               <span className="text-sm font-normal text-gray-500">
-                ({entries.length} registros) - Taxa de presença: {stats.presenceRate}%
+                ({total} registros) - Página {page} de {totalPages} - Taxa de presença: {stats.presenceRate}%
               </span>
             )}
           </CardTitle>
@@ -531,6 +519,33 @@ export default function WorkforceControlPage() {
               </table>
             </div>
           )}
+          {/* Paginação */}
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-gray-700">
+              Mostrando página {page} de {totalPages} ({total} registros)
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                Anterior
+              </Button>
+              <span className="text-sm text-gray-700">
+                Página {page}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                Próxima
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

@@ -4,7 +4,7 @@ import { RecordSource, WorkforceStatus } from '@prisma/client';
 
 export async function POST(req: NextRequest) {
   try {
-    const { nfcCardId, timestamp, action } = await req.json();
+    const { nfcCardId, timestamp, action, location } = await req.json();
     if (!nfcCardId || !timestamp || !action) {
       return NextResponse.json({ error: 'Dados obrigatórios ausentes.' }, { status: 400 });
     }
@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+    const contractName = employee.currentContract?.name || '';
     if (workforceEntry) {
       workforceEntry = await prisma.workforceEntry.update({
         where: { id: workforceEntry.id },
@@ -125,7 +126,8 @@ export async function POST(req: NextRequest) {
           status,
           isLate,
           hoursWorked: hoursWorked !== null ? hoursWorked : workforceEntry.hoursWorked,
-          contractName: employee.currentContract?.name || workforceEntry.contractName,
+          contractName,
+          location: location || workforceEntry.location,
         },
       });
     } else {
@@ -137,7 +139,8 @@ export async function POST(req: NextRequest) {
           status,
           isLate,
           hoursWorked: hoursWorked || 0,
-          contractName: employee.currentContract?.name || '',
+          contractName,
+          location: location || '',
         },
       });
     }
@@ -159,6 +162,7 @@ export async function POST(req: NextRequest) {
       isLate: workforceEntry.isLate,
       hoursWorked: workforceEntry.hoursWorked,
       contractName: workforceEntry.contractName,
+      location: workforceEntry.location,
     });
   } catch (error) {
     console.error('[NFC] Erro no registro de ponto:', error);

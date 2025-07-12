@@ -12,10 +12,9 @@ interface NFCReadModalProps {
 }
 
 export default function NFCReadModal({ isOpen, onClose, onBadgeDetected, title, description }: NFCReadModalProps) {
-  if (!isOpen) return null;
-
+  // Não faça return null condicional
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className={isOpen ? "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" : "hidden"}>
       <Card className="w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-lg font-semibold">
@@ -33,7 +32,7 @@ export default function NFCReadModal({ isOpen, onClose, onBadgeDetected, title, 
         <div className="p-6">
           {description && <p className="text-gray-600 mb-4 text-center">{description}</p>}
           <NFCScanner
-            isOpen={true}
+            isOpen={isOpen}
             onClose={onClose}
             onBadgeDetected={onBadgeDetected}
             autoStart={true}

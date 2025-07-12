@@ -3,13 +3,15 @@ import { toast } from 'react-hot-toast'
 import { WorkforceEntry, WorkforceStats, WorkforceFilters, NFCReadData, CreateWorkforceEntryData } from './types/workforce'
 
 // Buscar entradas de efetivo
-const fetchWorkforceEntries = async (filters: WorkforceFilters = {}): Promise<WorkforceEntry[]> => {
+const fetchWorkforceEntries = async (filters: WorkforceFilters = {}, page = 1, limit = 20): Promise<any> => {
   const params = new URLSearchParams()
   
   if (filters.contractId) params.append('contractId', filters.contractId)
   if (filters.status && filters.status.length > 0) params.append('status', filters.status.join(','))
   if (filters.search) params.append('search', filters.search)
   if (filters.dateRange?.from) params.append('date', filters.dateRange.from.toISOString().split('T')[0])
+  params.append('page', String(page))
+  params.append('limit', String(limit))
   
   const response = await fetch(`/api/workforce?${params}`)
   
@@ -73,10 +75,10 @@ const processNFCRead = async (data: NFCReadData): Promise<WorkforceEntry> => {
 }
 
 // Hook para buscar entradas de efetivo
-export const useWorkforceEntries = (filters: WorkforceFilters = {}) => {
+export const useWorkforceEntries = (filters: WorkforceFilters = {}, page = 1, limit = 20) => {
   return useQuery({
-    queryKey: ['workforce', 'entries', filters],
-    queryFn: () => fetchWorkforceEntries(filters),
+    queryKey: ['workforce', 'entries', filters, page, limit],
+    queryFn: () => fetchWorkforceEntries(filters, page, limit),
     staleTime: 2 * 60 * 1000, // 2 minutos
     gcTime: 5 * 60 * 1000, // 5 minutos
     refetchOnWindowFocus: true, // Refetch quando volta para a aba
@@ -157,12 +159,19 @@ export const useProcessNFC = () => {
 }
 
 // Hook para dados em tempo real (combina entradas e estatísticas)
-export const useWorkforceRealTime = (filters: WorkforceFilters = {}) => {
-  const entriesQuery = useWorkforceEntries(filters)
+export const useWorkforceRealTime = (filters: WorkforceFilters = {}, page = 1, limit = 20) => {
+  const entriesQuery = useWorkforceEntries(filters, page, limit)
   const statsQuery = useWorkforceStats(filters)
-  
+
+  // Adaptar para novo formato paginado
+  const paginated = entriesQuery.data || { entries: [], total: 0, page: 1, totalPages: 1, limit }
+
   return {
-    entries: entriesQuery.data || [],
+    entries: paginated.entries,
+    total: paginated.total,
+    page: paginated.page,
+    totalPages: paginated.totalPages,
+    limit: paginated.limit,
     stats: statsQuery.data,
     isLoading: entriesQuery.isLoading || statsQuery.isLoading,
     error: entriesQuery.error || statsQuery.error,

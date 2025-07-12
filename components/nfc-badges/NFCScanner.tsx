@@ -154,10 +154,8 @@ export default function NFCScanner({ isOpen, onClose, onBadgeDetected, onError, 
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className={isOpen ? "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" : "hidden"}>
       <Card className="w-full max-w-md mx-4">
         <div className="flex items-center justify-between p-6 border-b">
           <div className="flex items-center gap-3">
