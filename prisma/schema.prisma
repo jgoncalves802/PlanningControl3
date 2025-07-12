@@ -376,6 +376,12 @@ model WorkforceEntry {
   isLate        Boolean   @default(false)
   hoursWorked   Float?    @default(0)
   contractName  String?   // Denormalized for performance
+  contractId    String?   // ID do contrato para correlação
+  functionName  String?   // Nome da função do funcionário
+  functionId    String?   // ID da função para correlação
+  employeeName  String?   // Nome do funcionário (denormalizado)
+  employeeRegistration String? // Matrícula do funcionário
+  nfcCardId     String?   // ID do crachá usado
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   

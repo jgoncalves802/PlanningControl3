@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Ação inválida.' }, { status: 400 });
     }
 
-    // --- Sincronizar WorkforceEntry ---
+    // --- Sincronizar WorkforceEntry com dados completos do funcionário ---
     let workforceEntry = await prisma.workforceEntry.findFirst({
       where: {
         employeeId: employee.id,
@@ -116,31 +116,41 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+    
+    // Correlacionar dados automaticamente baseado na alocação do funcionário
     const contractName = employee.currentContract?.name || '';
+    const contractId = employee.currentContractId || null;
+    const functionName = employee.companyFunction?.name || '';
+    const functionId = employee.companyFunctionId || null;
+    
+    // Dados para sincronização automática
+    const workforceData = {
+      checkInTime: checkInTime || (workforceEntry?.checkInTime || null),
+      checkOutTime: checkOutTime || (workforceEntry?.checkOutTime || null),
+      status,
+      isLate,
+      hoursWorked: hoursWorked !== null ? hoursWorked : (workforceEntry?.hoursWorked || 0),
+      contractName,
+      location: location || workforceEntry?.location || '',
+      // Campos adicionais para correlação completa
+      contractId,
+      functionName,
+      functionId,
+      employeeName: employee.name,
+      employeeRegistration: employee.registration || '',
+      nfcCardId: employee.nfcCardId || nfcCardId,
+    };
+    
     if (workforceEntry) {
       workforceEntry = await prisma.workforceEntry.update({
         where: { id: workforceEntry.id },
-        data: {
-          checkInTime: checkInTime || workforceEntry.checkInTime,
-          checkOutTime: checkOutTime || workforceEntry.checkOutTime,
-          status,
-          isLate,
-          hoursWorked: hoursWorked !== null ? hoursWorked : workforceEntry.hoursWorked,
-          contractName,
-          location: location || workforceEntry.location,
-        },
+        data: workforceData,
       });
     } else {
       workforceEntry = await prisma.workforceEntry.create({
         data: {
           employeeId: employee.id,
-          checkInTime,
-          checkOutTime,
-          status,
-          isLate,
-          hoursWorked: hoursWorked || 0,
-          contractName,
-          location: location || '',
+          ...workforceData,
         },
       });
     }

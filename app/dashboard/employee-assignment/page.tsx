@@ -157,6 +157,7 @@ export default function EmployeeAssignmentPage() {
               id,
               updates: {
                 contractId: selectedContractId,
+                currentContractId: selectedContractId,
                 contractAssignmentDate: new Date().toISOString(),
               },
             });

@@ -16,10 +16,8 @@ export async function GET(request: NextRequest) {
     // Montar filtro
     let where: any = {}
     if (date) {
-      const from = new Date(date)
-      from.setHours(0, 0, 0, 0)
-      const to = new Date(date)
-      to.setHours(23, 59, 59, 999)
+      const from = new Date(date + 'T00:00:00.000Z')
+      const to = new Date(date + 'T23:59:59.999Z')
       // Filtro de contrato dentro do OR
       if (contractId) {
         where.OR = [
@@ -57,6 +55,7 @@ export async function GET(request: NextRequest) {
             currentContractId: true,
             companyFunctionId: true,
             nfcCardId: true,
+            registration: true,
             companyFunction: {
               select: { name: true }
             },
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
         employeeId: entry.employeeId,
         employeeName: entry.employee.name,
         contractId: entry.employee.currentContractId || '',
-        contractName: contractName,
+        contractName: entry.contractName || entry.employee.currentContract?.name || 'Sem Contrato',
         functionId: entry.employee.companyFunctionId || '',
         functionName: entry.employee.companyFunction?.name || '',
         checkInTime: entry.checkInTime,
@@ -108,6 +107,7 @@ export async function GET(request: NextRequest) {
         nfcCardId: entry.employee.nfcCardId,
         isLate: entry.isLate,
         hoursWorked: entry.hoursWorked,
+        employeeRegistration: entry.employee.registration || '',
         createdAt: entry.createdAt,
         updatedAt: entry.updatedAt
       }
