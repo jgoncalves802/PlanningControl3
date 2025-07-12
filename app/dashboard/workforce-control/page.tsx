@@ -28,7 +28,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDateTime } from '@/lib/utils'
-import { NFCReader } from '@/components/nfc/nfc-reader'
+import NFCReadModal from '@/components/nfc/NFCReadModal'
 import { useWorkforceRealTime, useProcessNFC } from '@/lib/useWorkforce'
 import { useContractsQuery } from '@/lib/useContracts'
 import { WorkforceFilters } from '@/lib/types/workforce'
@@ -40,6 +40,7 @@ import {
   User,
   UserRole
 } from '@/lib/auth'
+import { toast } from 'react-hot-toast'
 
 export default function WorkforceControlPage() {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
@@ -49,6 +50,7 @@ export default function WorkforceControlPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [nfcStatus, setNfcStatus] = useState('idle')
+  const [nfcReadValue, setNfcReadValue] = useState<string | null>(null)
 
   // Hooks para dados
   const { data: contractsData } = useContractsQuery()
@@ -91,6 +93,8 @@ export default function WorkforceControlPage() {
 
   const handleNFCRead = async (nfcData: string) => {
     try {
+      console.log('[NFC] Valor lido:', nfcData)
+      setNfcReadValue(nfcData)
       setNfcStatus('processing')
       
       await processNFCMutation.mutateAsync({
@@ -105,6 +109,7 @@ export default function WorkforceControlPage() {
       setTimeout(() => {
         setShowNFCReader(false)
         setNfcStatus('idle')
+        setNfcReadValue(null)
       }, 2000)
       
     } catch (error) {
@@ -112,6 +117,17 @@ export default function WorkforceControlPage() {
       setTimeout(() => setNfcStatus('idle'), 3000)
     }
   }
+
+  // Adicionar log na mutação
+  useEffect(() => {
+    if (processNFCMutation.isError) {
+      console.error('[NFC] Erro na mutação:', processNFCMutation.error)
+    }
+    if (processNFCMutation.isSuccess) {
+      console.log('[NFC] Mutação de registro de ponto bem-sucedida:', processNFCMutation.data)
+      refetch(); // Atualiza a tabela após registro
+    }
+  }, [processNFCMutation.isError, processNFCMutation.isSuccess])
 
   const refreshData = () => {
     refetch()
@@ -245,6 +261,38 @@ export default function WorkforceControlPage() {
       </div>
     )
   }
+
+  // Feedback visual customizado para NFC
+  const getNFCFeedback = (mutation) => {
+    if (mutation.isSuccess && mutation.data) {
+      const { action, status, isLate } = mutation.data
+      if (action === 'check_in') {
+        if (status === 'LATE' || isLate) {
+          return { type: 'warning', message: 'Check-in realizado (ATRASADO)' }
+        }
+        return { type: 'success', message: 'Check-in realizado com sucesso!' }
+      }
+      if (action === 'check_out') {
+        return { type: 'success', message: 'Check-out realizado com sucesso!' }
+      }
+      return { type: 'success', message: 'Registro realizado com sucesso!' }
+    }
+    if (mutation.isError && mutation.error) {
+      return { type: 'error', message: mutation.error.message }
+    }
+    return null
+  }
+
+  // Fechar feedback automaticamente após sucesso/erro
+  useEffect(() => {
+    if (processNFCMutation.isSuccess || processNFCMutation.isError) {
+      const timeout = setTimeout(() => {
+        processNFCMutation.reset()
+        setShowNFCReader(false)
+      }, 2000)
+      return () => clearTimeout(timeout)
+    }
+  }, [processNFCMutation.isSuccess, processNFCMutation.isError])
 
   return (
     <div className="space-y-6">
@@ -487,59 +535,36 @@ export default function WorkforceControlPage() {
       </Card>
 
       {/* NFC Reader Modal */}
-      {showNFCReader && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold mb-4">Leitura NFC</h3>
-              
-              {nfcStatus === 'idle' && (
-                <NFCReader 
-                  onRead={handleNFCRead}
-                  onStatusChange={(status) => console.log('NFC Status:', status)}
-                  isActive={true}
-                />
-              )}
-              
-              {nfcStatus === 'processing' && (
-                <div>
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
-                  <p className="text-gray-600">Processando registro...</p>
-                </div>
-              )}
-              
-              {nfcStatus === 'success' && (
-                <div>
-                  <CheckCircle className="h-8 w-8 mx-auto mb-4 text-green-600" />
-                  <p className="text-green-600 font-medium">Registro realizado com sucesso!</p>
-                </div>
-              )}
-              
-              {nfcStatus === 'error' && (
-                <div>
-                  <AlertTriangle className="h-8 w-8 mx-auto mb-4 text-red-600" />
-                  <p className="text-red-600 font-medium">Erro ao processar registro</p>
-                  <Button 
-                    onClick={() => setNfcStatus('idle')} 
-                    className="mt-4"
-                    size="sm"
-                  >
-                    Tentar Novamente
-                  </Button>
-                </div>
-              )}
-              
-              {nfcStatus === 'idle' && (
-                <Button 
-                  onClick={() => setShowNFCReader(false)}
-                  variant="outline"
-                  className="mt-4"
-                >
-                  Fechar
-                </Button>
-              )}
+      <NFCReadModal
+        isOpen={showNFCReader}
+        onClose={() => setShowNFCReader(false)}
+        onBadgeDetected={handleNFCRead}
+        title="Leitura NFC para Registro de Efetivo"
+        description="Aproxime o crachá do dispositivo para registrar o ponto."
+      />
+
+      {/* Feedback visual após leitura NFC */}
+      {(processNFCMutation.isSuccess || processNFCMutation.isError) && (
+        <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className={`rounded-lg shadow-lg px-8 py-6 text-center bg-white border-2
+              ${processNFCMutation.isSuccess ? 'border-green-400' : 'border-red-400'}`}
+          >
+            {processNFCMutation.isSuccess ? (
+              <CheckCircle className="h-10 w-10 text-green-500 mx-auto mb-2" />
+            ) : (
+              <AlertTriangle className="h-10 w-10 text-red-500 mx-auto mb-2" />
+            )}
+            <div className="text-lg font-semibold mb-1">
+              {getNFCFeedback(processNFCMutation)?.message}
             </div>
-          </div>
+            {processNFCMutation.isSuccess && processNFCMutation.data?.isLate && (
+              <div className="text-yellow-700 text-sm font-medium">Atenção: registro atrasado!</div>
+            )}
+          </motion.div>
         </div>
       )}
     </div>

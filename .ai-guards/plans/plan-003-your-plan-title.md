@@ -591,3 +591,65 @@ A página de controle de efetivo agora deve funcionar corretamente, exibindo os 
 **Commit sugerido:**
 ```
 
+
+## 🔍 Status Detalhado: Página de Controle de Efetivo (`/dashboard/workforce-control`)
+
+### Integração Atual
+- **Listagem de registros de efetivo:** 100% integrada ao banco via API (`/api/workforce`).
+- **Estatísticas globais:** 100% integradas ao banco via API (`/api/workforce/stats`).
+- **Filtros (contrato, busca, data):** 100% integrados, enviados para a API real.
+- **Registro de ponto via NFC:** 100% integrado ao backend real (`/api/workforce/nfc`).
+- **Permissões e contratos acessíveis:** Integrados via API e lógica local.
+
+### Funcionalidades NÃO integradas ou INCOMPLETAS
+- Exportação de dados: Falta implementar download real (CSV/Excel).
+- Relatórios avançados: Não há geração/exportação customizada.
+- Logs de auditoria: Não há exibição ou integração direta na interface.
+- Validações de acesso avançadas: Não há interface para validação por horário/localização.
+- Feedback visual para erros de permissão: Não há feedback detalhado para tentativas de acesso negado.
+- Ações em lote: Não há interface para seleção múltipla/exportação/correção/exclusão.
+- Notificações em tempo real: Não há SSE/websocket, apenas polling.
+- Filtros avançados: Não há filtros por status, função, horário, local.
+- Histórico detalhado por funcionário: Não há timeline de registros.
+- Paginação: Não implementada para listas grandes.
+- Customização de colunas: Não disponível.
+
+### Sugestões de Melhorias
+
+#### Técnicas
+- Implementar exportação real de dados (CSV/Excel) com feedback visual.
+- Adicionar logs de auditoria visíveis na interface (quem registrou, quando, alterações).
+- Permitir ações em lote (seleção múltipla para exportar, corrigir, excluir).
+- Adicionar loading states e feedback visual em todas as operações.
+- Implementar SSE/websocket para atualização instantânea dos registros.
+- Adicionar filtros avançados (status, função, horário, local).
+- Exibir histórico de registros por funcionário (timeline).
+- Adicionar validação visual de acesso negado.
+- Internacionalizar todas as mensagens e labels (pt-BR).
+- Adicionar paginação para listas grandes (>100 registros).
+- Permitir customização de colunas exibidas.
+
+#### Segurança e Auditoria
+- Exibir logs de auditoria diretamente na interface.
+- Adicionar botão para visualizar histórico de alterações de cada registro.
+- Implementar confirmação para ações críticas.
+- Adicionar badge visual para registros alterados manualmente.
+
+#### UX
+- Melhorar feedback visual para sucesso/erro em todas as ações.
+- Adicionar tooltips explicativos nos ícones e status.
+- Permitir visualização detalhada do registro ao clicar em uma linha.
+- Adicionar gráficos de presença/atraso por período.
+
+### Checklist de Pendências para a Página de Efetivo
+- [ ] Exportação real de dados (CSV/Excel)
+- [ ] Logs de auditoria visíveis
+- [ ] Ações em lote
+- [ ] SSE/websocket para atualização instantânea
+- [ ] Filtros avançados
+- [ ] Histórico detalhado por funcionário
+- [ ] Paginação
+- [ ] Customização de colunas
+- [ ] Feedback visual para erros de permissão
+- [ ] Internacionalização total
+- [ ] Gráficos de presença/atraso

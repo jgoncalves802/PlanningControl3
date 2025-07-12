@@ -57,17 +57,22 @@ export function NFCReader({ onRead, onStatusChange, isActive }: NFCReaderProps) 
         // Solicitar permissões
         await ndef.scan()
 
-        ndef.addEventListener('reading', ({ message }: any) => {
+        ndef.addEventListener('reading', (event: any) => {
           const textDecoder = new TextDecoder()
           let nfcData = ''
 
-          for (const record of message.records) {
-            if (record.recordType === 'text') {
-              nfcData = textDecoder.decode(record.data)
-              break
-            } else if (record.recordType === 'url') {
-              nfcData = textDecoder.decode(record.data)
-              break
+          // Novo: priorizar serialNumber
+          if (event.serialNumber) {
+            nfcData = event.serialNumber
+          } else if (event.message && event.message.records) {
+            for (const record of event.message.records) {
+              if (record.recordType === 'text') {
+                nfcData = textDecoder.decode(record.data)
+                break
+              } else if (record.recordType === 'url') {
+                nfcData = textDecoder.decode(record.data)
+                break
+              }
             }
           }
 
