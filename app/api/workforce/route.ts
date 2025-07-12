@@ -8,7 +8,8 @@ export async function GET(request: NextRequest) {
     const contractId = searchParams.get('contractId')
     const date = searchParams.get('date') // formato yyyy-mm-dd
     const search = searchParams.get('search')
-    const page = parseInt(searchParams.get('page') || '1', 10)
+    let page = parseInt(searchParams.get('page') || '1', 10)
+    if (isNaN(page) || page < 1) page = 1
     const limit = parseInt(searchParams.get('limit') || '20', 10)
     const skip = (page - 1) * limit
 
@@ -18,11 +19,16 @@ export async function GET(request: NextRequest) {
       where.employee = { currentContractId: contractId }
     }
     if (date) {
-      // Filtrar por data (considerando apenas o dia)
+      // Filtrar por data (considerando apenas o dia) usando checkInTime
       const from = new Date(date)
+      from.setHours(0, 0, 0, 0)
       const to = new Date(date)
       to.setHours(23, 59, 59, 999)
-      where.createdAt = { gte: from, lte: to }
+      // Busca registros cujo checkInTime OU checkOutTime está no dia
+      where.OR = [
+        { checkInTime: { gte: from, lte: to } },
+        { checkOutTime: { gte: from, lte: to } }
+      ]
     }
     if (search) {
       where.OR = [

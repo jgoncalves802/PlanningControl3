@@ -68,7 +68,10 @@ export default function WorkforceControlPage() {
     }
   }
 
-  const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, currentPage, pageSize)
+  // Corrigir página para nunca ser menor que 1
+  const safePage = currentPage < 1 ? 1 : currentPage
+
+  const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, safePage, pageSize)
   const processNFCMutation = useProcessNFC()
 
   // Contratos acessíveis baseado nas permissões
@@ -520,27 +523,25 @@ export default function WorkforceControlPage() {
             </div>
           )}
           {/* Paginação */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-gray-700">
+          <div className="flex justify-between items-center mt-4">
+            <span className="text-sm text-gray-500">
               Mostrando página {page} de {totalPages} ({total} registros)
-            </div>
-            <div className="flex items-center gap-2">
+            </span>
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={page <= 1}
               >
                 Anterior
               </Button>
-              <span className="text-sm text-gray-700">
-                Página {page}
-              </span>
+              <span className="text-sm text-gray-700">Página {page}</span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
+                onClick={() => setCurrentPage((prev) => prev + 1)}
+                disabled={page >= totalPages || totalPages <= 1}
               >
                 Próxima
               </Button>
