@@ -37,6 +37,7 @@ import autoTable from 'jspdf-autotable'
 import { getEmployees } from '@/lib/employeeService'
 import { useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useAddAdmission, useAddDismissal } from '@/lib/useCreateEmployee'
 import { useEmployeesQuery } from '@/lib/useEmployeesQuery'
+import { useEmployeesSSE } from '@/lib/hooks/useSSEConnection';
 import { ImportEmployeesDialog } from '@/components/employees/ImportEmployeesDialog'
 import EmployeeTable from '@/components/employees/EmployeeTable'
 import EmployeeFilters from '@/components/employees/EmployeeFilters'
@@ -173,6 +174,9 @@ export default function EmployeesPage() {
       setColumns(defaultColumns)
     }
   }, [])
+
+  // Ativar SSE para funcionários
+  useEmployeesSSE();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

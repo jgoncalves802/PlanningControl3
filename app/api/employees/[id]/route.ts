@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { emitEmployeeEvent } from '../events/route';
 
 const prisma = new PrismaClient();
 
@@ -289,15 +290,17 @@ export async function PUT(req: NextRequest, { params }) {
       });
     }
     
-    const employee = await prisma.employee.update({ 
+    const updatedEmployee = await prisma.employee.update({ 
       where: { id }, 
       data: filteredUpdates 
     });
     
+    // Emitir evento SSE
+    emitEmployeeEvent('updated', updatedEmployee);
     console.log('Funcionário atualizado com sucesso');
-    console.log('Dados finais no banco:', JSON.stringify(employee, null, 2));
+    console.log('Dados finais no banco:', JSON.stringify(updatedEmployee, null, 2));
     
-    return NextResponse.json(employee, {
+    return NextResponse.json(updatedEmployee, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       }
@@ -333,7 +336,9 @@ export async function PUT(req: NextRequest, { params }) {
 export async function DELETE(req: NextRequest, { params }) {
   try {
   const { id } = params;
-  await prisma.employee.delete({ where: { id } });
+  const deletedEmployee = await prisma.employee.delete({ where: { id } });
+    // Emitir evento SSE
+    emitEmployeeEvent('deleted', deletedEmployee);
     return NextResponse.json({ success: true }, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'

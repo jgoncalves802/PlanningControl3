@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { emitEmployeeEvent } from './events/route';
 
 const prisma = new PrismaClient();
 
@@ -327,6 +328,9 @@ export async function POST(req: NextRequest) {
     // Criação do funcionário
     const employee = await prisma.employee.create({ data });
     
+    // Emitir evento SSE
+    emitEmployeeEvent('created', employee);
+
     // Garantir que a resposta também tenha UTF-8 correto
     return NextResponse.json(employee, {
       headers: {

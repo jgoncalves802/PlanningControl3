@@ -188,3 +188,29 @@ export function useContractsSSE() {
     },
   });
 } 
+
+// Hook específico para funcionários (SSE)
+export function useEmployeesSSE() {
+  const queryClient = useQueryClient();
+
+  return useSSEConnection({
+    url: '/api/employees/events',
+    onMessage: (data) => {
+      if (data.type === 'created' || data.type === 'updated' || data.type === 'deleted') {
+        // Refetch employees e dashboards
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+        queryClient.refetchQueries({ queryKey: ['employees'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.refetchQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['workforce'] });
+        queryClient.refetchQueries({ queryKey: ['workforce'] });
+      }
+    },
+    onError: (error) => {
+      console.warn('[Employees SSE] Connection error, falling back to polling');
+    },
+    onOpen: () => {
+      console.log('[Employees SSE] Real-time updates enabled');
+    },
+  });
+} 
