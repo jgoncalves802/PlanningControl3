@@ -5,6 +5,7 @@ import {
   transformContractDates,
   sanitizeContractData 
 } from '@/lib/types/contracts'
+import { emitContractEvent } from '../events/route';
 
 const prisma = new PrismaClient()
 
@@ -162,6 +163,8 @@ export async function PUT(
       }
     })
 
+    // Emitir evento SSE
+    emitContractEvent('updated', contract);
     // Transformar resposta
     const transformedContract = {
       ...contract,
@@ -259,6 +262,8 @@ export async function DELETE(
       }
     })
 
+    // Emitir evento SSE
+    emitContractEvent('deleted', contract);
     return NextResponse.json(
       { 
         message: 'Contrato desativado com sucesso',

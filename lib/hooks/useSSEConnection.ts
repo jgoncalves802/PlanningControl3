@@ -164,3 +164,27 @@ export function useNFCBadgeSSE() {
     },
   });
 } 
+
+// Hook específico para contratos (SSE)
+export function useContractsSSE() {
+  const queryClient = useQueryClient();
+
+  return useSSEConnection({
+    url: '/api/contracts/events',
+    onMessage: (data) => {
+      if (data.type === 'created' || data.type === 'updated' || data.type === 'deleted') {
+        // Refetch contratos e dashboards
+        queryClient.invalidateQueries({ queryKey: ['contracts'] });
+        queryClient.refetchQueries({ queryKey: ['contracts'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.refetchQueries({ queryKey: ['dashboard'] });
+      }
+    },
+    onError: (error) => {
+      console.warn('[Contracts SSE] Connection error, falling back to polling');
+    },
+    onOpen: () => {
+      console.log('[Contracts SSE] Real-time updates enabled');
+    },
+  });
+} 

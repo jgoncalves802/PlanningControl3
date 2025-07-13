@@ -47,6 +47,7 @@ import {
   useUpdateContract, 
   useDeleteContract
 } from '@/lib/hooks/useContracts'
+import { useContractsSSE } from '@/lib/hooks/useSSEConnection';
 import { Contract, CreateContractData, UpdateContractData, ContractFilters } from '@/lib/types/contracts'
 import { toast } from 'react-hot-toast'
 
@@ -115,6 +116,9 @@ export default function ContractsPage() {
   const createContractMutation = useCreateContract()
   const updateContractMutation = useUpdateContract()
   const deleteContractMutation = useDeleteContract()
+
+  // Ativar SSE para contratos
+  useContractsSSE();
 
   // Debug: forçar refetch se não houver dados
   useEffect(() => {

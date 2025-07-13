@@ -14,22 +14,30 @@ export function useCreateEmployee() {
 
 export function useUpdateEmployee() {
   const queryClient = useQueryClient();
-  return useMutation<{ id: string; updates: any }, any, { id: string; updates: any }>({
-    mutationFn: ({ id, updates }) => updateEmployee(id, updates),
-    onSuccess: (data, variables) => {
-      // Invalidar todas as queries de employees de forma mais agressiva
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
-      queryClient.refetchQueries({ queryKey: ['employees'] });
-      queryClient.invalidateQueries({ queryKey: ['functions'] });
-      
-      // Remover dados específicos do cache para forçar reload
-      queryClient.removeQueries({ queryKey: ['employees'] });
-    },
-    onError: (error, variables) => {
-      console.error('Erro na mutação de atualização:', error);
-      console.error('Variáveis usadas:', variables);
+  return useMutation<{ id: string; updates: any }, any, { id: string; updates: any }>(
+    {
+      mutationFn: ({ id, updates }) => updateEmployee(id, updates),
+      onSuccess: (data, variables) => {
+        // Invalidar e refazer fetch de todas as queries relevantes
+        queryClient.invalidateQueries({ queryKey: ['employees'] });
+        queryClient.refetchQueries({ queryKey: ['employees'] });
+        queryClient.invalidateQueries({ queryKey: ['functions'] });
+        queryClient.refetchQueries({ queryKey: ['functions'] });
+        queryClient.invalidateQueries({ queryKey: ['workforce'] });
+        queryClient.refetchQueries({ queryKey: ['workforce'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        queryClient.refetchQueries({ queryKey: ['dashboard'] });
+        queryClient.invalidateQueries({ queryKey: ['contracts'] });
+        queryClient.refetchQueries({ queryKey: ['contracts'] });
+        // Remover dados específicos do cache para forçar reload
+        queryClient.removeQueries({ queryKey: ['employees'] });
+      },
+      onError: (error, variables) => {
+        console.error('Erro na mutação de atualização:', error);
+        console.error('Variáveis usadas:', variables);
+      }
     }
-  });
+  );
 }
 
 export function useDeleteEmployee() {

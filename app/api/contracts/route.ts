@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { emitContractEvent } from './events/route';
 
 // Função para normalizar caracteres especiais e garantir UTF-8
 function normalizeText(text: string): string {
@@ -222,6 +223,8 @@ export async function POST(request: NextRequest) {
 
     console.log('Contrato criado:', newContract)
 
+    // Emitir evento SSE
+    emitContractEvent('created', newContract);
     return NextResponse.json({
       ...newContract,
       employeeCount: newContract._count.employees,
