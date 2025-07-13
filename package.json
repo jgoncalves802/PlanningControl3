@@ -26,8 +26,10 @@
     "clsx": "^2.0.0",
     "daisyui": "^5.0.43",
     "date-fns": "^3.0.0",
+    "exceljs": "^4.3.0",
     "file-saver": "^2.0.5",
     "framer-motion": "^11.18.2",
+    "json2csv": "^5.0.7",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.344.0",
@@ -55,4 +57,3 @@
     "typescript": "^5.5.3"
   }
 }
-

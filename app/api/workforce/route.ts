@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { broadcastWorkforceUpdate } from './sse/route'
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +13,12 @@ export async function GET(request: NextRequest) {
     if (isNaN(page) || page < 1) page = 1
     const limit = parseInt(searchParams.get('limit') || '20', 10)
     const skip = (page - 1) * limit
+
+    const status = searchParams.get('status')
+    const functionId = searchParams.get('functionId')
+    const location = searchParams.get('location')
+    const checkInTimeFrom = searchParams.get('checkInTimeFrom')
+    const checkInTimeTo = searchParams.get('checkInTimeTo')
 
     // Montar filtro
     let where: any = {}
@@ -39,6 +46,20 @@ export async function GET(request: NextRequest) {
         { contractName: { contains: search, mode: 'insensitive' } },
         { employee: { companyFunction: { name: { contains: search, mode: 'insensitive' } } } },
       ]
+    }
+    if (status) {
+      where.status = status
+    }
+    if (functionId) {
+      where.functionId = functionId
+    }
+    if (location) {
+      where.location = { contains: location, mode: 'insensitive' }
+    }
+    if (checkInTimeFrom || checkInTimeTo) {
+      where.checkInTime = {}
+      if (checkInTimeFrom) where.checkInTime.gte = new Date(checkInTimeFrom)
+      if (checkInTimeTo) where.checkInTime.lte = new Date(checkInTimeTo)
     }
 
     // Buscar total de registros
@@ -186,7 +207,23 @@ export async function POST(request: NextRequest) {
     console.log('=== DEBUG: Iniciando POST workforce ===')
     const body = await request.json()
     console.log('=== DEBUG: Body recebido:', body, '===')
-    
+    // ... lógica de criação real aqui ...
+    // Após criar o registro:
+    broadcastWorkforceUpdate();
+    // Gravar log de auditoria
+    try {
+      const userId = null; // Se possível, obter do contexto de autenticação
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'CREATE',
+          entityId: 'workforceEntryId', // Substituir pelo id real quando implementar
+          details: body,
+        },
+      });
+    } catch (e) {
+      console.error('[AUDIT] Falha ao registrar log de auditoria:', e);
+    }
     return NextResponse.json({ message: 'Teste OK', body }, {
       status: 201,
       headers: {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'react-hot-toast'
 import { WorkforceEntry, WorkforceStats, WorkforceFilters, NFCReadData, CreateWorkforceEntryData } from './types/workforce'
+import { useEffect } from 'react'
 
 // Buscar entradas de efetivo
 const fetchWorkforceEntries = async (filters: WorkforceFilters = {}, page = 1, limit = 20): Promise<any> => {
@@ -178,10 +179,29 @@ export const useProcessNFC = () => {
   })
 }
 
+// Hook para SSE de workforce
+export function useWorkforceSSE(refetch: () => void) {
+  useEffect(() => {
+    const eventSource = new EventSource('/api/workforce/sse')
+    eventSource.addEventListener('update', () => {
+      refetch()
+    })
+    return () => {
+      eventSource.close()
+    }
+  }, [refetch])
+}
+
 // Hook para dados em tempo real (combina entradas e estatísticas)
 export const useWorkforceRealTime = (filters: WorkforceFilters = {}, page = 1, limit = 20) => {
   const entriesQuery = useWorkforceEntries(filters, page, limit)
   const statsQuery = useWorkforceStats(filters)
+
+  // Integrar SSE para atualização instantânea
+  useWorkforceSSE(() => {
+    entriesQuery.refetch()
+    statsQuery.refetch()
+  })
 
   // Adaptar para novo formato paginado e agrupado
   const paginated = entriesQuery.data || { entries: [], contractGroups: [], total: 0, page: 1, totalPages: 1, limit }

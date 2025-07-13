@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { RecordSource, WorkforceStatus } from '@prisma/client';
+import { broadcastWorkforceUpdate } from '../sse/route'
 
 export async function POST(req: NextRequest) {
   try {
@@ -153,6 +154,52 @@ export async function POST(req: NextRequest) {
           ...workforceData,
         },
       });
+    }
+
+    // Disparar atualização SSE
+    broadcastWorkforceUpdate();
+
+    // Gravar log de auditoria do WorkforceEntry
+    try {
+      const userId = null; // Se possível, obter do contexto de autenticação
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: workforceEntry.createdAt.getTime() === workforceEntry.updatedAt.getTime() ? 'CREATE' : 'UPDATE',
+          entityId: workforceEntry.id,
+          details: {
+            employeeId: employee.id,
+            employeeName: employee.name,
+            action,
+            status: workforceEntry.status,
+            checkInTime: workforceEntry.checkInTime,
+            checkOutTime: workforceEntry.checkOutTime,
+            location: workforceEntry.location,
+            nfcCardId: workforceEntry.nfcCardId,
+          },
+        },
+      });
+      // Gravar log de auditoria do TimeRecord (registro de ponto)
+      await prisma.auditLog.create({
+        data: {
+          userId,
+          action: 'TIME_RECORD',
+          entityId: timeRecord.id,
+          details: {
+            employeeId: employee.id,
+            employeeName: employee.name,
+            action,
+            status,
+            checkIn: timeRecord.clockIn,
+            checkOut: timeRecord.clockOut,
+            nfcCardId: nfcCardId,
+            location,
+            source: timeRecord.source,
+          },
+        },
+      });
+    } catch (e) {
+      console.error('[AUDIT] Falha ao registrar log de auditoria:', e);
     }
 
     // Retornar dados do registro

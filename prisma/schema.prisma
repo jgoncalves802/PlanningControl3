@@ -1,13 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
-// ============================================================================
-// PARTE 1: SCHEMA DO BANCO DE DADOS PRINCIPAL (SUPER ADMIN)
-// ============================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,83 +9,52 @@ datasource db {
 
 model Tenant {
   id               String   @id @default(cuid())
-  subdomain        String   @unique // Ex: "empresa-a"
+  subdomain        String   @unique
   companyName      String
   subscriptionPlan PlanType @default(BASIC)
   isActive         Boolean  @default(true)
-  databaseUrl      String   // Connection string para o banco de dados do tenant
+  databaseUrl      String
   customDomain     String?  @unique
-
   logoUrl          String?
   primaryColor     String?  @default("#007bff")
   secondaryColor   String?  @default("#6c757d")
-
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
 
-enum PlanType {
-  BASIC
-  PROFESSIONAL
-  ENTERPRISE
-}
-
-// ============================================================================
-// PARTE 2: SCHEMA TEMPLATE DO TENANT (Será replicado para cada cliente)
-// ============================================================================
-
-// --- Usuários e Permissões ---
-
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique // ID do Clerk
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  contractResponsibilities ContractResponsible[]
-  transferRequestsMade     TransferRequest[] @relation("RequestedBy")
-  transferRequestsApproved TransferRequest[] @relation("ApprovedBy")
-  overtimeApprovalsGiven   OvertimeApproval[] @relation("ApprovedBy")
-  badgesAssigned           NFCBadge[] @relation("BadgeAssignedBy")
-  badgesRevoked            NFCBadge[] @relation("BadgeRevokedBy")
+  id                       String                @id @default(cuid())
+  clerkId                  String                @unique
+  email                    String                @unique
+  name                     String?
+  createdAt                DateTime              @default(now())
+  updatedAt                DateTime              @updatedAt
   auditLogs                AuditLog[]
-  
+  contractResponsibilities ContractResponsible[]
+  badgesAssigned           NFCBadge[]            @relation("BadgeAssignedBy")
+  badgesRevoked            NFCBadge[]            @relation("BadgeRevokedBy")
+  overtimeApprovalsGiven   OvertimeApproval[]    @relation("ApprovedBy")
+  transferRequestsApproved TransferRequest[]     @relation("ApprovedBy")
+  transferRequestsMade     TransferRequest[]     @relation("RequestedBy")
+
   @@map("users")
 }
 
-
-
-enum UserRole {
-  TENANT_ADMIN
-  HR
-  PLANNING
-  SAFETY
-  CONTRACT_MANAGER
-  SUPERVISOR
-  OPERATOR
-}
-
-// --- Contratos e Funções ---
-
 model Contract {
-  id               String   @id @default(cuid())
+  id               String                @id @default(cuid())
   name             String
-  code             String   @unique
-  isActive         Boolean  @default(true)
+  code             String                @unique
+  isActive         Boolean               @default(true)
   workdayHours     Float
-  includesWeekends Boolean  @default(false)
-  includesHolidays Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  responsibles   ContractResponsible[]
-  functions      ContractFunction[]
-  employees      Employee[]
-  hourPlannings  HourPlanning[]
-  nfcCollections NFCCollection[]
+  includesWeekends Boolean               @default(false)
+  includesHolidays Boolean               @default(false)
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  functions        ContractFunction[]
+  responsibles     ContractResponsible[]
+  employees        Employee[]
+  hourPlannings    HourPlanning[]
+  nfcCollections   NFCCollection[]
 }
 
 model ContractResponsible {
@@ -103,118 +62,109 @@ model ContractResponsible {
   userId     String
   contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id])
+
   @@id([contractId, userId])
 }
 
 model ContractFunction {
-  id          String   @id @default(cuid())
-  contractId  String
-  name        String
-  isActive    Boolean  @default(true)
+  id                String             @id @default(cuid())
+  contractId        String
+  name              String
+  isActive          Boolean            @default(true)
   contract          Contract           @relation(fields: [contractId], references: [id], onDelete: Cascade)
   employees         Employee[]
   requiredTrainings RequiredTraining[]
+
   @@unique([contractId, name])
 }
 
 model CompanyFunction {
-  id          String    @id @default(cuid())
-  name        String    @unique // Nome da função (ex: "PEDREIRO", "SOLDADOR")
-  laborType   LaborType // Tipo de mão de obra
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
-  // Relacionamentos
-  employees   Employee[] @relation("EmployeeCompanyFunction")
+  id        String     @id @default(cuid())
+  name      String     @unique
+  laborType LaborType
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  employees Employee[] @relation("EmployeeCompanyFunction")
 }
-
-enum LaborType {
-  DIRETO    // Mão de obra direta
-  INDIRETO  // Mão de obra indireta
-}
-
-// --- Colaboradores e Transferências ---
 
 model Employee {
-  id                String   @id @default(cuid())
-  name              String
-  registration      String?   // Matrícula
-  role              String?   // Função
-  category          String?   // Categoria
-  company           String?   // Empresa
-  cpf               String   @unique
-  rg                String?
-  birthDate         DateTime?
-  admissionDate     DateTime?
-  dismissalDate     DateTime?
-  status            String?   // Situação (ativo, afastado, etc)
-  workplace         String?   // Local de Trabalho
-  shift             String?   // Turno
-  phone             String?
-  email             String?   // Email do funcionário
-  address           Json?     // Endereço completo (cep, logradouro, número, bairro, cidade, uf, complemento)
-  nationality       String?
-  naturalness       String?   // Naturalidade
-  gender            String?   // Sexo
-  maritalStatus     String?   // Estado Civil
-  sexo              String?   // Sexo (campo adicional para compatibilidade)
-  estadoCivil       String?   // Estado Civil (campo adicional para compatibilidade)
-  educationLevel    String?   // Grau de Instrução
-  pis               String?
-  ctps              String?   // CTPS
-  ctpsSeries        String?   // Série CTPS
-  ctpsUf            String?   // UF CTPS
-  voterTitle        String?   // Título de Eleitor
-  voterZone         String?
-  voterSection      String?
-  reservist         String?
-  reservistCategory String?
-  cnh               String?
-  cnhCategory       String?
-  cnhValidity       DateTime?
-  motherName        String?
-  fatherName        String?
-  dependents        Json?     // Lista de dependentes (nome, parentesco, nascimento)
-  notes             String?   // Observações
-  employmentHistory Json?     // Histórico de vínculos/admissões/demissões
-  avatar            String?   // URL ou base64 da foto do funcionário
-  
-  // Campos adicionais usados na interface
-  centroCusto                String?   // Centro de Custo
-  obra                       String?   // Obra/Projeto
-  primeiraExperiencia        DateTime? // Primeira Experiência
-  segundaExperiencia         DateTime? // Segunda Experiência
-  previsaoObra               DateTime? // Previsão na Obra
-  mo                         String?   // Tipo de Mão de Obra (Direto/Indireto)
-  horasNormaisTrabalhadas    Float?    // Horas Normais Trabalhadas
-  horasExtrasTrabalhadas     Float?    // Horas Extras Trabalhadas
-  horasNoturnasTrabalhadas   Float?    // Horas Noturnas Trabalhadas
-  localAlojado               String?   // Local/Alojamento
-  pontoReferencia            String?   // Ponto de Referência
-  statusBancodoc             String?   // Status Bancário/Documental
-  efetivoRDO                 Boolean?  // Efetivo Apontado em RDO
-  
-  isActive              Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
-  nfcCardId             String?           @unique
-  currentContractId     String?
-  currentFunctionId     String?
-  companyFunctionId     String?
-  contractId            String?           // ID do contrato atual para vinculação
-  contractAssignmentDate DateTime?        // Data de vinculação ao contrato
-  currentContract   Contract?         @relation(fields: [currentContractId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  currentFunction   ContractFunction? @relation(fields: [currentFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  companyFunction   CompanyFunction?  @relation("EmployeeCompanyFunction", fields: [companyFunctionId], references: [id], onUpdate: NoAction, onDelete: NoAction)
-  transferHistory   TransferHistory[]
-  asos              ASO[]
-  trainings         EmployeeTraining[]
-  timeRecords       TimeRecord[]
-  transferRequests  TransferRequest[] @relation("EmployeeTransferRequests")
-  workforceEntries  WorkforceEntry[]  @relation("EmployeeWorkforceEntries")
-  nfcBadge          NFCBadge?         @relation("EmployeeNFCBadge")
-  @@unique([registration, company]) // Matrícula única por empresa
+  id                       String             @id @default(cuid())
+  name                     String
+  registration             String?
+  role                     String?
+  category                 String?
+  company                  String?
+  cpf                      String             @unique
+  rg                       String?
+  birthDate                DateTime?
+  admissionDate            DateTime?
+  dismissalDate            DateTime?
+  status                   String?
+  workplace                String?
+  shift                    String?
+  phone                    String?
+  email                    String?
+  address                  Json?
+  nationality              String?
+  naturalness              String?
+  gender                   String?
+  maritalStatus            String?
+  sexo                     String?
+  estadoCivil              String?
+  educationLevel           String?
+  pis                      String?
+  ctps                     String?
+  ctpsSeries               String?
+  ctpsUf                   String?
+  voterTitle               String?
+  voterZone                String?
+  voterSection             String?
+  reservist                String?
+  reservistCategory        String?
+  cnh                      String?
+  cnhCategory              String?
+  cnhValidity              DateTime?
+  motherName               String?
+  fatherName               String?
+  dependents               Json?
+  notes                    String?
+  employmentHistory        Json?
+  avatar                   String?
+  centroCusto              String?
+  obra                     String?
+  primeiraExperiencia      DateTime?
+  segundaExperiencia       DateTime?
+  previsaoObra             DateTime?
+  mo                       String?
+  horasNormaisTrabalhadas  Float?
+  horasExtrasTrabalhadas   Float?
+  horasNoturnasTrabalhadas Float?
+  localAlojado             String?
+  pontoReferencia          String?
+  statusBancodoc           String?
+  efetivoRDO               Boolean?
+  isActive                 Boolean            @default(true)
+  createdAt                DateTime           @default(now())
+  updatedAt                DateTime           @updatedAt
+  nfcCardId                String?            @unique
+  currentContractId        String?
+  currentFunctionId        String?
+  companyFunctionId        String?
+  contractId               String?
+  contractAssignmentDate   DateTime?
+  asos                     ASO[]
+  companyFunction          CompanyFunction?   @relation("EmployeeCompanyFunction", fields: [companyFunctionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currentContract          Contract?          @relation(fields: [currentContractId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  currentFunction          ContractFunction?  @relation(fields: [currentFunctionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  trainings                EmployeeTraining[]
+  nfcBadge                 NFCBadge?          @relation("EmployeeNFCBadge")
+  timeRecords              TimeRecord[]
+  transferHistory          TransferHistory[]
+  transferRequests         TransferRequest[]  @relation("EmployeeTransferRequests")
+  workforceEntries         WorkforceEntry[]   @relation("EmployeeWorkforceEntries")
+
+  @@unique([registration, company])
 }
 
 model TransferRequest {
@@ -227,29 +177,20 @@ model TransferRequest {
   status        TransferStatus @default(PENDING)
   scheduledDate DateTime
   completedAt   DateTime?
+  approvedBy    User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
   employee      Employee       @relation("EmployeeTransferRequests", fields: [employeeId], references: [id])
   requestedBy   User           @relation("RequestedBy", fields: [requestedById], references: [id])
-  approvedBy    User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
 }
 
 model TransferHistory {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   employeeId String
   contractId String
   functionId String
   startDate  DateTime
   endDate    DateTime?
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee  @relation(fields: [employeeId], references: [id])
 }
-
-enum TransferStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  COMPLETED
-}
-
-// --- Saúde e Segurança do Trabalho (SST) ---
 
 model ASO {
   id         String    @id @default(cuid())
@@ -261,26 +202,12 @@ model ASO {
   employee   Employee  @relation(fields: [employeeId], references: [id])
 }
 
-enum ASOType {
-  ADMISSIONAL
-  PERIODIC
-  FUNCTION_CHANGE
-  RETURN_TO_WORK
-  DISMISSAL
-}
-
-enum ASOResult {
-  FIT
-  UNFIT
-  FIT_WITH_RESTRICTIONS
-}
-
 model Training {
   id             String             @id @default(cuid())
   name           String             @unique
   validityMonths Int
-  requiredFor    RequiredTraining[]
   employeeHas    EmployeeTraining[]
+  requiredFor    RequiredTraining[]
 }
 
 model RequiredTraining {
@@ -288,6 +215,7 @@ model RequiredTraining {
   trainingId String
   function   ContractFunction @relation(fields: [functionId], references: [id], onDelete: Cascade)
   training   Training         @relation(fields: [trainingId], references: [id])
+
   @@id([functionId, trainingId])
 }
 
@@ -301,8 +229,6 @@ model EmployeeTraining {
   training      Training @relation(fields: [trainingId], references: [id])
 }
 
-// --- Planejamento, Ponto e Auditoria ---
-
 model HourPlanning {
   id            String   @id @default(cuid())
   contractId    String
@@ -310,6 +236,7 @@ model HourPlanning {
   regularHours  Float    @default(0)
   overtimeHours Float    @default(0)
   contract      Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
   @@unique([contractId, date])
 }
 
@@ -322,16 +249,10 @@ model OvertimeApproval {
   approvedBy   User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
 }
 
-enum ApprovalStatus {
-  PENDING
-  APPROVED
-  REJECTED
-}
-
 model NFCCollection {
   id          String      @id @default(cuid())
   contractId  String
-  collectorId String      // ID do User Supervisor
+  collectorId String
   date        DateTime    @db.Date
   createdAt   DateTime    @default(now())
   contract    Contract    @relation(fields: [contractId], references: [id])
@@ -356,83 +277,54 @@ model TimeRecord {
   source     RecordSource
   isEdited   Boolean      @default(false)
   employee   Employee     @relation(fields: [employeeId], references: [id])
+
   @@unique([employeeId, date, source])
 }
 
-enum RecordSource {
-  NFC_PROCESSED
-  PAYROLL_IMPORTED
-}
-
-// --- Controle de Efetivo ---
-
 model WorkforceEntry {
-  id            String    @id @default(cuid())
-  employeeId    String
-  checkInTime   DateTime?
-  checkOutTime  DateTime?
-  status        WorkforceStatus @default(PRESENT)
-  location      String?
-  isLate        Boolean   @default(false)
-  hoursWorked   Float?    @default(0)
-  contractName  String?   // Denormalized for performance
-  contractId    String?   // ID do contrato para correlação
-  functionName  String?   // Nome da função do funcionário
-  functionId    String?   // ID da função para correlação
-  employeeName  String?   // Nome do funcionário (denormalizado)
-  employeeRegistration String? // Matrícula do funcionário
-  nfcCardId     String?   // ID do crachá usado
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  
-  employee      Employee  @relation("EmployeeWorkforceEntries", fields: [employeeId], references: [id])
-  
-  @@unique([employeeId, createdAt]) // One entry per employee per day
-}
+  id                   String          @id @default(cuid())
+  employeeId           String
+  checkInTime          DateTime?
+  checkOutTime         DateTime?
+  status               WorkforceStatus @default(PRESENT)
+  location             String?
+  isLate               Boolean         @default(false)
+  hoursWorked          Float?          @default(0)
+  contractName         String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  contractId           String?
+  employeeName         String?
+  employeeRegistration String?
+  functionId           String?
+  functionName         String?
+  nfcCardId            String?
+  employee             Employee        @relation("EmployeeWorkforceEntries", fields: [employeeId], references: [id])
 
-enum WorkforceStatus {
-  PRESENT
-  ABSENT  
-  LATE
-  LEFT
+  @@unique([employeeId, createdAt])
 }
-
-// --- Gestão de Crachás NFC ---
 
 model NFCBadge {
-  id          String         @id @default(cuid())
-  badgeId     String         @unique // ID único do crachá NFC
-  employeeId  String?        @unique // Um funcionário pode ter apenas um crachá ativo
-  status      NFCBadgeStatus @default(AVAILABLE)
-  isActive    Boolean        @default(true)
-  assignedAt  DateTime?      // Data de atribuição
-  revokedAt   DateTime?      // Data de revogação
-  assignedBy  String?        // ID do usuário que atribuiu
-  revokedBy   String?        // ID do usuário que revogou
-  notes       String?        // Observações sobre o crachá
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  
-  // Relacionamentos
-  employee    Employee?      @relation("EmployeeNFCBadge", fields: [employeeId], references: [id])
-  assignedByUser User?       @relation("BadgeAssignedBy", fields: [assignedBy], references: [id])
-  revokedByUser  User?       @relation("BadgeRevokedBy", fields: [revokedBy], references: [id])
-  
+  id             String         @id @default(cuid())
+  badgeId        String         @unique
+  employeeId     String?        @unique
+  status         NFCBadgeStatus @default(AVAILABLE)
+  isActive       Boolean        @default(true)
+  assignedAt     DateTime?
+  revokedAt      DateTime?
+  assignedBy     String?
+  revokedBy      String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  assignedByUser User?          @relation("BadgeAssignedBy", fields: [assignedBy], references: [id])
+  employee       Employee?      @relation("EmployeeNFCBadge", fields: [employeeId], references: [id])
+  revokedByUser  User?          @relation("BadgeRevokedBy", fields: [revokedBy], references: [id])
+
   @@index([badgeId])
   @@index([employeeId])
   @@index([status])
 }
-
-enum NFCBadgeStatus {
-  AVAILABLE   // Disponível para atribuição
-  ASSIGNED    // Atribuído a um funcionário
-  REVOKED     // Revogado/Bloqueado
-  LOST        // Perdido
-  DAMAGED     // Danificado
-  EXPIRED     // Expirado
-}
-
-// --- Logs ---
 
 model AuditLog {
   id        String   @id @default(cuid())
@@ -442,4 +334,73 @@ model AuditLog {
   details   Json
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id])
+}
+
+enum PlanType {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum UserRole {
+  TENANT_ADMIN
+  HR
+  PLANNING
+  SAFETY
+  CONTRACT_MANAGER
+  SUPERVISOR
+  OPERATOR
+}
+
+enum LaborType {
+  DIRETO
+  INDIRETO
+}
+
+enum TransferStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum ASOType {
+  ADMISSIONAL
+  PERIODIC
+  FUNCTION_CHANGE
+  RETURN_TO_WORK
+  DISMISSAL
+}
+
+enum ASOResult {
+  FIT
+  UNFIT
+  FIT_WITH_RESTRICTIONS
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum RecordSource {
+  NFC_PROCESSED
+  PAYROLL_IMPORTED
+}
+
+enum WorkforceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  LEFT
+}
+
+enum NFCBadgeStatus {
+  AVAILABLE
+  ASSIGNED
+  REVOKED
+  LOST
+  DAMAGED
+  EXPIRED
 }

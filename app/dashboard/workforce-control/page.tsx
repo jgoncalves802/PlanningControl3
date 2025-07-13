@@ -23,7 +23,9 @@ import {
   Shield,
   Eye,
   EyeOff,
-  Loader2
+  Loader2,
+  History,
+  Trash2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -31,6 +33,7 @@ import { formatDateTime } from '@/lib/utils'
 import NFCReadModal from '@/components/nfc/NFCReadModal'
 import { useWorkforceRealTime, useProcessNFC } from '@/lib/useWorkforce'
 import { useContractsQuery } from '@/lib/useContracts'
+import { useFunctionsQuery } from '@/lib/useFunctions'
 import { WorkforceFilters } from '@/lib/types/workforce'
 import { 
   getCurrentUser, 
@@ -41,44 +44,60 @@ import {
   UserRole
 } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 export default function WorkforceControlPage() {
-  // Inicialize diretamente, sem useState/useEffect
-  const currentUser = getCurrentUser()
-  const userPermissions = getUserPermissions(currentUser)
-
-  const [selectedContract, setSelectedContract] = useState<string>('all')
-  const [showNFCReader, setShowNFCReader] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [nfcStatus, setNfcStatus] = useState('idle')
-  const [nfcReadValue, setNfcReadValue] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(1)
-  const pageSize = 20 // ou outro valor desejado
-
-  const { data: contractsData } = useContractsQuery()
-  const contracts = contractsData?.contracts || []
-  
+  // TODOS OS HOOKS DEVEM FICAR AQUI, no topo do componente
+  const currentUser = getCurrentUser();
+  const userPermissions = getUserPermissions(currentUser);
+  const [selectedContract, setSelectedContract] = useState<string>('all');
+  const [showNFCReader, setShowNFCReader] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [nfcStatus, setNfcStatus] = useState('idle');
+  const [nfcReadValue, setNfcReadValue] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
+  const [auditModalOpen, setAuditModalOpen] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+  const [pointHistoryModalOpen, setPointHistoryModalOpen] = useState(false);
+  const [pointHistoryLogs, setPointHistoryLogs] = useState<any[]>([]);
+  const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
+  const [pointHistoryEmployee, setPointHistoryEmployee] = useState<{ id: string, name: string } | null>(null);
+  const [pointHistorySearch, setPointHistorySearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterFunction, setFilterFunction] = useState('');
+  const [filterLocation, setFilterLocation] = useState('');
+  const [filterCheckInFrom, setFilterCheckInFrom] = useState('');
+  const [filterCheckInTo, setFilterCheckInTo] = useState('');
+  const [selectedRows, setSelectedRows] = useState<string[]>([]);
+  const { data: functionsList } = useFunctionsQuery({ isActive: true });
+  const { data: contractsData } = useContractsQuery();
+  const contracts = contractsData?.contracts || [];
   const filters: WorkforceFilters = {
     contractId: selectedContract === 'all' ? undefined : selectedContract,
     search: searchTerm || undefined,
     dateRange: {
       from: selectedDate,
       to: selectedDate
-    }
-  }
-
-  // Corrigir página para nunca ser menor que 1
-  const safePage = currentPage < 1 ? 1 : currentPage
-
-  const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, safePage, pageSize)
-  const processNFCMutation = useProcessNFC()
-
-  // Acessar dados agrupados por contrato
-  const contractGroups = entries?.contractGroups || []
-
-  // Contratos acessíveis baseado nas permissões
-  const accessibleContracts = currentUser ? getAccessibleContracts(currentUser, contracts) : []
+    },
+    status: filterStatus || undefined,
+    functionId: filterFunction || undefined,
+    location: filterLocation || undefined,
+    checkInTimeFrom: filterCheckInFrom || undefined,
+    checkInTimeTo: filterCheckInTo || undefined,
+  };
+  const safePage = currentPage < 1 ? 1 : currentPage;
+  const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, safePage, pageSize);
+  const processNFCMutation = useProcessNFC();
+  const contractGroups = entries?.contractGroups || [];
+  const accessibleContracts = currentUser ? getAccessibleContracts(currentUser, contracts) : [];
+  const allEntryIds = contractGroups.flatMap(group => group.entries.map(entry => entry.id));
+  const isAllSelected = allEntryIds.length > 0 && allEntryIds.every(id => selectedRows.includes(id));
+  const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
 
   useEffect(() => {
     if (accessibleContracts.length === 1 && selectedContract === 'all') {
@@ -177,7 +196,7 @@ export default function WorkforceControlPage() {
         location: `Setor ${Math.floor(Math.random() * 5) + 1}`,
         action: 'check_in' // A API determinará se é check-in ou check-out
       })
-   
+      
       setNfcStatus('success')
       
       setTimeout(() => {
@@ -192,38 +211,31 @@ export default function WorkforceControlPage() {
     }
   }
 
-  const exportData = () => {
-    if (!stats) return
-    
-    const dataToExport = {
-      data: selectedDate.toLocaleDateString('pt-BR'),
-      estatisticas: {
-        totalFuncionarios: stats.totalEmployees,
-        presentes: stats.present,
-        atrasados: stats.late,
-        ausentes: stats.absent,
-        sairam: stats.left,
-        taxaPresenca: `${stats.presenceRate}%`,
-        horaMediaEntrada: stats.averageCheckInTime
-      },
-      contratos: contractGroups.map(group => ({
-        contrato: group.contractName,
-        funcionarios: group.entries.map(entry => ({
-          nome: entry.employeeName,
-          funcao: entry.functionName,
-          entrada: formatTime(entry.checkInTime) || 'Não registrada',
-          saida: formatTime(entry.checkOutTime) || 'Não registrada',
-          status: entry.status,
-          local: entry.location || 'Não informado',
-          horasTrabalhadas: entry.hoursWorked?.toFixed(1) || '0.0',
-          atrasado: entry.isLate ? 'Sim' : 'Não'
-        }))
-      }))
+  const exportData = async (format: 'csv' | 'xlsx' = 'csv') => {
+    try {
+      const params = new URLSearchParams();
+      if (selectedContract && selectedContract !== 'all') params.append('contractId', selectedContract);
+      if (selectedDate) params.append('date', selectedDate.toISOString().split('T')[0]);
+      if (searchTerm) params.append('search', searchTerm);
+      params.append('format', format);
+      // status pode ser adicionado se houver filtro de status
+      const url = `/api/workforce/export?${params.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Erro ao exportar dados');
+      const blob = await res.blob();
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = format === 'xlsx' ? 'efetivo.xlsx' : 'efetivo.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      toast.success('Exportação concluída!');
+    } catch (err) {
+      toast.error('Erro ao exportar dados');
     }
-    
-    console.log('Dados para exportação:', dataToExport)
-    // TODO: Implementar download do arquivo CSV/Excel
-  }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -315,6 +327,89 @@ export default function WorkforceControlPage() {
     return null
   }
 
+  const openAuditModal = async (entryId: string) => {
+    setSelectedEntryId(entryId)
+    setAuditModalOpen(true)
+    setAuditLoading(true)
+    try {
+      const res = await fetch(`/api/audit-logs?entityId=${entryId}`)
+      const logs = await res.json()
+      setAuditLogs(logs)
+    } catch (e) {
+      setAuditLogs([])
+    } finally {
+      setAuditLoading(false)
+    }
+  }
+
+  const openPointHistoryModal = async (employeeId: string, employeeName: string) => {
+    setPointHistoryEmployee({ id: employeeId, name: employeeName })
+    setPointHistoryModalOpen(true)
+    setPointHistoryLoading(true)
+    try {
+      const res = await fetch(`/api/audit-logs?employeeId=${employeeId}&action=TIME_RECORD`)
+      const logs = await res.json()
+      setPointHistoryLogs(logs)
+    } catch (e) {
+      setPointHistoryLogs([])
+    } finally {
+      setPointHistoryLoading(false)
+    }
+  }
+
+  // Seleção múltipla
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedRows([])
+    } else {
+      setSelectedRows(allEntryIds)
+    }
+  }
+  const toggleSelectRow = (id: string) => {
+    setSelectedRows(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+  const clearSelection = () => setSelectedRows([])
+  const handleBulkExport = async () => {
+    if (selectedRows.length === 0) return
+    const params = new URLSearchParams()
+    selectedRows.forEach(id => params.append('ids', id))
+    params.append('format', 'csv')
+    const res = await fetch(`/api/workforce/export?${params.toString()}`)
+    const blob = await res.blob()
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = downloadUrl
+    a.download = 'efetivo_selecionado.csv'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(downloadUrl)
+    clearSelection()
+  }
+  const handleBulkDelete = async () => {
+    setBulkDeleteLoading(true);
+    try {
+      const res = await fetch('/api/workforce/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: selectedRows })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error || 'Erro ao excluir registros');
+      } else {
+        toast.success('Registros excluídos com sucesso!');
+        clearSelection();
+        refreshData();
+        setShowBulkDeleteModal(false);
+      }
+    } catch (err) {
+      toast.error('Erro ao excluir registros');
+    } finally {
+      setBulkDeleteLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-6 p-6">
       {/* Header com Informações de Permissão */}
@@ -360,11 +455,20 @@ export default function WorkforceControlPage() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={exportData}
+            onClick={() => exportData('csv')}
             disabled={!stats}
           >
             <Download className="h-4 w-4 mr-2" />
-            Exportar
+            Exportar CSV
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => exportData('xlsx')}
+            disabled={!stats}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Exportar Excel
           </Button>
           <Button 
             size="sm"
@@ -434,7 +538,7 @@ export default function WorkforceControlPage() {
                 />
               </div>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-3 items-center">
               <select
                 value={selectedContract}
                 onChange={(e) => setSelectedContract(e.target.value)}
@@ -449,20 +553,99 @@ export default function WorkforceControlPage() {
                   </option>
                 ))}
               </select>
+              <select
+                value={filterStatus}
+                onChange={e => setFilterStatus(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Status</option>
+                <option value="PRESENT">Presente</option>
+                <option value="ABSENT">Ausente</option>
+                <option value="LATE">Atrasado</option>
+                <option value="LEFT">Saiu</option>
+              </select>
+              <select
+                value={filterFunction}
+                onChange={e => setFilterFunction(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg"
+              >
+                <option value="">Função</option>
+                {functionsList?.map(func => (
+                  <option key={func.id} value={func.id}>{func.name}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                placeholder="Local"
+                value={filterLocation}
+                onChange={e => setFilterLocation(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg"
+              />
+              <input
+                type="time"
+                value={filterCheckInFrom}
+                onChange={e => setFilterCheckInFrom(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg"
+                title="Entrada a partir de"
+              />
+              <input
+                type="time"
+                value={filterCheckInTo}
+                onChange={e => setFilterCheckInTo(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg"
+                title="Entrada até"
+              />
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Barra de ações em lote */}
+      {selectedRows.length > 0 && (
+        <div className="flex items-center gap-4 mb-2 p-2 bg-blue-50 border border-blue-200 rounded">
+          <span className="text-sm">{selectedRows.length} selecionado(s)</span>
+          <Button size="sm" variant="outline" onClick={handleBulkExport}><Download className="h-4 w-4 mr-1" />Exportar Selecionados</Button>
+          <Button size="sm" variant="danger" onClick={() => setShowBulkDeleteModal(true)} disabled={bulkDeleteLoading}><Trash2 className="h-4 w-4 mr-1" />Excluir Selecionados</Button>
+          <Button size="sm" variant="ghost" onClick={clearSelection}>Limpar Seleção</Button>
+        </div>
+      )}
+
+      {/* Modal de confirmação de exclusão em lote */}
+      <Dialog open={showBulkDeleteModal} onOpenChange={setShowBulkDeleteModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir <b>{selectedRows.length}</b> registro(s) de efetivo? Esta ação não pode ser desfeita e os registros serão removidos permanentemente do sistema.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 my-4">
+            <Trash2 className="h-6 w-6 text-red-600 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-red-900">Atenção!</h3>
+              <p className="text-sm text-red-700 mt-1">
+                Esta ação é irreversível. Todos os registros selecionados serão excluídos e não poderão ser recuperados.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-4 mt-6 px-6 pb-6">
+            <Button variant="outline" onClick={() => setShowBulkDeleteModal(false)} disabled={bulkDeleteLoading}>Cancelar</Button>
+            <Button variant="danger" onClick={handleBulkDelete} loading={bulkDeleteLoading}>
+              <Trash2 className="h-4 w-4 mr-2" />Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Contract Groups - Tabela Detalhada */}
       {contractGroups.length === 0 ? (
-        <Card>
+      <Card>
           <CardContent className="p-12">
             <div className="text-center">
               <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum registro encontrado</h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm || selectedContract !== 'all'
+                {searchTerm || selectedContract !== 'all' 
                   ? 'Tente ajustar os filtros de busca.'
                   : 'Nenhum registro de efetivo para o filtro atual.'}
               </p>
@@ -473,7 +656,7 @@ export default function WorkforceControlPage() {
             </div>
           </CardContent>
         </Card>
-      ) : (
+          ) : (
         <div className="space-y-8">
           {contractGroups.map((group) => (
             <Card key={group.contractId} className="shadow-md border border-gray-200">
@@ -494,6 +677,7 @@ export default function WorkforceControlPage() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
+                      <th className="px-2 py-2"><input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll} /></th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Nome</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Matrícula</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Função</th>
@@ -505,17 +689,18 @@ export default function WorkforceControlPage() {
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">NFC</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Observações</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Ações</th>
-                    </tr>
-                  </thead>
+                  </tr>
+                </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {group.entries.map((entry) => (
-                      <tr key={entry.id} className="hover:bg-blue-50 transition-colors">
+                      <tr key={entry.id} className={`hover:bg-blue-50 transition-colors ${selectedRows.includes(entry.id) ? 'bg-blue-100' : ''}`}>
+                        <td className="px-2 py-2"><input type="checkbox" checked={selectedRows.includes(entry.id)} onChange={() => toggleSelectRow(entry.id)} /></td>
                         <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-900">{entry.employeeName}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.employeeRegistration || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.functionName || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-semibold ${getStatusColor(entry.status)}`}>{getStatusIcon(entry.status)} {getStatusText(entry.status)}</span>
-                        </td>
+                      </td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{formatTime(entry.checkInTime) || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{formatTime(entry.checkOutTime) || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.hoursWorked?.toFixed(1) || '0.0'}h</td>
@@ -523,16 +708,32 @@ export default function WorkforceControlPage() {
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.nfcCardId || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">-</td>
                         <td className="px-4 py-2 whitespace-nowrap flex gap-2">
-                          <Button size="sm" variant="ghost" title="Visualizar histórico"><Clock className="h-4 w-4 text-gray-500" /></Button>
+                          <Button size="sm" variant="ghost" title="Visualizar histórico" onClick={() => openAuditModal(entry.id)}><Clock className="h-4 w-4 text-gray-500" /></Button>
+                          <Button size="sm" variant="ghost" title="Histórico de ponto do funcionário" onClick={() => openPointHistoryModal(entry.employeeId, entry.employeeName)}><History className="h-4 w-4 text-blue-500" /></Button>
                           <Button size="sm" variant="ghost" title="Editar"><Settings className="h-4 w-4 text-gray-500" /></Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+        </CardContent>
+      </Card>
           ))}
+        </div>
+      )}
+
+      {/* Controles de Paginação */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-6">
+          <div className="text-sm text-gray-600">
+            Página <b>{page}</b> de <b>{totalPages}</b> | Total: <b>{total}</b> registros
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setCurrentPage(1)} disabled={page === 1}>« Primeira</Button>
+            <Button size="sm" variant="outline" onClick={() => setCurrentPage(page - 1)} disabled={page === 1}>‹ Anterior</Button>
+            <Button size="sm" variant="outline" onClick={() => setCurrentPage(page + 1)} disabled={page === totalPages}>Próxima ›</Button>
+            <Button size="sm" variant="outline" onClick={() => setCurrentPage(totalPages)} disabled={page === totalPages}>Última »</Button>
+          </div>
         </div>
       )}
 
@@ -544,6 +745,82 @@ export default function WorkforceControlPage() {
         title="Registro de Ponto"
         description="Aproxime o crachá NFC do leitor para registrar entrada/saída"
       />
+
+      {/* Modal de Histórico de Auditoria */}
+      <Dialog open={auditModalOpen} onOpenChange={setAuditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Histórico de Auditoria</DialogTitle>
+            <DialogDescription>Veja todas as alterações deste registro de efetivo.</DialogDescription>
+          </DialogHeader>
+          {auditLoading ? (
+            <div className="py-8 text-center text-gray-500">Carregando...</div>
+          ) : auditLogs.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">Nenhum log encontrado.</div>
+          ) : (
+            <ul className="space-y-4 max-h-96 overflow-auto">
+              {auditLogs.map((log) => (
+                <li key={log.id} className="border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{new Date(log.createdAt).toLocaleString('pt-BR')}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700 border border-gray-200">{log.action}</span>
+                    <span className="text-xs text-gray-500">{log.user?.name || 'Sistema'}</span>
+                  </div>
+                  <pre className="text-xs bg-gray-50 rounded p-2 mt-1 overflow-x-auto">{JSON.stringify(log.details, null, 2)}</pre>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Histórico de Ponto do Funcionário */}
+      <Dialog open={pointHistoryModalOpen} onOpenChange={setPointHistoryModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Histórico de Ponto do Funcionário</DialogTitle>
+            <DialogDescription>
+              {pointHistoryEmployee ? `Funcionário: ${pointHistoryEmployee.name}` : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <input
+            type="text"
+            placeholder="Buscar por data, local, status..."
+            className="w-full mb-3 px-3 py-2 border border-gray-300 rounded"
+            value={pointHistorySearch}
+            onChange={e => setPointHistorySearch(e.target.value)}
+          />
+          {pointHistoryLoading ? (
+            <div className="py-8 text-center text-gray-500">Carregando...</div>
+          ) : pointHistoryLogs.length === 0 ? (
+            <div className="py-8 text-center text-gray-500">Nenhum registro encontrado.</div>
+          ) : (
+            <ul className="space-y-4 max-h-96 overflow-auto">
+              {pointHistoryLogs.filter(log => {
+                const search = pointHistorySearch.toLowerCase()
+                return (
+                  log.details.status?.toLowerCase().includes(search) ||
+                  (log.details.location || '').toLowerCase().includes(search) ||
+                  (log.details.checkIn ? new Date(log.details.checkIn).toLocaleDateString('pt-BR') : '').includes(search) ||
+                  (log.details.checkOut ? new Date(log.details.checkOut).toLocaleDateString('pt-BR') : '').includes(search)
+                )
+              }).map((log) => (
+                <li key={log.id} className="border-b pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{new Date(log.createdAt).toLocaleString('pt-BR')}</span>
+                    <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-700 border border-blue-200">{log.details.status}</span>
+                    <span className="text-xs text-gray-500">{log.details.location || '-'}</span>
+                  </div>
+                  <div className="text-xs text-gray-700 mt-1">
+                    Entrada: {log.details.checkIn ? new Date(log.details.checkIn).toLocaleString('pt-BR') : '-'}<br />
+                    Saída: {log.details.checkOut ? new Date(log.details.checkOut).toLocaleString('pt-BR') : '-'}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
