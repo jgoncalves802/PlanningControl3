@@ -45,6 +45,9 @@ import {
 } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { MultiSelect } from '@/components/ui/multiselect';
+import { useRef } from 'react'
+import { useDebounce } from '@/lib/hooks/useDebounce'
 
 export default function WorkforceControlPage() {
   // TODOS OS HOOKS DEVEM FICAR AQUI, no topo do componente
@@ -67,27 +70,41 @@ export default function WorkforceControlPage() {
   const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
   const [pointHistoryEmployee, setPointHistoryEmployee] = useState<{ id: string, name: string } | null>(null);
   const [pointHistorySearch, setPointHistorySearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('');
-  const [filterFunction, setFilterFunction] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string[]>([]);
+  const [filterFunction, setFilterFunction] = useState<string[]>([]);
   const [filterLocation, setFilterLocation] = useState('');
+  // Estado para filtros de horário
   const [filterCheckInFrom, setFilterCheckInFrom] = useState('');
   const [filterCheckInTo, setFilterCheckInTo] = useState('');
+  // Estado para filtros de horário de saída
+  const [filterCheckOutFrom, setFilterCheckOutFrom] = useState('');
+  const [filterCheckOutTo, setFilterCheckOutTo] = useState('');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const { data: functionsList } = useFunctionsQuery({ isActive: true });
   const { data: contractsData } = useContractsQuery();
   const contracts = contractsData?.contracts || [];
-  const filters: WorkforceFilters = {
+
+  // Debounced values
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
+  const debouncedCheckInFrom = useDebounce(filterCheckInFrom, 400);
+  const debouncedCheckInTo = useDebounce(filterCheckInTo, 400);
+  const debouncedCheckOutFrom = useDebounce(filterCheckOutFrom, 400);
+  const debouncedCheckOutTo = useDebounce(filterCheckOutTo, 400);
+
+  const filters: any = {
     contractId: selectedContract === 'all' ? undefined : selectedContract,
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     dateRange: {
       from: selectedDate,
       to: selectedDate
     },
-    status: filterStatus || undefined,
-    functionId: filterFunction || undefined,
+    status: filterStatus.length > 0 ? filterStatus : undefined,
+    functionIds: filterFunction.length > 0 ? filterFunction : undefined,
     location: filterLocation || undefined,
-    checkInTimeFrom: filterCheckInFrom || undefined,
-    checkInTimeTo: filterCheckInTo || undefined,
+    checkInTimeFrom: debouncedCheckInFrom || undefined,
+    checkInTimeTo: debouncedCheckInTo || undefined,
+    checkOutTimeFrom: debouncedCheckOutFrom || undefined,
+    checkOutTimeTo: debouncedCheckOutTo || undefined,
   };
   const safePage = currentPage < 1 ? 1 : currentPage;
   const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, safePage, pageSize);
@@ -130,6 +147,33 @@ export default function WorkforceControlPage() {
   const refreshData = () => {
     refetch()
   }
+
+  // Função para resetar todos os filtros
+  const clearAllFilters = () => {
+    setSelectedContract('all');
+    setSearchTerm('');
+    setSelectedDate(new Date());
+    setFilterStatus([]);
+    setFilterFunction([]);
+    setFilterLocation('');
+    setFilterCheckInFrom('');
+    setFilterCheckInTo('');
+    setFilterCheckOutFrom('');
+    setFilterCheckOutTo('');
+  };
+
+  // Contador de filtros ativos
+  const activeFiltersCount = [
+    selectedContract !== 'all',
+    !!searchTerm,
+    filterStatus.length > 0,
+    filterFunction.length > 0,
+    !!filterLocation,
+    !!filterCheckInFrom,
+    !!filterCheckInTo,
+    !!filterCheckOutFrom,
+    !!filterCheckOutTo
+  ].filter(Boolean).length;
 
   // [2] Só depois dos hooks, os returns condicionais:
   if (!currentUser || !userPermissions) {
@@ -482,15 +526,16 @@ export default function WorkforceControlPage() {
         </div>
       </div>
 
-      {/* Global Stats */}
-      {stats && (
+      {/* Stats por contrato ou globais */}
+      {/* Exibe apenas UM dos blocos abaixo, nunca ambos */}
+      {(!filters.contractId && !filters.location) ? (
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
           {[
-            { label: 'Total Funcionários', value: stats.totalEmployees, color: 'blue', icon: Users },
-            { label: 'Presentes', value: stats.present, color: 'green', icon: UserCheck },
-            { label: 'Ausentes', value: stats.absent, color: 'red', icon: UserX },
-            { label: 'Atrasados', value: stats.late, color: 'yellow', icon: AlertTriangle },
-            { label: 'Saíram', value: stats.left, color: 'gray', icon: CheckCircle }
+            { label: 'Total Funcionários', value: entries?.globalStats?.total ?? 0, color: 'blue', icon: Users },
+            { label: 'Presentes', value:entries?.globalStats?.present ?? 0, color: 'green', icon: UserCheck },
+            { label: 'Ausentes', value: entries?.globalStats?.absent ?? 0, color: 'red', icon: UserX },
+            { label: 'Atrasados', value: entries?.globalStats?.late ?? 0, color: 'yellow', icon: AlertTriangle },
+            { label: 'Saíram', value: entries?.globalStats?.left ?? 0, color: 'gray', icon: CheckCircle }
           ].map((stat, index) => (
             <motion.div
               key={stat.label}
@@ -505,10 +550,7 @@ export default function WorkforceControlPage() {
                       <p className="text-sm font-medium text-gray-600">{stat.label}</p>
                       <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                       <p className="text-xs text-gray-500 mt-1">
-                        {stats.totalEmployees > 0 ? 
-                          `${Math.round((stat.value / stats.totalEmployees) * 100)}%` : 
-                          '0%'
-                        } do total
+                        {entries?.globalStats?.total > 0 ? `${Math.round((stat.value / entries.globalStats.total) * 100)}%` : '0%'} do total
                       </p>
                     </div>
                     <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
@@ -520,83 +562,157 @@ export default function WorkforceControlPage() {
             </motion.div>
           ))}
         </div>
-      )}
+      ) : (!!filters.contractId || !!filters.location) ? (
+        <div className="space-y-6">
+          {(entries?.contractGroups && entries.contractGroups.length > 0 ? entries.contractGroups : [{ contractId: 'none', contractName: 'Sem Contrato', entries: [], stats: { total: 0, present: 0, absent: 0, late: 0, left: 0 } }]).map((c: any) => (
+            <div key={c.contractId}>
+              <div className="flex items-center gap-3 mb-2">
+                <Building className="h-5 w-5 text-blue-600" />
+                <span className="text-lg font-bold text-blue-900">{c.contractName}</span>
+                <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">{c.entries.length} funcionário(s)</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+                {[ 
+                  { label: 'Total Funcionários', value: c.stats?.total ?? 0, color: 'blue', icon: Users },
+                  { label: 'Presentes', value: c.stats?.present ?? 0, color: 'green', icon: UserCheck },
+                  { label: 'Ausentes', value: c.stats?.absent ?? 0, color: 'red', icon: UserX },
+                  { label: 'Atrasados', value: c.stats?.late ?? 0, color: 'yellow', icon: AlertTriangle },
+                  { label: 'Saíram', value: c.stats?.left ?? 0, color: 'gray', icon: CheckCircle }
+                ].map((stat, index) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.1 }}
+                  >
+                    <Card>
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {c.stats?.total > 0 ? `${Math.round((stat.value / c.stats.total) * 100)}%` : '0%'} do total
+                            </p>
+                          </div>
+                          <div className={`p-3 rounded-xl bg-${stat.color}-100`}>
+                            <stat.icon className={`h-5 w-5 text-${stat.color}-600`} />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {/* Filters */}
       <Card>
         <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1">
+          <form className="flex flex-col gap-4 md:flex-row md:gap-4" aria-label="Filtros de efetivo">
+            <div className="flex flex-col gap-1 flex-1 min-w-0">
+              <label htmlFor="search-term" className="text-xs text-gray-600">Buscar</label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden="true" />
                 <input
+                  id="search-term"
                   type="text"
                   placeholder="Buscar funcionário ou função..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-primary focus-visible:outline-primary"
+                  aria-label="Buscar funcionário ou função"
                 />
               </div>
             </div>
-            <div className="flex gap-3 items-center">
-              <select
-                value={selectedContract}
-                onChange={(e) => setSelectedContract(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-              >
-                {accessibleContracts.length > 1 && (
-                  <option value="all">Todos os Contratos Acessíveis</option>
-                )}
-                {accessibleContracts.map(contract => (
-                  <option key={contract.id} value={contract.id}>
-                    {contract.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filterStatus}
-                onChange={e => setFilterStatus(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Status</option>
-                <option value="PRESENT">Presente</option>
-                <option value="ABSENT">Ausente</option>
-                <option value="LATE">Atrasado</option>
-                <option value="LEFT">Saiu</option>
-              </select>
-              <select
-                value={filterFunction}
-                onChange={e => setFilterFunction(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-              >
-                <option value="">Função</option>
-                {functionsList?.map(func => (
-                  <option key={func.id} value={func.id}>{func.name}</option>
-                ))}
-              </select>
-              <input
-                type="text"
-                placeholder="Local"
-                value={filterLocation}
-                onChange={e => setFilterLocation(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-              />
-              <input
-                type="time"
-                value={filterCheckInFrom}
-                onChange={e => setFilterCheckInFrom(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-                title="Entrada a partir de"
-              />
-              <input
-                type="time"
-                value={filterCheckInTo}
-                onChange={e => setFilterCheckInTo(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg"
-                title="Entrada até"
-              />
+            <div className="flex flex-wrap gap-3 items-end md:items-center">
+              <div className="flex flex-col gap-1 min-w-[160px]">
+                <label htmlFor="contract-select" className="text-xs text-gray-600">Contrato</label>
+                <select
+                  id="contract-select"
+                  value={selectedContract}
+                  onChange={(e) => setSelectedContract(e.target.value)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-primary focus-visible:outline-primary"
+                  aria-label="Contrato"
+                >
+                  {accessibleContracts.length > 1 && (
+                    <option value="all">Todos os Contratos Acessíveis</option>
+                  )}
+                  {accessibleContracts.map(contract => (
+                    <option key={contract.id} value={contract.id}>
+                      {contract.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {/* Filtro de horário (check-in) */}
+              <div className="flex flex-col gap-1 min-w-[120px]">
+                <label htmlFor="checkin-from" className="text-xs text-gray-600">Check-in de</label>
+                <input
+                  id="checkin-from"
+                  type="time"
+                  value={filterCheckInFrom}
+                  onChange={e => setFilterCheckInFrom(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-primary focus-visible:outline-primary"
+                  aria-label="Check-in de"
+                />
+              </div>
+              <div className="flex flex-col gap-1 min-w-[120px]">
+                <label htmlFor="checkin-to" className="text-xs text-gray-600">até</label>
+                <input
+                  id="checkin-to"
+                  type="time"
+                  value={filterCheckInTo}
+                  onChange={e => setFilterCheckInTo(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-primary focus-visible:outline-primary"
+                  aria-label="Check-in até"
+                />
+              </div>
+              {/* Filtro de horário (check-out) */}
+              <div className="flex flex-col gap-1 min-w-[120px]">
+                <label htmlFor="checkout-from" className="text-xs text-gray-600">Check-out de</label>
+                <input
+                  id="checkout-from"
+                  type="time"
+                  value={filterCheckOutFrom}
+                  onChange={e => setFilterCheckOutFrom(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-primary focus-visible:outline-primary"
+                  aria-label="Check-out de"
+                />
+              </div>
+              <div className="flex flex-col gap-1 min-w-[120px]">
+                <label htmlFor="checkout-to" className="text-xs text-gray-600">até</label>
+                <input
+                  id="checkout-to"
+                  type="time"
+                  value={filterCheckOutTo}
+                  onChange={e => setFilterCheckOutTo(e.target.value)}
+                  className="px-2 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent focus:outline-primary focus-visible:outline-primary"
+                  aria-label="Check-out até"
+                />
+              </div>
+              {/* Botão Limpar Filtros e badge de filtros ativos */}
+              {activeFiltersCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="ml-2 flex items-center gap-1 border-red-300 text-red-700 hover:bg-red-50 focus:outline-primary focus-visible:outline-primary"
+                  title="Limpar todos os filtros"
+                  tabIndex={0}
+                  aria-label="Limpar todos os filtros"
+                >
+                  Limpar Filtros
+                  <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                    {activeFiltersCount}
+                  </span>
+                </Button>
+              )}
             </div>
-          </div>
+          </form>
         </CardContent>
       </Card>
 
@@ -637,26 +753,80 @@ export default function WorkforceControlPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Contract Groups - Tabela Detalhada */}
-      {contractGroups.length === 0 ? (
-      <Card>
-          <CardContent className="p-12">
-            <div className="text-center">
-              <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum registro encontrado</h3>
-              <p className="text-gray-600 mb-4">
-                {searchTerm || selectedContract !== 'all' 
-                  ? 'Tente ajustar os filtros de busca.'
-                  : 'Nenhum registro de efetivo para o filtro atual.'}
-              </p>
-              <Button onClick={refreshData} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Recarregar
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-          ) : (
+      {/* Tabela de funcionários: modo global (todos os contratos acessíveis) */}
+      {(!filters.contractId && !filters.location) ? (
+        entries.entries && entries.entries.length > 0 ? (
+          <div className="space-y-8">
+            <Card className="shadow-md border border-gray-200">
+              <CardHeader className="bg-blue-50 border-b border-blue-200 rounded-t-lg flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div className="flex items-center gap-3">
+                  <Users className="h-6 w-6 text-blue-600" />
+                  <span className="text-lg font-bold text-blue-900">Todos os Funcionários</span>
+                  <span className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">{entries.entries.length} funcionário(s)</span>
+                </div>
+              </CardHeader>
+              <CardContent className="overflow-x-auto p-0">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-2 py-2"><input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll} /></th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Nome</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Matrícula</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Função</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Check-in</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Check-out</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Horas</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Local</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">NFC</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Observações</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-100">
+                    {entries.entries.map((entry: any) => (
+                      <tr key={entry.id}>
+                        <td className="px-2 py-2"><input type="checkbox" checked={selectedRows.includes(entry.id)} onChange={() => toggleSelectRow(entry.id)} /></td>
+                        <td className="px-4 py-2">{entry.employeeName}</td>
+                        <td className="px-4 py-2">{entry.employeeRegistration}</td>
+                        <td className="px-4 py-2">{entry.functionName}</td>
+                        <td className="px-4 py-2">{getStatusText(entry.status)}</td>
+                        <td className="px-4 py-2">{formatTime(entry.checkInTime)}</td>
+                        <td className="px-4 py-2">{formatTime(entry.checkOutTime)}</td>
+                        <td className="px-4 py-2">{entry.hoursWorked ?? ''}</td>
+                        <td className="px-4 py-2">{entry.location}</td>
+                        <td className="px-4 py-2">{entry.nfcCardId}</td>
+                        <td className="px-4 py-2">{entry.isLate ? 'Atrasado' : ''}</td>
+                        <td className="px-4 py-2">
+                          {/* Ações: histórico, editar, excluir, etc. */}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </div>
+        ) : (
+          <Card>
+            <CardContent className="p-12">
+              <div className="text-center">
+                <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum registro encontrado</h3>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm || selectedContract !== 'all' 
+                    ? 'Tente ajustar os filtros de busca.'
+                    : 'Nenhum registro de efetivo para o filtro atual.'}
+                </p>
+                <Button onClick={refreshData} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Recarregar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      ) : (
         <div className="space-y-8">
           {contractGroups.map((group) => (
             <Card key={group.contractId} className="shadow-md border border-gray-200">
@@ -719,15 +889,15 @@ export default function WorkforceControlPage() {
         </CardContent>
       </Card>
           ))}
-        </div>
-      )}
-
+                </div>
+              )}
+              
       {/* Controles de Paginação */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-6">
           <div className="text-sm text-gray-600">
             Página <b>{page}</b> de <b>{totalPages}</b> | Total: <b>{total}</b> registros
-          </div>
+                </div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => setCurrentPage(1)} disabled={page === 1}>« Primeira</Button>
             <Button size="sm" variant="outline" onClick={() => setCurrentPage(page - 1)} disabled={page === 1}>‹ Anterior</Button>

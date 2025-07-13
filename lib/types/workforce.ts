@@ -31,6 +31,8 @@ export interface WorkforceStats {
 export interface WorkforceFilters {
   contractId?: string
   status?: string[]
+  functionIds?: string[]
+  location?: string
   search?: string
   dateRange?: {
     from: Date
