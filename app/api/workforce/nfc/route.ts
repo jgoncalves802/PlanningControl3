@@ -121,9 +121,10 @@ export async function POST(req: NextRequest) {
     // Correlacionar dados automaticamente baseado na alocação do funcionário
     const contractName = employee.currentContract?.name || '';
     const contractId = employee.currentContractId || null;
-    const functionName = employee.companyFunction?.name || '';
+    // Garantir preenchimento correto dos campos de função e matrícula
+    const functionName = employee.companyFunction?.name || '-';
     const functionId = employee.companyFunctionId || null;
-    
+    const employeeRegistration = employee.registration || '-';
     // Dados para sincronização automática
     const workforceData = {
       checkInTime: checkInTime || (workforceEntry?.checkInTime || null),
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
       functionName,
       functionId,
       employeeName: employee.name,
-      employeeRegistration: employee.registration || '',
+      employeeRegistration,
       nfcCardId: employee.nfcCardId || nfcCardId,
     };
     

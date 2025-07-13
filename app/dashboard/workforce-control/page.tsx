@@ -162,6 +162,20 @@ export default function WorkforceControlPage() {
     setFilterCheckOutTo('');
   };
 
+  // Função para corrigir registros antigos e atualizar dados
+  const fixAndRefresh = async () => {
+    try {
+      // Chama uma rota de API interna que executa o script de correção
+      const res = await fetch('/api/workforce/fix-entries', { method: 'POST' });
+      if (!res.ok) throw new Error('Erro ao corrigir registros antigos');
+      toast.success('Registros antigos corrigidos com sucesso!');
+    } catch (err) {
+      toast.error('Erro ao corrigir registros antigos');
+    } finally {
+      refetch(); // Atualiza os dados sem piscar a tela
+    }
+  };
+
   // Contador de filtros ativos
   const activeFiltersCount = [
     selectedContract !== 'all',
@@ -490,7 +504,7 @@ export default function WorkforceControlPage() {
           <Button 
             variant="outline" 
             size="sm"
-            onClick={refreshData}
+            onClick={fixAndRefresh}
             disabled={isLoading}
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />

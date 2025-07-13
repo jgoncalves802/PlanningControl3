@@ -84,13 +84,17 @@ export default function EmployeesPage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyEmployee, setHistoryEmployee] = useState<Employee | null>(null);
 
+  // Estado de paginação
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
   // Queries e mutations
   const createEmployeeMutation = useCreateEmployee();
   const updateEmployeeMutation = useUpdateEmployee();
   const deleteEmployeeMutation = useDeleteEmployee();
   const addAdmissionMutation = useAddAdmission();
   const addDismissalMutation = useAddDismissal();
-  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery();
+  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery({ page, limit });
   
   // Functions queries
   const { data: functions = [] } = useFunctionsQuery({});
@@ -98,6 +102,7 @@ export default function EmployeesPage() {
 
   // Extrair array de funcionários da resposta da API
   const employees = employeesData?.employees || [];
+  const pagination = employeesData?.pagination || { page: 1, limit: 10, total: 0, pages: 1 };
 
   // Converter dados da API para o formato esperado pelos componentes
   const processedEmployees = employees.map(emp => ({
@@ -435,6 +440,10 @@ export default function EmployeesPage() {
     }
   }
 
+  // Helper para obter o número total de páginas
+  // Corrigir acesso dinâmico para evitar erro de tipo
+  const totalPages = (pagination && typeof pagination['pages'] === 'number') ? pagination['pages'] : ((pagination && typeof pagination['totalPages'] === 'number') ? pagination['totalPages'] : 1);
+
   if (!currentUser || !userPermissions || isEmployeesLoading) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -573,7 +582,7 @@ export default function EmployeesPage() {
               <Users className="h-4 w-4" />
               Funcionários
               <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
-                {employees.length}
+                {pagination.total}
               </span>
                       </div>
           </button>
@@ -628,42 +637,76 @@ export default function EmployeesPage() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+        transition={{ duration: 0.6 }}
       >
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Funcionários ({filteredEmployees.length})
+                <Users className="h-4 w-4" />
+                Funcionários ({pagination.total})
               </CardTitle>
-                  {selectedEmployees.length > 0 && (
+              {selectedEmployees.length > 0 && (
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600 dark:text-slate-400">
-                        {selectedEmployees.length} selecionado{selectedEmployees.length !== 1 ? 's' : ''}
+                    {selectedEmployees.length} selecionado{selectedEmployees.length !== 1 ? 's' : ''}
                   </span>
-                      {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                        <Button size="sm" variant="danger" onClick={handleBulkDelete}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Excluir Selecionados
-                  </Button>
-                      )}
+                  {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+                    <Button size="sm" variant="danger" onClick={handleBulkDelete}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir Selecionados
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
           </CardHeader>
           <CardContent className="p-0">
-                <EmployeeTable
-                  employees={filteredEmployees}
-                  columns={columns}
-                  selectedEmployees={selectedEmployees}
-                  canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}
-                  onSelectEmployee={handleSelectEmployee}
-                  onSelectAll={handleSelectAll}
-                  onEditEmployee={handleOpenEditDrawer}
-                  onViewEmployee={handleViewEmployee}
-                  onShowHistory={handleShowHistory}
-                />
+            <EmployeeTable
+              employees={processedEmployees}
+              columns={columns}
+              selectedEmployees={selectedEmployees}
+              canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}
+              onSelectEmployee={handleSelectEmployee}
+              onSelectAll={handleSelectAll}
+              onEditEmployee={handleOpenEditDrawer}
+              onViewEmployee={handleViewEmployee}
+              onShowHistory={handleShowHistory}
+            />
+            {/* Controles de paginação */}
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+              <div>
+                Página {pagination.page} de {totalPages}
+                <span className="ml-4 text-xs text-gray-500">({pagination.total} funcionários)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={pagination.page <= 1}
+                >
+                  Anterior
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={pagination.page >= totalPages}
+                >
+                  Próxima
+                </Button>
+                <select
+                  className="ml-4 px-2 py-1 border rounded text-sm bg-white dark:bg-slate-800"
+                  value={limit}
+                  onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+                >
+                  {[10, 20, 50, 100].map(opt => (
+                    <option key={opt} value={opt}>{opt} por página</option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </motion.div>

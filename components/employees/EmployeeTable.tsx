@@ -123,14 +123,16 @@ const EmployeeTable = memo(function EmployeeTable({
       case 'cpf':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.cpf}</span>;
       case 'matricula':
-        return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.id.padStart(6, '0')}</span>;
+        return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.id ? employee.id.padStart(6, '0') : '-'}</span>;
       case 'cargo':
         // Priorizar companyFunction.name, depois role, depois currentFunction.name
         const cargoDisplay = employee.companyFunction?.name || 
                            employee.role || 
                            (typeof employee.currentFunction === 'string' ? employee.currentFunction : employee.currentFunction?.name) ||
-                           'Não atribuído';
+                           '-';
         return <span className="text-sm text-gray-900 dark:text-slate-100">{cargoDisplay}</span>;
+      case 'nfc':
+        return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.nfcCardId || '-'}</span>;
       case 'status':
         return (
           <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm ${getStatusColor(employee.status)}`}>
@@ -252,13 +254,13 @@ const EmployeeTable = memo(function EmployeeTable({
                   </td>
                 ))}
                 <td className="p-4 flex gap-2">
-                  <button onClick={() => onViewEmployee(employee)} title="Visualizar" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1">
+                  <button onClick={() => onViewEmployee(employee)} title="Visualizar" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1" disabled={!employee.id}>
                     <Eye className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" strokeWidth={1.5} />
                   </button>
-                  <button onClick={() => onEditEmployee(employee)} title="Editar" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1">
+                  <button onClick={() => onEditEmployee(employee)} title="Editar" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1" disabled={!employee.id}>
                     <Pencil className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" strokeWidth={1.5} />
                   </button>
-                  <button onClick={() => onShowHistory(employee)} title="Histórico" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1">
+                  <button onClick={() => onShowHistory(employee)} title="Histórico" className="hover:bg-gray-100 dark:hover:bg-slate-700 rounded p-1" disabled={!employee.id}>
                     <Clock className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" strokeWidth={1.5} />
                   </button>
                   {/* Outras ações */}
@@ -266,6 +268,7 @@ const EmployeeTable = memo(function EmployeeTable({
                     <button
                       className="text-blue-600 hover:underline text-sm font-medium"
                       onClick={() => alert('Solicitar transferência para gestor do contrato atual (implementar fluxo)')}
+                      disabled={!employee.id}
                     >
                       Solicitar transferência
                     </button>
