@@ -196,8 +196,7 @@ function convertCSVToEmployeeData(csvData: any): any {
     company: normalizeText(csvData.company),
     cpf: csvData.cpf?.replace(/\D/g, ''), // Remove formatação
     phone: csvData.phone && csvData.phone.trim() ? csvData.phone.replace(/\D/g, '') : null,
-    role: csvData.role && csvData.role.trim() ? normalizeText(csvData.role) : null,
-    category: csvData.category && csvData.category.trim() ? normalizeText(csvData.category) : null,
+    
     gender: csvData.gender && csvData.gender.trim() ? normalizeText(csvData.gender) : null,
     maritalStatus: csvData.maritalStatus && csvData.maritalStatus.trim() ? normalizeText(csvData.maritalStatus) : null,
     pis: csvData.pis && csvData.pis.trim() ? csvData.pis.replace(/\D/g, '') : null,

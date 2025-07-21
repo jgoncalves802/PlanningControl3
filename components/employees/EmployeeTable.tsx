@@ -125,10 +125,9 @@ const EmployeeTable = memo(function EmployeeTable({
       case 'matricula':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.id ? employee.id.padStart(6, '0') : '-'}</span>;
       case 'cargo':
-        // Priorizar companyFunction.name, depois role, depois currentFunction.name
-        const cargoDisplay = employee.companyFunction?.name || 
-                           employee.role || 
-                           (typeof employee.currentFunction === 'string' ? employee.currentFunction : employee.currentFunction?.name) ||
+        // Priorizar currentFunction.name, depois companyFunction.name
+        const cargoDisplay = (typeof employee.currentFunction === 'object' ? employee.currentFunction?.name : employee.currentFunction) || 
+                           employee.companyFunction?.name ||
                            '-';
         return <span className="text-sm text-gray-900 dark:text-slate-100">{cargoDisplay}</span>;
       case 'nfc':

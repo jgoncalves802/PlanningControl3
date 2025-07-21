@@ -110,7 +110,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
       setFormData({
         ...employee,
         dataEntrada: employee.admissionDate ? formatDateInput(employee.admissionDate) : '',
-        cargo: employee.currentFunction || employee.role || '',
+        cargo: (typeof employee.currentFunction === 'object' ? employee.currentFunction?.name : employee.currentFunction) || '',
         turno: employee.shift || '',
         contrato: employee.currentContract || '',
         endereco: employee.endereco || employee.address || {},
@@ -236,7 +236,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
       ...formData,
       admissionDate: formData.dataEntrada ? new Date(formData.dataEntrada) : formData.admissionDate,
       birthDate: formData.dataNascimento ? new Date(formData.dataNascimento) : formData.birthDate,
-      role: formData.cargo,
+
       shift: formData.turno,
       address: formData.endereco,
       isActive: formData.status === 'active',
@@ -250,7 +250,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
     delete employeeData.currentFunction;
     delete employeeData.currentFunctionId;
     delete employeeData.contrato;
-    delete employeeData.cargo; // já mapeado para role
+    delete employeeData.cargo; // já mapeado para currentFunction
     delete employeeData.turno; // já mapeado para shift
     delete employeeData.dataEntrada; // já mapeado para admissionDate
     delete employeeData.dataNascimento; // já mapeado para birthDate

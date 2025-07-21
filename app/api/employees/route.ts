@@ -18,16 +18,16 @@ function normalizeText(text: string): string {
 function normalizeTextFields(data: any): any {
   const normalized = { ...data };
   
-  // Campos de texto que devem ser normalizados
-  const textFields = [
-    'name', 'registration', 'role', 'category', 'company', 'rg',
-    'workplace', 'shift', 'phone', 'nationality', 'naturalness', 
-    'gender', 'maritalStatus', 'educationLevel', 'pis', 'ctps', 
-    'ctpsSeries', 'ctpsUf', 'voterTitle', 'voterZone', 'voterSection',
-    'reservist', 'reservistCategory', 'cnh', 'cnhCategory', 
-    'motherName', 'fatherName', 'notes', 'centroCusto', 'obra',
-    'mo', 'localAlojado', 'pontoReferencia', 'statusBancodoc'
-  ];
+      // Campos de texto que devem ser normalizados
+    const textFields = [
+      'name', 'registration', 'company', 'rg',
+      'workplace', 'shift', 'phone', 'nationality', 'naturalness', 
+      'gender', 'maritalStatus', 'educationLevel', 'pis', 'ctps', 
+      'ctpsSeries', 'ctpsUf', 'voterTitle', 'voterZone', 'voterSection',
+      'reservist', 'reservistCategory', 'cnh', 'cnhCategory', 
+      'motherName', 'fatherName', 'notes', 'centroCusto', 'obra',
+      'mo', 'localAlojado', 'pontoReferencia', 'statusBancodoc'
+    ];
   
   textFields.forEach(field => {
     if (normalized[field] && typeof normalized[field] === 'string') {
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
         { name: { contains: search, mode: 'insensitive' } },
         { cpf: { contains: search, mode: 'insensitive' } },
         { registration: { contains: search, mode: 'insensitive' } },
-        { role: { contains: search, mode: 'insensitive' } }
+        { currentFunction: { name: { contains: search, mode: 'insensitive' } } }
       ];
     }
 
@@ -101,11 +101,15 @@ export async function GET(req: NextRequest) {
     // Buscar funcionários
     const employees = await prisma.employee.findMany({
       where,
-      // Remover include de nfcBadge que não existe no schema
       skip,
       take: limit,
       orderBy: {
         [sortBy]: sortOrder
+      },
+      include: {
+        currentFunction: true,
+        companyFunction: true,
+        currentContract: true
       }
     });
 

@@ -92,8 +92,6 @@ model Employee {
   id                       String             @id @default(cuid())
   name                     String
   registration             String?
-  role                     String?
-  category                 String?
   company                  String?
   cpf                      String             @unique
   rg                       String?

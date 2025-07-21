@@ -141,7 +141,6 @@ const EmployeeAddModal: React.FC<EmployeeAddModalProps> = ({
       city: address.cidade,
       state: address.uf,
       currentFunction: formData.cargo,
-      role: formData.cargo,
       shift: formData.turno,
       admissionDate: formData.dataEntrada ? new Date(formData.dataEntrada) : new Date(),
       currentContract: formData.contrato,

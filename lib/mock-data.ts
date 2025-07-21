@@ -91,8 +91,6 @@ export interface Employee {
   id: string
   name: string
   registration?: string
-  role?: string
-  category?: string
   company?: string
   cpf: string
   rg?: string

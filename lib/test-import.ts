@@ -170,8 +170,7 @@ export function convertCSVRowToAPIFormat(csvRow: any) {
     ctpsSeries: csvRow.ctpsSeries?.toString().trim(),
     ctpsUf: csvRow.ctpsUf?.toString().trim().toUpperCase(),
     motherName: csvRow.motherName?.trim(),
-    role: csvRow.role?.trim(),
-    category: csvRow.category?.trim(),
+    
     currentContractId: csvRow.currentContractId?.toString().trim(),
     admissionDate: csvRow.admissionDate?.trim(),
     status: csvRow.status?.trim() || 'Ativo'

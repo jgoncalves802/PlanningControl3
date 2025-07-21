@@ -152,7 +152,7 @@ export async function PUT(req: NextRequest, { params }) {
     
     // Filtrar apenas campos válidos do modelo Employee
     const validFields = [
-      'name', 'registration', 'role', 'category', 'company', 'cpf', 'rg', 
+      'name', 'registration', 'company', 'cpf', 'rg', 
       'birthDate', 'admissionDate', 'dismissalDate', 'status', 'workplace', 
       'shift', 'phone', 'address', 'nationality', 'naturalness', 'gender', 
       'maritalStatus', 'educationLevel', 'pis', 'ctps', 'ctpsSeries', 'ctpsUf',
