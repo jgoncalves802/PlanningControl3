@@ -7,32 +7,7 @@ module.exports = withNextIntl({
     domains: ['images.unsplash.com', 'api.dicebear.com'],
   },
   
-  // Headers de segurança para NFC
-  async headers() {
-    return [
-      {
-        source: '/(.*)',
-        headers: [
-          {
-            key: 'Permissions-Policy',
-            value: 'nfc=*, camera=*, microphone=*, geolocation=*',
-          },
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'unsafe-none',
-          },
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-    ];
-  },
+
 
   // Configuração experimental para HTTPS local
   experimental: {
@@ -62,6 +37,42 @@ module.exports = withNextIntl({
       {
         source: '/api/:path*',
         destination: '/api/:path*',
+      },
+    ];
+  },
+
+  // Configuração para servir arquivos estáticos corretamente
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'nfc=*, camera=*, microphone=*, geolocation=*',
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none',
+          },
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
       },
     ];
   },

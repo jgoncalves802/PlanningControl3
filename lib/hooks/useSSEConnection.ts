@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 
 interface SSEOptions {
   url: string;
@@ -196,18 +197,30 @@ export function useEmployeesSSE() {
   return useSSEConnection({
     url: '/api/employees/events',
     onMessage: (data) => {
+      console.log('[Employees SSE] Received event:', data);
+      
       if (data.type === 'created' || data.type === 'updated' || data.type === 'deleted') {
-        // Refetch employees e dashboards
+        // Invalidar e refazer fetch imediatamente para melhor responsividade
         queryClient.invalidateQueries({ queryKey: ['employees'] });
         queryClient.refetchQueries({ queryKey: ['employees'] });
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.refetchQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['workforce'] });
         queryClient.refetchQueries({ queryKey: ['workforce'] });
+        
+        // Mostrar notificação para o usuário
+        if (data.type === 'created') {
+          toast.success('Novo funcionário adicionado', { duration: 3000 });
+        } else if (data.type === 'updated') {
+          toast.success('Funcionário atualizado', { duration: 3000 });
+        } else if (data.type === 'deleted') {
+          toast.success('Funcionário removido', { duration: 3000 });
+        }
       }
     },
     onError: (error) => {
       console.warn('[Employees SSE] Connection error, falling back to polling');
+      toast.error('Conexão de tempo real perdida', { duration: 5000 });
     },
     onOpen: () => {
       console.log('[Employees SSE] Real-time updates enabled');

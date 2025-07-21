@@ -4,6 +4,7 @@
   "version": "3.0.0",
   "scripts": {
     "dev": "next dev",
+    "dev:no-lint": "node scripts/start-dev.js",
     "dev:https": "node scripts/https-server.js",
     "build": "next build",
     "start": "next start",

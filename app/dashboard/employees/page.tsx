@@ -51,6 +51,7 @@ import FunctionModal from '@/components/functions/FunctionModal'
 import FunctionImportDialog from '@/components/functions/FunctionImportDialog'
 import { useEmployeeFilters } from '@/lib/hooks/useEmployeeFilters'
 import { useFunctionsQuery, useCreateFunction } from '@/lib/useFunctions'
+import { EmployeeRealTimeUpdater } from '@/components/employees/EmployeeRealTimeUpdater'
 
 // Configuração das colunas disponíveis
 interface ColumnConfig {
@@ -826,6 +827,9 @@ export default function EmployeesPage() {
         </div>
         </div>
       )}
+      
+      {/* Componente de atualizações em tempo real */}
+      <EmployeeRealTimeUpdater />
     </div>
     </>
   );
