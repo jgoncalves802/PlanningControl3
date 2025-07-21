@@ -125,10 +125,22 @@ const EmployeeTable = memo(function EmployeeTable({
       case 'matricula':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.id ? employee.id.padStart(6, '0') : '-'}</span>;
       case 'cargo':
-        // Priorizar currentFunction.name, depois companyFunction.name
-        const cargoDisplay = (typeof employee.currentFunction === 'object' ? employee.currentFunction?.name : employee.currentFunction) || 
-                           employee.companyFunction?.name ||
-                           '-';
+        // Usar companyFunctionId para buscar o nome da função
+        let cargoDisplay = '-';
+        
+        // Se tem companyFunctionId, usar companyFunction.name
+        if (employee.companyFunctionId && employee.companyFunction?.name) {
+          cargoDisplay = employee.companyFunction.name;
+        }
+        // Se não tem companyFunction mas tem currentFunction
+        else if (employee.currentFunction) {
+          if (typeof employee.currentFunction === 'object' && employee.currentFunction?.name) {
+            cargoDisplay = employee.currentFunction.name;
+          } else if (typeof employee.currentFunction === 'string') {
+            cargoDisplay = employee.currentFunction;
+          }
+        }
+        
         return <span className="text-sm text-gray-900 dark:text-slate-100">{cargoDisplay}</span>;
       case 'nfc':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.nfcCardId || '-'}</span>;

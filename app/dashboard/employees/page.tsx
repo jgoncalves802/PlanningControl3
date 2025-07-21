@@ -73,6 +73,7 @@ export default function EmployeesPage() {
   const [columns, setColumns] = useState<ColumnConfig[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
+  const [lastSSEUpdate, setLastSSEUpdate] = useState<Date | null>(null) // Timestamp da última atualização SSE
 
   // Estados para functions
   const [showCreateFunction, setShowCreateFunction] = useState(false)
@@ -105,6 +106,8 @@ export default function EmployeesPage() {
   // Extrair array de funcionários da resposta da API
   const employees = employeesData?.employees || [];
   const pagination = employeesData?.pagination || { page: 1, limit: 10, total: 0, pages: 1 };
+
+
 
   // Converter dados da API para o formato esperado pelos componentes
   const processedEmployees = employees.map(emp => ({
@@ -176,8 +179,51 @@ export default function EmployeesPage() {
     }
   }, [])
 
-  // Ativar SSE para funcionários
-  useEmployeesSSE();
+  // Ativar SSE para funcionários - LÓGICA SIMPLIFICADA
+  const { isConnected: sseConnected } = useEmployeesSSE(() => {
+    console.log('[Employees Page] SSE callback - dados atualizados!');
+    const now = new Date();
+    setLastSSEUpdate(now);
+    
+    // Simplesmente forçar refetch - React Query cuidará do resto
+    refetch();
+    
+    toast.success('Dados atualizados automaticamente!', { duration: 2000 });
+  });
+
+  // Forçar refetch quando SSE conectar
+  useEffect(() => {
+    if (sseConnected) {
+      console.log('[Employees Page] SSE connected, refetching data...');
+      refetch();
+    }
+  }, [sseConnected, refetch]);
+
+
+
+  // Log quando dados mudam
+  useEffect(() => {
+    if (employees.length > 0) {
+      console.log('[Employees Page] Data updated, employees count:', employees.length);
+      const bruno = employees.find(emp => emp.name === 'BRUNO SERGIO SANTOS LOBO');
+      if (bruno) {
+        console.log('[Employees Page] BRUNO data:', {
+          name: bruno.name,
+          cargo: (bruno as any).companyFunction?.name || '-',
+          status: bruno.isActive ? 'active' : 'inactive'
+        });
+      }
+      
+      // Log de todos os funcionários para debug
+      console.log('[Employees Page] All employees:');
+      employees.forEach((emp, index) => {
+        console.log(`[Employees Page] ${index + 1}. ${emp.name}:`, {
+          cargo: (emp as any).companyFunction?.name || '-',
+          status: emp.isActive ? 'active' : 'inactive'
+        });
+      });
+    }
+  }, [employees]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -650,6 +696,20 @@ export default function EmployeesPage() {
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Funcionários ({pagination.total})
+                {lastSSEUpdate && (
+                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
+                    Última atualização: {lastSSEUpdate.toLocaleTimeString()}
+                  </span>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => refetch()}
+                  >
+                    🔄 Atualizar
+                  </Button>
+                </div>
               </CardTitle>
               {selectedEmployees.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -668,7 +728,7 @@ export default function EmployeesPage() {
           </CardHeader>
           <CardContent className="p-0">
             <EmployeeTable
-              employees={processedEmployees}
+              employees={filteredEmployees}
               columns={columns}
               selectedEmployees={selectedEmployees}
               canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}

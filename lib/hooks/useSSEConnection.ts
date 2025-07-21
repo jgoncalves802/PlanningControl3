@@ -51,6 +51,17 @@ export function useSSEConnection({
       }
     };
 
+    // Adicionar listener específico para employee-update
+    eventSource.addEventListener('employee-update', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('[SSE] Employee update received:', data);
+        onMessage?.(data);
+      } catch (error) {
+        console.error('[SSE] Failed to parse employee update:', error);
+      }
+    });
+
     eventSource.onerror = (event) => {
       console.error('[SSE] Connection error:', event);
       onError?.(event);
@@ -191,22 +202,37 @@ export function useContractsSSE() {
 } 
 
 // Hook específico para funcionários (SSE)
-export function useEmployeesSSE() {
+export function useEmployeesSSE(onUpdate?: () => void) {
   const queryClient = useQueryClient();
-
-  return useSSEConnection({
+  const { isConnected } = useSSEConnection({
     url: '/api/employees/events',
     onMessage: (data) => {
       console.log('[Employees SSE] Received event:', data);
       
       if (data.type === 'created' || data.type === 'updated' || data.type === 'deleted') {
-        // Invalidar e refazer fetch imediatamente para melhor responsividade
-        queryClient.invalidateQueries({ queryKey: ['employees'] });
-        queryClient.refetchQueries({ queryKey: ['employees'] });
+        console.log('[Employees SSE] Processing event:', data.type);
+        console.log('[Employees SSE] Employee data:', data.employee);
+        
+        // Invalidar todas as queries relacionadas a funcionários (incluindo as com filtros)
+        console.log('[Employees SSE] Invalidating queries...');
+        
+        // Invalidar queries relacionadas (simples e direto)
+        queryClient.invalidateQueries({ 
+          queryKey: ['employees'],
+          exact: false 
+        });
+        
+        // Invalidar outras queries relacionadas
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.refetchQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['workforce'] });
-        queryClient.refetchQueries({ queryKey: ['workforce'] });
+        
+        console.log('[Employees SSE] All queries invalidated and refetched');
+        
+        // Chamar callback para forçar re-renderização
+        if (onUpdate) {
+          console.log('[Employees SSE] Calling onUpdate callback...');
+          onUpdate();
+        }
         
         // Mostrar notificação para o usuário
         if (data.type === 'created') {
@@ -226,4 +252,6 @@ export function useEmployeesSSE() {
       console.log('[Employees SSE] Real-time updates enabled');
     },
   });
+
+  return { isConnected };
 } 

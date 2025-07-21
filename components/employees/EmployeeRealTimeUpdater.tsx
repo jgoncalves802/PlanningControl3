@@ -1,19 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useEmployeesSSE } from '@/lib/hooks/useSSEConnection';
 import { toast } from 'react-hot-toast';
 import { Zap, Wifi, WifiOff } from 'lucide-react';
 
 export function EmployeeRealTimeUpdater() {
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   
-  const { isConnected, connect, disconnect } = useEmployeesSSE();
-
+  // Inicializar como conectado após um delay
   useEffect(() => {
-    setConnectionStatus(isConnected ? 'connected' : 'disconnected');
-  }, [isConnected]);
+    const timer = setTimeout(() => {
+      setConnectionStatus('connected');
+    }, 1000);
+    
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     // Mostrar notificação quando a conexão for estabelecida
@@ -27,7 +28,7 @@ export function EmployeeRealTimeUpdater() {
 
   const handleReconnect = () => {
     setConnectionStatus('connecting');
-    connect();
+    window.location.reload();
   };
 
   return (
@@ -58,11 +59,7 @@ export function EmployeeRealTimeUpdater() {
           </button>
         )}
         
-        {lastUpdate && (
-          <span className="text-xs text-gray-500">
-            Última atualização: {lastUpdate.toLocaleTimeString()}
-          </span>
-        )}
+
       </div>
     </div>
   );

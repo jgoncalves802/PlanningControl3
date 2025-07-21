@@ -49,14 +49,16 @@ async function fetchEmployees(filters: EmployeeFilters = {}): Promise<EmployeesR
 }
 
 export function useEmployeesQuery(filters: EmployeeFilters = {}) {
+  const queryKey = ['employees', filters];
+  console.log('[useEmployeesQuery] Query key:', queryKey);
+  
   return useQuery({
-    queryKey: ['employees', filters],
-    queryFn: () => fetchEmployees(filters),
-    staleTime: 0, // Sem cache - sempre buscar dados frescos
-    gcTime: 0, // Sem cache - não manter dados em memória
-    refetchOnWindowFocus: true, // Refetch quando a janela ganhar foco
-    refetchOnMount: true, // Sempre refetch ao montar
-    refetchOnReconnect: true, // Refetch quando reconectar
+    queryKey,
+    queryFn: () => {
+      console.log('[useEmployeesQuery] Fetching employees with filters:', filters);
+      return fetchEmployees(filters);
+    },
+    // Usar configurações globais do ReactQueryProvider
   });
 }
 
