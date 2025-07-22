@@ -28,7 +28,7 @@ function normalizeTextFields(data: any): any {
   
   // Campos de texto que devem ser normalizados
   const textFields = [
-    'name', 'registration', 'role', 'category', 'company', 'rg',
+    'name', 'registration', 'company', 'rg',
     'workplace', 'shift', 'phone', 'nationality', 'naturalness', 
     'gender', 'maritalStatus', 'educationLevel', 'pis', 'ctps', 
     'ctpsSeries', 'ctpsUf', 'voterTitle', 'voterZone', 'voterSection',

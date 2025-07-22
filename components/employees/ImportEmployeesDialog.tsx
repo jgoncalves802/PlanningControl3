@@ -11,8 +11,19 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
+import { 
+  robustNormalizeText, 
+  validateFileEncoding, 
+  parseCSVWithEncoding, 
+  validateEmployeeDataInRealTime,
+  createTestCSVTemplate,
+  generateEncodingReport,
+  processCSVWithAutoCorrection,
+  autoCorrectEmployeeData,
+  ValidationResult 
+} from '@/lib/csvEncodingUtils';
 
 interface ImportResult {
   success: boolean;
@@ -51,38 +62,34 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
   const [isLoading, setIsLoading] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [csvData, setCsvData] = useState<any[]>([]);
+  const [encodingValidation, setEncodingValidation] = useState<ValidationResult | null>(null);
+  const [encodingReport, setEncodingReport] = useState<string>('');
+  const [autoCorrections, setAutoCorrections] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Função para converter CSV para JSON
+  // Função para converter CSV para JSON com validação de encoding
   const parseCSV = (csvText: string): any[] => {
-    const lines = csvText.split('\n');
-    if (lines.length < 2) return [];
-
-    const headers = lines[0].split(';').map(h => h.trim());
-    const data = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (!line) continue;
-
-      const values = line.split(';');
-      const row: any = {};
-
-      headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || '';
-      });
-
-      // Só adiciona se tiver pelo menos nome
-      if (row.name) {
-        data.push(row);
-      }
+    // Usar processamento com correção automática
+    const { data, corrections, encodingIssues } = processCSVWithAutoCorrection(csvText);
+    
+    // Armazenar correções para exibição
+    setAutoCorrections(corrections);
+    
+    // Mostrar avisos sobre correções aplicadas
+    if (corrections.length > 0) {
+      toast.success(`${corrections.length} correções automáticas aplicadas`);
     }
-
+    
+    // Mostrar avisos sobre problemas de encoding
+    if (encodingIssues.length > 0) {
+      toast.warning(`${encodingIssues.length} problemas de encoding detectados`);
+    }
+    
     return data;
   };
 
-  // Função para processar arquivo CSV
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Função para processar arquivo CSV com validação de encoding
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -91,19 +98,58 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const csvText = e.target?.result as string;
-      try {
-        const data = parseCSV(csvText);
-        setCsvData(data);
-        toast.success(`${data.length} registros carregados do CSV`);
-      } catch (error) {
-        toast.error('Erro ao processar arquivo CSV');
-        console.error('Erro ao processar CSV:', error);
+    try {
+      // Validar encoding do arquivo
+      const validation = await validateFileEncoding(file);
+      setEncodingValidation(validation);
+
+      if (!validation.isValid) {
+        toast.error('Problema de encoding detectado. Use UTF-8.');
+        if (validation.errors.length > 0) {
+          console.error('Erros de encoding:', validation.errors);
+        }
+        return;
       }
-    };
-    reader.readAsText(file, 'UTF-8');
+
+      if (validation.warnings.length > 0) {
+        toast.warning(`Avisos de encoding: ${validation.warnings.join(', ')}`);
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const csvText = e.target?.result as string;
+        try {
+          const data = parseCSV(csvText);
+          
+          // Validar dados em tempo real
+          const realTimeValidation = validateEmployeeDataInRealTime(data);
+          
+          if (!realTimeValidation.isValid) {
+            toast.error(`Problemas detectados: ${realTimeValidation.errors.length} erros`);
+            console.error('Erros de validação:', realTimeValidation.errors);
+          }
+
+          if (realTimeValidation.warnings.length > 0) {
+            toast.warning(`Avisos: ${realTimeValidation.warnings.length} normalizações realizadas`);
+          }
+
+          setCsvData(data);
+          
+          // Gerar relatório de encoding
+          const report = generateEncodingReport(data);
+          setEncodingReport(report);
+          
+          toast.success(`${data.length} registros carregados do CSV`);
+        } catch (error) {
+          toast.error('Erro ao processar arquivo CSV');
+          console.error('Erro ao processar CSV:', error);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    } catch (error) {
+      toast.error('Erro ao validar encoding do arquivo');
+      console.error('Erro na validação:', error);
+    }
   };
 
   // Função para fazer a importação
@@ -114,59 +160,69 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
     }
 
     setIsLoading(true);
-    setImportResult(null);
 
     try {
+      // Aplicar correção automática em todos os dados
+      const correctedEmployees = [];
+      const allCorrections: string[] = [];
+
+      for (const employee of csvData) {
+        const { correctedData, corrections } = autoCorrectEmployeeData(employee);
+        correctedEmployees.push(correctedData);
+        
+        if (corrections.length > 0) {
+          allCorrections.push(...corrections);
+        }
+      }
+
+      // Mostrar resumo das correções aplicadas
+      if (allCorrections.length > 0) {
+        console.log('Correções automáticas aplicadas:', allCorrections);
+      }
+
       const response = await fetch('/api/employees/import', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(csvData),
+        body: JSON.stringify(correctedEmployees),
       });
 
-      const result: ImportResult = await response.json();
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro na importação');
+      }
+
+      const result = await response.json();
       setImportResult(result);
-
-      if (result.summary.created > 0) {
-        toast.success(
-          `${result.summary.created} funcionários importados com sucesso!`
-        );
+      
+      if (onImportComplete) {
+        onImportComplete(result);
       }
 
-      if (result.summary.failed > 0) {
-        toast.warning(
-          `${result.summary.failed} funcionários falharam na importação`
-        );
+      if (result.success) {
+        toast.success(`Importação concluída! ${result.summary.created} funcionários criados.`);
+      } else {
+        toast.error(`Importação falhou! ${result.summary.failed} erros encontrados.`);
       }
-
-      onImportComplete?.(result);
 
     } catch (error) {
       console.error('Erro na importação:', error);
-      toast.error('Erro ao importar funcionários');
+      toast.error(`Erro na importação: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Função para baixar modelo CSV
+  // Função para baixar modelo CSV com caracteres especiais
   const downloadTemplate = () => {
-    const headers = [
-      'name', 'registration', 'company', 'cpf', 'phone', 'birthDate',
-      'gender', 'maritalStatus', 'pis', 'ctps', 'ctpsSeries', 'ctpsUf',
-      'motherName', 'role', 'category', 'currentContractId', 'admissionDate', 'status'
-    ];
-
-    const csvContent = headers.join(';') + '\n' +
-      'João Silva Santos;12345;SARTORI SERVIÇOS;12345678901;31987654321;15/05/1985;Masculino;Solteiro;;;;;;;Operador;CLT;;01/03/2024;Ativo\n' +
-      'Maria Santos Costa;12346;SARTORI SERVIÇOS;98765432100;31987654322;20/08/1990;Feminino;Casada;;;;;;;Auxiliar;CLT;;15/03/2024;Ativo';
-
+    const csvContent = createTestCSVTemplate();
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = 'modelo_importacao_funcionarios.csv';
     link.click();
+    toast.success('Modelo CSV baixado com sucesso!');
   };
 
   // Reset do dialog
@@ -175,6 +231,9 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
     if (!open) {
       setCsvData([]);
       setImportResult(null);
+      setEncodingValidation(null);
+      setEncodingReport('');
+      setAutoCorrections([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -248,6 +307,91 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
                   </div>
                 </div>
               )}
+
+              {/* Seção de Validação de Encoding */}
+              {encodingValidation && (
+                <div className={`border rounded-md p-3 ${
+                  encodingValidation.isValid 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <div className="flex items-start">
+                    {encodingValidation.isValid ? (
+                      <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                    )}
+                    <div className="ml-2 text-sm">
+                      <p className={`font-medium ${
+                        encodingValidation.isValid ? 'text-green-800' : 'text-red-800'
+                      }`}>
+                        Validação de Encoding: {encodingValidation.isValid ? 'APROVADO' : 'REPROVADO'}
+                      </p>
+                      
+                      {encodingValidation.warnings.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-yellow-700 font-medium">Avisos:</p>
+                          <ul className="list-disc list-inside text-yellow-700">
+                            {encodingValidation.warnings.map((warning, index) => (
+                              <li key={index}>{warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {encodingValidation.errors.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-red-700 font-medium">Erros:</p>
+                          <ul className="list-disc list-inside text-red-700">
+                            {encodingValidation.errors.map((error, index) => (
+                              <li key={index}>{error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Relatório de Encoding */}
+              {encodingReport && (
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-start">
+                    <FileText className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="ml-2 text-sm text-blue-800">
+                      <p className="font-medium">Relatório de Encoding:</p>
+                      <pre className="mt-2 text-xs whitespace-pre-wrap font-mono">
+                        {encodingReport}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Correções Automáticas Aplicadas */}
+              {autoCorrections.length > 0 && (
+                <div className="bg-green-50 border border-green-200 rounded-md p-3">
+                  <div className="flex items-start">
+                    <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div className="ml-2 text-sm text-green-800">
+                      <p className="font-medium">✅ Correções Automáticas Aplicadas ({autoCorrections.length}):</p>
+                      <div className="mt-2 max-h-32 overflow-y-auto">
+                        {autoCorrections.slice(0, 10).map((correction, index) => (
+                          <div key={index} className="text-xs text-green-700">
+                            • {correction}
+                          </div>
+                        ))}
+                        {autoCorrections.length > 10 && (
+                          <div className="text-xs text-green-600 italic">
+                            ... e mais {autoCorrections.length - 10} correções
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
 
@@ -266,6 +410,8 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
                         <li>Matrículas devem ser únicas por empresa</li>
                         <li>Datas devem estar no formato DD/MM/YYYY</li>
                         <li>Telefones devem ter 10 ou 11 dígitos</li>
+                        <li>Arquivo deve estar em <strong>UTF-8</strong> para caracteres especiais</li>
+                        <li>Nomes com acentos (João, Antônia) serão normalizados automaticamente</li>
                       </ul>
                     </div>
                   </div>

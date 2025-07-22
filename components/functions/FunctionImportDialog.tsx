@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useRef } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Upload, 
   Download, 
@@ -11,12 +10,20 @@ import {
   AlertCircle,
   Loader2,
   FileSpreadsheet,
-  Info
+  Info,
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'react-hot-toast'
 import { useQueryClient } from '@tanstack/react-query'
+import { 
+  robustNormalizeText, 
+  validateFileEncoding, 
+  parseCSVWithEncoding,
+  autoCorrectFunctionData,
+  ValidationResult 
+} from '@/lib/csvEncodingUtils'
 
 interface ImportResult {
   success: number
@@ -39,6 +46,8 @@ export default function FunctionImportDialog({
   const [isProcessing, setIsProcessing] = useState(false)
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [dragActive, setDragActive] = useState(false)
+  const [encodingValidation, setEncodingValidation] = useState<ValidationResult | null>(null)
+  const [autoCorrections, setAutoCorrections] = useState<string[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -70,93 +79,52 @@ export default function FunctionImportDialog({
   }
 
   const parseCSV = (csvText: string) => {
-    const lines = csvText.trim().split('\n')
+    // Usar o parser robusto com validação de encoding
+    const data = parseCSVWithEncoding(csvText)
     
-    // Detectar se há BOM e removê-lo
-    const firstLine = lines[0].replace(/^\uFEFF/, '')
-    lines[0] = firstLine
+    // Aplicar correção automática em cada função
+    const correctedFunctions = [];
+    const allCorrections: string[] = [];
     
-    // Função para parsear linha CSV considerando aspas
-    const parseCSVLine = (line: string) => {
-      const result = []
-      let current = ''
-      let inQuotes = false
+    data.forEach((row, index) => {
+      const func: any = {}
       
-      for (let i = 0; i < line.length; i++) {
-        const char = line[i]
-        
-        if (char === '"') {
-          if (inQuotes && line[i + 1] === '"') {
-            // Aspas duplas escapadas
-            current += '"'
-            i++ // Pular próxima aspa
-          } else {
-            // Alternar estado de aspas
-            inQuotes = !inQuotes
-          }
-        } else if (char === ',' && !inQuotes) {
-          // Separador encontrado fora de aspas
-          result.push(current.trim())
-          current = ''
+      if (row.name) {
+        func.name = robustNormalizeText(row.name)
+      }
+      
+      if (row.laborType || row.tipo || row.tipoMaoObra) {
+        const laborType = row.laborType || row.tipo || row.tipoMaoObra
+        const normalized = laborType.toUpperCase().trim()
+        if (normalized === 'DIRETO' || normalized === 'DIRETA' || normalized === 'DIRECT') {
+          func.laborType = 'DIRETO'
+        } else if (normalized === 'INDIRETO' || normalized === 'INDIRETA' || normalized === 'INDIRECT') {
+          func.laborType = 'INDIRETO'
         } else {
-          current += char
+          func.laborType = normalized
         }
       }
       
-      // Adicionar último campo
-      result.push(current.trim())
-      return result
-    }
-    
-    const headers = parseCSVLine(lines[0])
-    
-    // Mapear headers para chaves esperadas (flexível)
-    const headerMap: { [key: string]: string } = {}
-    headers.forEach((header, index) => {
-      const normalizedHeader = header.toLowerCase().trim()
-      if (normalizedHeader.includes('nome') || normalizedHeader === 'name') {
-        headerMap[index] = 'name'
-      } else if (normalizedHeader.includes('tipo') || normalizedHeader.includes('mão') || normalizedHeader.includes('obra') || normalizedHeader === 'labortype') {
-        headerMap[index] = 'laborType'
+      // Aplicar correção automática
+      const { correctedData, corrections } = autoCorrectFunctionData(func)
+      correctedFunctions.push(correctedData)
+      
+      if (corrections.length > 0) {
+        corrections.forEach(correction => {
+          allCorrections.push(`Linha ${index + 1}: ${correction}`)
+        })
       }
     })
     
-    const functions = []
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseCSVLine(lines[i])
-      
-      // Pular linhas vazias
-      if (values.every(v => v === '')) continue
-      
-      const func: any = {}
-      
-      // Mapear valores usando o mapeamento de headers
-      Object.keys(headerMap).forEach(index => {
-        const key = headerMap[index]
-        const value = values[parseInt(index)]
-        
-        if (key === 'name') {
-          func.name = value
-        } else if (key === 'laborType') {
-          // Normalizar tipo de mão de obra
-          const normalized = value.toUpperCase().trim()
-          if (normalized === 'DIRETO' || normalized === 'DIRETA' || normalized === 'DIRECT') {
-            func.laborType = 'DIRETO'
-          } else if (normalized === 'INDIRETO' || normalized === 'INDIRETA' || normalized === 'INDIRECT') {
-            func.laborType = 'INDIRETO'
-          } else {
-            func.laborType = value // Manter original para validação na API
-          }
-        }
-      })
-      
-      // Só adicionar se tiver pelo menos o nome
-      if (func.name && func.name.trim() !== '') {
-        functions.push(func)
-      }
+    // Armazenar correções para exibição
+    setAutoCorrections(allCorrections)
+    
+    // Mostrar avisos sobre correções aplicadas
+    if (allCorrections.length > 0) {
+      toast.success(`${allCorrections.length} correções automáticas aplicadas`)
     }
     
-    return functions
+    return correctedFunctions.filter(func => func.name && func.name.trim() !== '')
   }
 
   const handleFileUpload = async (file: File) => {
@@ -170,8 +138,26 @@ export default function FunctionImportDialog({
 
     setIsProcessing(true)
     setImportResult(null)
+    setEncodingValidation(null)
 
     try {
+      // Validar encoding do arquivo
+      const validation = await validateFileEncoding(file)
+      setEncodingValidation(validation)
+
+      if (!validation.isValid) {
+        toast.error('Problema de encoding detectado. Use UTF-8.')
+        if (validation.errors.length > 0) {
+          console.error('Erros de encoding:', validation.errors)
+        }
+        setIsProcessing(false)
+        return
+      }
+
+      if (validation.warnings.length > 0) {
+        toast.error(`Avisos de encoding: ${validation.warnings.join(', ')}`)
+      }
+
       const text = await file.text()
       const functions = parseCSV(text)
       
@@ -243,6 +229,8 @@ export default function FunctionImportDialog({
   const handleClose = () => {
     setImportResult(null)
     setIsProcessing(false)
+    setEncodingValidation(null)
+    setAutoCorrections([])
     onClose()
   }
 
@@ -250,12 +238,7 @@ export default function FunctionImportDialog({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-      >
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100">
             Importar Funções em Massa
@@ -292,8 +275,10 @@ export default function FunctionImportDialog({
               <ul className="text-xs text-blue-800 dark:text-blue-200 space-y-1">
                 <li>• <strong>Todas as funções</strong> são criadas como <strong>ATIVAS</strong> automaticamente</li>
                 <li>• <strong>Caracteres especiais</strong> são suportados (ç, ã, é, etc.)</li>
+                <li>• <strong>Arquivo deve estar em UTF-8</strong> para caracteres especiais</li>
                 <li>• <strong>Tipo de mão de obra:</strong> use "DIRETO" ou "INDIRETO"</li>
                 <li>• <strong>Nomes duplicados</strong> serão ignorados (sem sobrescrever)</li>
+                <li>• <strong>Nomes com acentos</strong> serão normalizados automaticamente</li>
               </ul>
             </div>
           </div>
@@ -332,44 +317,104 @@ export default function FunctionImportDialog({
             
             <div className="space-y-4">
               <div className="flex justify-center">
-                {isProcessing ? (
-                  <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                ) : (
-                  <Upload className="h-12 w-12 text-gray-400 dark:text-slate-500" />
-                )}
+                <FileSpreadsheet className="h-12 w-12 text-gray-400" />
               </div>
               
               <div>
-                <p className="text-lg font-medium text-gray-900 dark:text-slate-100">
-                  {isProcessing ? 'Processando arquivo...' : 'Arraste o arquivo CSV aqui'}
-                </p>
-                <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
-                  ou clique para selecionar
+                <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">
+                  {dragActive ? 'Solte o arquivo aqui' : 'Arraste e solte ou clique para selecionar'}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                  Apenas arquivos CSV são aceitos
                 </p>
               </div>
               
-              {!isProcessing && (
+              {!dragActive && (
                 <Button
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="mt-4"
+                  className="gap-2"
                 >
-                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  <Upload className="h-4 w-4" />
                   Selecionar Arquivo CSV
                 </Button>
               )}
             </div>
           </div>
 
+          {/* Seção de Validação de Encoding */}
+          {encodingValidation && (
+            <div className={`border rounded-md p-3 ${
+              encodingValidation.isValid 
+                ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' 
+                : 'bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800'
+            }`}>
+              <div className="flex items-start">
+                {encodingValidation.isValid ? (
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                ) : (
+                  <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5" />
+                )}
+                <div className="ml-2 text-sm">
+                  <p className={`font-medium ${
+                    encodingValidation.isValid ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
+                  }`}>
+                    Validação de Encoding: {encodingValidation.isValid ? 'APROVADO' : 'REPROVADO'}
+                  </p>
+                  
+                  {encodingValidation.warnings.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-yellow-700 dark:text-yellow-300 font-medium">Avisos:</p>
+                      <ul className="list-disc list-inside text-yellow-700 dark:text-yellow-300">
+                        {encodingValidation.warnings.map((warning, index) => (
+                          <li key={index}>{warning}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {encodingValidation.errors.length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-red-700 dark:text-red-300 font-medium">Erros:</p>
+                      <ul className="list-disc list-inside text-red-700 dark:text-red-300">
+                        {encodingValidation.errors.map((error, index) => (
+                          <li key={index}>{error}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Correções Automáticas Aplicadas */}
+          {autoCorrections.length > 0 && (
+            <div className="bg-green-50 border border-green-200 rounded-md p-3 dark:bg-green-900/20 dark:border-green-800">
+              <div className="flex items-start">
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                <div className="ml-2 text-sm text-green-800 dark:text-green-300">
+                  <p className="font-medium">✅ Correções Automáticas Aplicadas ({autoCorrections.length}):</p>
+                  <div className="mt-2 max-h-32 overflow-y-auto">
+                    {autoCorrections.slice(0, 10).map((correction, index) => (
+                      <div key={index} className="text-xs text-green-700 dark:text-green-400">
+                        • {correction}
+                      </div>
+                    ))}
+                    {autoCorrections.length > 10 && (
+                      <div className="text-xs text-green-600 dark:text-green-500 italic">
+                        ... e mais {autoCorrections.length - 10} correções
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Resultado da importação */}
-          <AnimatePresence>
-            {importResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="space-y-4"
-              >
+          {importResult && (
+            <div className="space-y-4">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -448,9 +493,8 @@ export default function FunctionImportDialog({
                     )}
                   </CardContent>
                 </Card>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </div>
 
         <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-slate-700">
@@ -462,7 +506,7 @@ export default function FunctionImportDialog({
             {importResult ? 'Fechar' : 'Cancelar'}
           </Button>
         </div>
-      </motion.div>
+      </div>
     </div>
   )
 } 

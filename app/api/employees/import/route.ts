@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
+import { autoCorrectEmployeeData } from '@/lib/csvEncodingUtils';
 
 const prisma = new PrismaClient();
 
@@ -159,8 +160,6 @@ async function validateEmployeeFromCSV(data: any, index: number) {
   const maxLengths: Record<string, number> = {
     name: 100,
     registration: 20,
-    role: 50,
-    category: 30,
     company: 50,
     phone: 20,
     gender: 10,
@@ -188,30 +187,30 @@ async function validateEmployeeFromCSV(data: any, index: number) {
   return errors;
 }
 
-// Função para converter dados do CSV para formato do banco
+// Função de conversão de dados CSV para formato do banco
 function convertCSVToEmployeeData(csvData: any): any {
-  const employeeData: any = {
+  const employeeData = {
     name: normalizeText(csvData.name),
     registration: csvData.registration?.toString(),
     company: normalizeText(csvData.company),
-    cpf: csvData.cpf?.replace(/\D/g, ''), // Remove formatação
+    cpf: csvData.cpf?.replace(/\D/g, ''),
+    motherName: csvData.motherName ? normalizeText(csvData.motherName) : null,
     phone: csvData.phone && csvData.phone.trim() ? csvData.phone.replace(/\D/g, '') : null,
-    
     gender: csvData.gender && csvData.gender.trim() ? normalizeText(csvData.gender) : null,
     maritalStatus: csvData.maritalStatus && csvData.maritalStatus.trim() ? normalizeText(csvData.maritalStatus) : null,
     pis: csvData.pis && csvData.pis.trim() ? csvData.pis.replace(/\D/g, '') : null,
     ctps: csvData.ctps && csvData.ctps.trim() ? csvData.ctps.replace(/\D/g, '') : null,
     ctpsSeries: csvData.ctpsSeries && csvData.ctpsSeries.trim() ? csvData.ctpsSeries : null,
     ctpsUf: csvData.ctpsUf && csvData.ctpsUf.trim() ? csvData.ctpsUf.toUpperCase() : null,
-    motherName: csvData.motherName && csvData.motherName.trim() ? normalizeText(csvData.motherName) : null,
-    status: csvData.status && csvData.status.trim() ? normalizeText(csvData.status) : 'Ativo',
+    // Sempre definir status como ACTIVE para funcionários importados
+    status: 'ACTIVE',
     isActive: true,
     
     // Campos de data
     birthDate: parseDate(csvData.birthDate),
     admissionDate: parseDate(csvData.admissionDate),
     
-    // Campos adicionais que podem estar vazios
+    // Campos adicionais
     rg: csvData.rg || null,
     workplace: csvData.workplace || null,
     shift: csvData.shift || null,
@@ -238,14 +237,7 @@ function convertCSVToEmployeeData(csvData: any): any {
     segundaExperiencia: parseDate(csvData.segundaExperiencia),
     previsaoObra: parseDate(csvData.previsaoObra),
   };
-  
-  // Remove campos undefined/null desnecessários
-  Object.keys(employeeData).forEach(key => {
-    if (employeeData[key] === undefined || employeeData[key] === '') {
-      employeeData[key] = null;
-    }
-  });
-  
+
   return employeeData;
 }
 
@@ -269,23 +261,31 @@ export async function POST(req: NextRequest) {
     
     for (const [index, csvData] of employees.entries()) {
       try {
-        // Validar dados do CSV
-        const errors = await validateEmployeeFromCSV(csvData, index);
+        // Aplicar correção automática de caracteres especiais
+        const { correctedData, corrections } = autoCorrectEmployeeData(csvData);
         
-    if (Object.keys(errors).length > 0) {
+        // Log das correções aplicadas (para debug)
+        if (corrections.length > 0) {
+          console.log(`Correções aplicadas para funcionário ${index + 1}:`, corrections);
+        }
+        
+        // Validar dados do CSV (usando dados corrigidos)
+        const errors = await validateEmployeeFromCSV(correctedData, index);
+        
+        if (Object.keys(errors).length > 0) {
           results.push({ 
             index: index + 1, 
-            name: csvData.name || 'Nome não informado',
-            registration: csvData.registration || 'Matrícula não informada',
+            name: correctedData.name || 'Nome não informado',
+            registration: correctedData.registration || 'Matrícula não informada',
             status: 'error', 
             errors 
           });
-          failedEmployees.push({ index: index + 1, name: csvData.name, errors });
-      continue;
-    }
+          failedEmployees.push({ index: index + 1, name: correctedData.name, errors });
+          continue;
+        }
         
-        // Converter dados para formato do banco
-        const employeeData = convertCSVToEmployeeData(csvData);
+        // Converter dados para formato do banco (usando dados corrigidos)
+        const employeeData = convertCSVToEmployeeData(correctedData);
         
         // Criar funcionário no banco
         const employee = await prisma.employee.create({ 

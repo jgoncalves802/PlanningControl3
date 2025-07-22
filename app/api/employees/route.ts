@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
 
     // Tamanhos máximos
     const maxLengths: Record<string, number> = {
-      name: 100, registration: 20, role: 50, category: 30, company: 50, cpf: 14, rg: 20,
+      name: 100, registration: 20, company: 50, cpf: 14, rg: 20,
       phone: 20, nationality: 30, naturalness: 30, gender: 10, maritalStatus: 20, pis: 20,
       ctps: 20, ctpsSeries: 10, ctpsUf: 2, voterTitle: 20, voterZone: 10, voterSection: 10,
       reservist: 20, reservistCategory: 10, cnh: 20, cnhCategory: 5, motherName: 100, fatherName: 100, notes: 500,
@@ -335,7 +335,7 @@ export async function POST(req: NextRequest) {
 
     // Preencher todos os campos obrigatórios do Prisma (exceto name e cpf) com valor padrão se não enviados
     const prismaRequiredFields = [
-      'role', 'category', 'rg', 'status', 'workplace', 'shift', 'phone', 'address',
+      'rg', 'status', 'workplace', 'shift', 'phone', 'address',
       'nationality', 'naturalness', 'gender', 'maritalStatus', 'educationLevel', 'pis', 'ctps', 'ctpsSeries', 'ctpsUf',
       'voterTitle', 'voterZone', 'voterSection', 'reservist', 'reservistCategory', 'cnh', 'cnhCategory',
       'motherName', 'fatherName', 'dependents', 'isActive', 'createdAt', 'updatedAt'

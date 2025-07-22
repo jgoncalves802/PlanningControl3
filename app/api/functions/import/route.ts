@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { validateUserAccess, User, UserRole } from '@/lib/auth'
 import { PrismaClient } from '@prisma/client'
+import { autoCorrectFunctionData } from '@/lib/csvEncodingUtils'
 
 const prisma = new PrismaClient()
 
@@ -51,19 +52,27 @@ export async function POST(req: NextRequest) {
       const rowNumber = i + 2 // +2 porque linha 1 é header e começamos do 0
 
       try {
-        // Validar dados obrigatórios
-        if (!func.name || typeof func.name !== 'string' || func.name.trim() === '') {
+        // Aplicar correção automática de caracteres especiais
+        const { correctedData, corrections } = autoCorrectFunctionData(func)
+        
+        // Log das correções aplicadas (para debug)
+        if (corrections.length > 0) {
+          console.log(`Correções aplicadas para função ${rowNumber}:`, corrections)
+        }
+        
+        // Validar dados obrigatórios (usando dados corrigidos)
+        if (!correctedData.name || typeof correctedData.name !== 'string' || correctedData.name.trim() === '') {
           results.errors.push(`Linha ${rowNumber}: Nome da função é obrigatório`)
           continue
         }
 
-        if (!func.laborType || typeof func.laborType !== 'string' || !['DIRETO', 'INDIRETO'].includes(func.laborType.toUpperCase())) {
+        if (!correctedData.laborType || typeof correctedData.laborType !== 'string' || !['DIRETO', 'INDIRETO'].includes(correctedData.laborType.toUpperCase())) {
           results.errors.push(`Linha ${rowNumber}: Tipo de mão de obra deve ser "DIRETO" ou "INDIRETO"`)
           continue
         }
 
         // Normalizar e limpar nome (preservar caracteres especiais, mas limpar espaços)
-        const normalizedName = func.name.trim().toUpperCase()
+        const normalizedName = correctedData.name.trim().toUpperCase()
         
         // Validar se o nome não está vazio após limpeza
         if (normalizedName === '') {
@@ -87,7 +96,7 @@ export async function POST(req: NextRequest) {
         await prisma.companyFunction.create({
           data: {
             name: normalizedName,
-            laborType: func.laborType.toUpperCase(),
+            laborType: correctedData.laborType.toUpperCase(),
             isActive: true // Sempre ativo por padrão
           }
         })
