@@ -44,7 +44,7 @@ module.exports = {
         headers: [
           {
             key: 'Permissions-Policy',
-            value: 'nfc=*, camera=*, microphone=*, geolocation=*',
+            value: 'camera=*, microphone=*, geolocation=*',
           },
           {
             key: 'Cross-Origin-Embedder-Policy',
@@ -53,10 +53,6 @@ module.exports = {
           {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin-allow-popups',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
           },
         ],
       },
@@ -69,6 +65,38 @@ module.exports = {
           },
         ],
       },
+      {
+        source: '/api/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          },
+          {
+            key: 'Pragma',
+            value: 'no-cache',
+          },
+          {
+            key: 'Expires',
+            value: '0',
+          },
+        ],
+      },
     ];
   },
+
+  // Configuração para melhorar o build
+  output: 'standalone',
+  
+  // Configuração para resolver problemas de assets com ngrok
+  assetPrefix: process.env.NODE_ENV === 'production' ? undefined : '',
+  
+  // Configuração para resolver problemas de base path
+  basePath: '',
+  
+  // Configuração para resolver problemas de trailing slash
+  trailingSlash: false,
+  
+  // Configuração para resolver problemas de compressão
+  compress: true,
 }

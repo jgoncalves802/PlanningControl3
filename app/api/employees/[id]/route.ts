@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-// Criar uma única instância do Prisma Client
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+import { prisma } from '@/lib/prisma';
+import { formatCPF, convertExcelNumberToDate, isExcelNumber, convertNameToUpperCase } from '@/lib/csvEncodingUtils';
 
 // Função para normalizar caracteres especiais e garantir UTF-8
 function normalizeText(text: string): string {
@@ -145,6 +135,16 @@ export async function PUT(req: NextRequest, { params }) {
     // Normalizar caracteres especiais
     const updates = normalizeTextFields(rawUpdates);
     
+    // Converter nome para maiúsculo se fornecido
+    if (updates.name && typeof updates.name === 'string') {
+      updates.name = convertNameToUpperCase(updates.name);
+    }
+    
+    // Formatar CPF se fornecido
+    if (updates.cpf) {
+      updates.cpf = formatCPF(updates.cpf);
+    }
+    
     // Converter endereco para address se necessário
     if (updates.endereco && typeof updates.endereco === 'object') {
       updates.address = updates.endereco;
@@ -190,10 +190,31 @@ export async function PUT(req: NextRequest, { params }) {
       if (filteredUpdates[field] !== undefined) {
         if (!filteredUpdates[field] || filteredUpdates[field] === '') {
           filteredUpdates[field] = null;
-        } else if (typeof filteredUpdates[field] === 'string') {
+        } else if (typeof filteredUpdates[field] === 'string' || typeof filteredUpdates[field] === 'number') {
           try {
-            filteredUpdates[field] = new Date(filteredUpdates[field]);
+            // Primeiro, verificar se é um número do Excel
+            if (isExcelNumber(filteredUpdates[field])) {
+              const excelDate = convertExcelNumberToDate(filteredUpdates[field]);
+              if (excelDate) {
+                filteredUpdates[field] = excelDate;
+                return;
+              }
+            }
+            
+            // Se não é número do Excel, tentar como data normal
+            const date = new Date(filteredUpdates[field]);
+            // Validar se a data é válida e está em um intervalo razoável
+            if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+              filteredUpdates[field] = date;
+            } else {
+              filteredUpdates[field] = null;
+            }
           } catch (e) {
+            filteredUpdates[field] = null;
+          }
+        } else if (filteredUpdates[field] instanceof Date) {
+          // Se já é um objeto Date, validar se é válido
+          if (isNaN(filteredUpdates[field].getTime()) || filteredUpdates[field].getFullYear() < 1900 || filteredUpdates[field].getFullYear() > 2100) {
             filteredUpdates[field] = null;
           }
         }
@@ -222,6 +243,21 @@ export async function PUT(req: NextRequest, { params }) {
         filteredUpdates.efetivoRDO = null;
       } else {
         filteredUpdates.efetivoRDO = Boolean(filteredUpdates.efetivoRDO);
+      }
+    }
+    
+    // Validação de telefone (opcional, mas se fornecido deve ser válido)
+    if (filteredUpdates.phone !== undefined) {
+      if (!filteredUpdates.phone || filteredUpdates.phone === '') {
+        filteredUpdates.phone = null;
+      } else {
+        const cleanPhone = String(filteredUpdates.phone).replace(/\D/g, '');
+        if (!/^\d{10,11}$/.test(cleanPhone)) {
+          console.log('Telefone inválido removido. Deve ser inserido posteriormente.');
+          filteredUpdates.phone = null;
+        } else {
+          filteredUpdates.phone = cleanPhone;
+        }
       }
     }
     

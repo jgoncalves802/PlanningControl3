@@ -70,3 +70,21 @@ export function getInitials(name: string) {
 export function capitalizeFirst(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
+
+/**
+ * Formata CPF para exibição no formato XXX.XXX.XXX-XX
+ * @param cpf - CPF a ser formatado (pode ser string ou número)
+ * @returns CPF formatado ou string vazia se inválido
+ */
+export function formatCPFForDisplay(cpf: string | number | null | undefined): string {
+  if (!cpf) return '';
+  
+  // Converter para string e remover caracteres não numéricos
+  const cpfString = String(cpf).replace(/\D/g, '');
+  
+  // Verificar se tem 11 dígitos
+  if (cpfString.length !== 11) return cpfString;
+  
+  // Formatar no padrão XXX.XXX.XXX-XX
+  return cpfString.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+}

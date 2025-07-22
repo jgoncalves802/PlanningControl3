@@ -4,7 +4,7 @@ import React, { memo } from 'react';
 import { Employee } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Clock, Mail, Phone } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatCPFForDisplay } from '@/lib/utils';
 import { StatusBadge } from '@/components/ui/status-badge';
 
 interface ColumnConfig {
@@ -104,7 +104,7 @@ const EmployeeTable = memo(function EmployeeTable({
           </div>
         );
       case 'cpf':
-        return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.cpf}</span>;
+        return <span className="text-sm text-gray-900 dark:text-slate-100 font-mono">{formatCPFForDisplay(employee.cpf)}</span>;
       case 'matricula':
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.id ? employee.id.padStart(6, '0') : '-'}</span>;
       case 'cargo':

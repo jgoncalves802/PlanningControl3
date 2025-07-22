@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-import { autoCorrectEmployeeData } from '@/lib/csvEncodingUtils';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { autoCorrectEmployeeData, formatCPF, convertExcelNumberToDate, isExcelNumber, convertNameToUpperCase } from '@/lib/csvEncodingUtils';
 
 // Função para normalizar texto (caracteres especiais)
 function normalizeText(text: string): string {
@@ -63,37 +61,59 @@ function validateCPF(cpf: string): boolean {
   return true;
 }
 
-// Função para validar telefone
+// Função para validar telefone (opcional)
 function validatePhone(phone: string): boolean {
-  if (!phone) return false;
+  if (!phone || phone.trim() === '') return true; // Telefone vazio é válido (opcional)
   const cleanPhone = phone.replace(/\D/g, '');
   return cleanPhone.length >= 10 && cleanPhone.length <= 11;
 }
 
-// Função para converter data do formato DD/MM/YYYY
-function parseDate(dateString: string): Date | null {
-  if (!dateString || dateString.trim() === '') return null;
+// Função para converter data do formato DD/MM/YYYY ou número do Excel
+function parseDate(dateString: string | number): Date | null {
+  if (!dateString) return null;
   
-  // Tenta formato DD/MM/YYYY
-  const dateParts = dateString.split('/');
-  if (dateParts.length === 3) {
-    const day = parseInt(dateParts[0], 10);
-    const month = parseInt(dateParts[1], 10) - 1; // JavaScript months are 0-indexed
-    const year = parseInt(dateParts[2], 10);
-    
-    const date = new Date(year, month, day);
-    if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
-      return date;
+  // Converter para string se for número
+  const dateStr = String(dateString).trim();
+  if (!dateStr) return null;
+  
+  try {
+    // Primeiro, verificar se é um número do Excel
+    if (isExcelNumber(dateStr)) {
+      const excelDate = convertExcelNumberToDate(dateStr);
+      if (excelDate) {
+        return excelDate;
+      }
     }
+    
+    // Tenta formato DD/MM/YYYY
+    const dateParts = dateStr.split('/');
+    if (dateParts.length === 3) {
+      const day = parseInt(dateParts[0], 10);
+      const month = parseInt(dateParts[1], 10) - 1; // JavaScript months are 0-indexed
+      const year = parseInt(dateParts[2], 10);
+      
+      // Validar se os valores são válidos
+      if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
+        return null;
+      }
+      
+      const date = new Date(year, month, day);
+      if (date.getFullYear() === year && date.getMonth() === month && date.getDate() === day) {
+        return date;
+      }
+    }
+    
+    // Tenta formato ISO
+    const isoDate = new Date(dateStr);
+    if (!isNaN(isoDate.getTime()) && isoDate.getFullYear() > 1900 && isoDate.getFullYear() < 2100) {
+      return isoDate;
+    }
+    
+    return null;
+  } catch (error) {
+    console.warn('Erro ao converter data:', dateString, error);
+    return null;
   }
-  
-  // Tenta formato ISO
-  const isoDate = new Date(dateString);
-  if (!isNaN(isoDate.getTime())) {
-    return isoDate;
-  }
-  
-  return null;
 }
 
 // Função de validação para dados do CSV
@@ -128,9 +148,15 @@ async function validateEmployeeFromCSV(data: any, index: number) {
     }
   }
   
-  // Validação de telefone
-  if (data.phone && !validatePhone(data.phone)) {
-    errors.phone = 'Telefone inválido (deve ter 10 ou 11 dígitos)';
+  // Validação de telefone (opcional)
+  if (data.phone && data.phone.trim() !== '') {
+    if (!validatePhone(data.phone)) {
+      // Em vez de erro, remover o telefone e informar
+      data.phone = null;
+      console.log(`Funcionário ${index + 1} (${data.name}): Telefone inválido removido. Deve ser inserido posteriormente.`);
+    }
+  } else {
+    data.phone = null;
   }
   
   // Validação de datas
@@ -190,12 +216,24 @@ async function validateEmployeeFromCSV(data: any, index: number) {
 // Função de conversão de dados CSV para formato do banco
 function convertCSVToEmployeeData(csvData: any): any {
   const employeeData = {
-    name: normalizeText(csvData.name),
+    name: convertNameToUpperCase(normalizeText(csvData.name)),
     registration: csvData.registration?.toString(),
     company: normalizeText(csvData.company),
-    cpf: csvData.cpf?.replace(/\D/g, ''),
+    cpf: formatCPF(csvData.cpf), // Aplicar formatação de CPF
     motherName: csvData.motherName ? normalizeText(csvData.motherName) : null,
-    phone: csvData.phone && csvData.phone.trim() ? csvData.phone.replace(/\D/g, '') : null,
+    phone: (() => {
+      if (csvData.phone && csvData.phone.trim()) {
+        const cleanPhone = csvData.phone.replace(/\D/g, '');
+        // Validar se tem 10 ou 11 dígitos
+        if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+          return cleanPhone;
+        } else {
+          console.log(`Telefone inválido para ${csvData.name}: "${csvData.phone}". Será salvo sem telefone.`);
+          return null;
+        }
+      }
+      return null;
+    })(),
     gender: csvData.gender && csvData.gender.trim() ? normalizeText(csvData.gender) : null,
     maritalStatus: csvData.maritalStatus && csvData.maritalStatus.trim() ? normalizeText(csvData.maritalStatus) : null,
     pis: csvData.pis && csvData.pis.trim() ? csvData.pis.replace(/\D/g, '') : null,
@@ -232,11 +270,20 @@ function convertCSVToEmployeeData(csvData: any): any {
     horasExtrasTrabalhadas: csvData.horasExtrasTrabalhadas ? parseFloat(csvData.horasExtrasTrabalhadas) : null,
     horasNoturnasTrabalhadas: csvData.horasNoturnasTrabalhadas ? parseFloat(csvData.horasNoturnasTrabalhadas) : null,
     
-    // Campos de experiência (datas)
+    // Campos de experiência (datas) - com validação adicional
     primeiraExperiencia: parseDate(csvData.primeiraExperiencia),
     segundaExperiencia: parseDate(csvData.segundaExperiencia),
     previsaoObra: parseDate(csvData.previsaoObra),
   };
+
+  // Validação final das datas antes de retornar
+  const dateFields = ['birthDate', 'admissionDate', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'];
+  dateFields.forEach(field => {
+    if (employeeData[field] && (isNaN(employeeData[field].getTime()) || employeeData[field].getFullYear() < 1900 || employeeData[field].getFullYear() > 2100)) {
+      console.warn(`Data inválida para campo ${field}:`, employeeData[field]);
+      employeeData[field] = null;
+    }
+  });
 
   return employeeData;
 }

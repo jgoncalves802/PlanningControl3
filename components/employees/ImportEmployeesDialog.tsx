@@ -11,7 +11,7 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
-import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, AlertTriangle } from 'lucide-react';
+import { Upload, FileText, CheckCircle, XCircle, AlertCircle, Download, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { 
   robustNormalizeText, 
@@ -53,6 +53,15 @@ interface ImportResult {
   }>;
 }
 
+interface ImportProgress {
+  current: number;
+  total: number;
+  currentEmployee: string;
+  status: 'preparing' | 'processing' | 'completed' | 'error';
+  stage: 'validation' | 'correction' | 'import' | 'finalizing';
+  message: string;
+}
+
 interface ImportEmployeesDialogProps {
   onImportComplete?: (result: ImportResult) => void;
 }
@@ -65,6 +74,7 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
   const [encodingValidation, setEncodingValidation] = useState<ValidationResult | null>(null);
   const [encodingReport, setEncodingReport] = useState<string>('');
   const [autoCorrections, setAutoCorrections] = useState<string[]>([]);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Função para converter CSV para JSON com validação de encoding
@@ -82,7 +92,7 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
     
     // Mostrar avisos sobre problemas de encoding
     if (encodingIssues.length > 0) {
-      toast.warning(`${encodingIssues.length} problemas de encoding detectados`);
+      toast.error(`${encodingIssues.length} problemas de encoding detectados`);
     }
     
     return data;
@@ -99,60 +109,31 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
     }
 
     try {
+      const text = await file.text();
+      const data = parseCSV(text);
+      setCsvData(data);
+      
       // Validar encoding do arquivo
       const validation = await validateFileEncoding(file);
       setEncodingValidation(validation);
-
-      if (!validation.isValid) {
-        toast.error('Problema de encoding detectado. Use UTF-8.');
-        if (validation.errors.length > 0) {
-          console.error('Erros de encoding:', validation.errors);
-        }
-        return;
+      
+      if (validation.isValid) {
+        toast.success('Arquivo CSV carregado com sucesso!');
+      } else {
+        toast.error('Problemas de encoding detectados no arquivo');
       }
-
-      if (validation.warnings.length > 0) {
-        toast.warning(`Avisos de encoding: ${validation.warnings.join(', ')}`);
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const csvText = e.target?.result as string;
-        try {
-          const data = parseCSV(csvText);
-          
-          // Validar dados em tempo real
-          const realTimeValidation = validateEmployeeDataInRealTime(data);
-          
-          if (!realTimeValidation.isValid) {
-            toast.error(`Problemas detectados: ${realTimeValidation.errors.length} erros`);
-            console.error('Erros de validação:', realTimeValidation.errors);
-          }
-
-          if (realTimeValidation.warnings.length > 0) {
-            toast.warning(`Avisos: ${realTimeValidation.warnings.length} normalizações realizadas`);
-          }
-
-          setCsvData(data);
-          
-          // Gerar relatório de encoding
-          const report = generateEncodingReport(data);
-          setEncodingReport(report);
-          
-          toast.success(`${data.length} registros carregados do CSV`);
-        } catch (error) {
-          toast.error('Erro ao processar arquivo CSV');
-          console.error('Erro ao processar CSV:', error);
-        }
-      };
-      reader.readAsText(file, 'UTF-8');
+      
+      // Gerar relatório de encoding
+      const report = generateEncodingReport(data);
+      setEncodingReport(report);
+      
     } catch (error) {
       toast.error('Erro ao validar encoding do arquivo');
       console.error('Erro na validação:', error);
     }
   };
 
-  // Função para fazer a importação
+  // Função para fazer a importação com progresso
   const handleImport = async () => {
     if (csvData.length === 0) {
       toast.error('Nenhum dado para importar');
@@ -160,25 +141,65 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
     }
 
     setIsLoading(true);
+    setImportProgress({
+      current: 0,
+      total: csvData.length,
+      currentEmployee: '',
+      status: 'preparing',
+      stage: 'validation',
+      message: 'Iniciando validação dos dados...'
+    });
 
     try {
-      // Aplicar correção automática em todos os dados
+      // Estágio 1: Validação
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'validation',
+        message: 'Validando dados dos funcionários...'
+      } : null);
+
+      // Estágio 2: Correção automática
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'correction',
+        message: 'Aplicando correções automáticas...'
+      } : null);
+
       const correctedEmployees = [];
       const allCorrections: string[] = [];
 
-      for (const employee of csvData) {
+      for (let i = 0; i < csvData.length; i++) {
+        const employee = csvData[i];
+        setImportProgress(prev => prev ? {
+          ...prev,
+          current: i + 1,
+          currentEmployee: employee.name || `Funcionário ${i + 1}`,
+          message: `Aplicando correções em: ${employee.name || `Funcionário ${i + 1}`}`
+        } : null);
+
         const { correctedData, corrections } = autoCorrectEmployeeData(employee);
         correctedEmployees.push(correctedData);
         
         if (corrections.length > 0) {
           allCorrections.push(...corrections);
         }
+
+        // Pequena pausa para mostrar o progresso
+        await new Promise(resolve => setTimeout(resolve, 50));
       }
 
       // Mostrar resumo das correções aplicadas
       if (allCorrections.length > 0) {
         console.log('Correções automáticas aplicadas:', allCorrections);
       }
+
+      // Estágio 3: Importação
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'import',
+        current: 0,
+        message: 'Iniciando importação no banco de dados...'
+      } : null);
 
       const response = await fetch('/api/employees/import', {
         method: 'POST',
@@ -194,6 +215,15 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
       }
 
       const result = await response.json();
+      
+      // Estágio 4: Finalização
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'finalizing',
+        current: csvData.length,
+        message: 'Finalizando importação...'
+      } : null);
+
       setImportResult(result);
       
       if (onImportComplete) {
@@ -206,9 +236,22 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
         toast.error(`Importação falhou! ${result.summary.failed} erros encontrados.`);
       }
 
+      // Marcar como concluído
+      setImportProgress(prev => prev ? {
+        ...prev,
+        status: 'completed',
+        message: 'Importação concluída com sucesso!'
+      } : null);
+
     } catch (error) {
       console.error('Erro na importação:', error);
       toast.error(`Erro na importação: ${error.message}`);
+      
+      setImportProgress(prev => prev ? {
+        ...prev,
+        status: 'error',
+        message: `Erro: ${error.message}`
+      } : null);
     } finally {
       setIsLoading(false);
     }
@@ -234,10 +277,76 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
       setEncodingValidation(null);
       setEncodingReport('');
       setAutoCorrections([]);
+      setImportProgress(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
     }
+  };
+
+  // Componente de progresso
+  const ProgressBar = ({ progress }: { progress: ImportProgress }) => {
+    const percentage = (progress.current / progress.total) * 100;
+    
+    const getStageColor = (stage: string) => {
+      switch (stage) {
+        case 'validation': return 'bg-blue-500';
+        case 'correction': return 'bg-yellow-500';
+        case 'import': return 'bg-green-500';
+        case 'finalizing': return 'bg-purple-500';
+        default: return 'bg-gray-500';
+      }
+    };
+
+    const getStageIcon = (stage: string) => {
+      switch (stage) {
+        case 'validation': return <FileText className="h-4 w-4" />;
+        case 'correction': return <AlertTriangle className="h-4 w-4" />;
+        case 'import': return <Upload className="h-4 w-4" />;
+        case 'finalizing': return <CheckCircle className="h-4 w-4" />;
+        default: return <Loader2 className="h-4 w-4 animate-spin" />;
+      }
+    };
+
+    const getStageName = (stage: string) => {
+      switch (stage) {
+        case 'validation': return 'Validação';
+        case 'correction': return 'Correção';
+        case 'import': return 'Importação';
+        case 'finalizing': return 'Finalização';
+        default: return 'Processando';
+      }
+    };
+
+    return (
+      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getStageIcon(progress.stage)}
+            <span className="font-medium text-sm">{getStageName(progress.stage)}</span>
+          </div>
+          <span className="text-sm text-gray-600">
+            {progress.current} / {progress.total}
+          </span>
+        </div>
+        
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full transition-all duration-300 ${getStageColor(progress.stage)}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        
+        <div className="text-sm text-gray-600">
+          <div className="font-medium">{progress.message}</div>
+          {progress.currentEmployee && (
+            <div className="text-xs text-gray-500 mt-1">
+              Processando: {progress.currentEmployee}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -338,7 +447,7 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
                           </ul>
                         </div>
                       )}
-                      
+
                       {encodingValidation.errors.length > 0 && (
                         <div className="mt-2">
                           <p className="text-red-700 font-medium">Erros:</p>
@@ -376,17 +485,19 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
                     <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                     <div className="ml-2 text-sm text-green-800">
                       <p className="font-medium">✅ Correções Automáticas Aplicadas ({autoCorrections.length}):</p>
-                      <div className="mt-2 max-h-32 overflow-y-auto">
-                        {autoCorrections.slice(0, 10).map((correction, index) => (
+                      <div 
+                        className="mt-2 max-h-32 overflow-y-auto"
+                        ref={(el) => {
+                          if (el) {
+                            el.scrollTop = el.scrollHeight;
+                          }
+                        }}
+                      >
+                        {autoCorrections.map((correction, index) => (
                           <div key={index} className="text-xs text-green-700">
                             • {correction}
                           </div>
                         ))}
-                        {autoCorrections.length > 10 && (
-                          <div className="text-xs text-green-600 italic">
-                            ... e mais {autoCorrections.length - 10} correções
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -416,6 +527,13 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
                     </div>
                   </div>
                 </div>
+
+                {/* Progresso da importação */}
+                {importProgress && (
+                  <div className="mb-4">
+                    <ProgressBar progress={importProgress} />
+                  </div>
+                )}
 
                 <Button
                   onClick={handleImport}

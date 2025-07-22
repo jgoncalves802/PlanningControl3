@@ -1,7 +1,7 @@
 # 📋 PLANEJAMENTO: GARANTIA DE IMPORTAÇÃO CSV COM CARACTERES ESPECIAIS
 
 ## 🎯 OBJETIVO
-Garantir que a importação e inserção de dados CSV funcione corretamente, especialmente para caracteres especiais em português brasileiro (Ç, Ã, Õ, etc.).
+Garantir que a importação e inserção de dados CSV funcione corretamente, especialmente para caracteres especiais em português brasileiro (Ç, Ã, Õ, etc.), e estabelecer sincronismo adequado entre funções importadas e a tabela de funções do sistema.
 
 ## 🔍 ANÁLISE DO PROBLEMA
 
@@ -11,12 +11,17 @@ Garantir que a importação e inserção de dados CSV funcione corretamente, esp
 3. **BOM (Byte Order Mark)** não tratado adequadamente
 4. **Normalização Unicode** inconsistente
 5. **Validação de dados** insuficiente para caracteres especiais
+6. **Sincronismo de funções** entre dados importados e tabela companyfunctions
+7. **Referenciamento inadequado** de funções não cadastradas no sistema
 
 ### Impacto:
 - Nomes de funcionários com caracteres especiais ficam corrompidos
 - Busca e filtros não funcionam corretamente
 - Relatórios com dados incorretos
 - Experiência do usuário prejudicada
+- Funcionários importados sem função associada corretamente
+- Inconsistência entre funções do CSV e funções cadastradas no sistema
+- Dificuldade para relatórios e análises por função
 
 ## 🛠️ SOLUÇÕES IMPLEMENTADAS
 
@@ -42,6 +47,52 @@ lines[0] = firstLine
 function validateSpecialCharacters(text: string): boolean {
   const specialCharsRegex = /[À-ÿ]/;
   return specialCharsRegex.test(text);
+}
+```
+
+### 4. **Sincronismo de Funções**
+```typescript
+// Validar e sincronizar funções com a tabela companyfunctions
+async function validateAndSyncFunctions(functionNames: string[]): Promise<{
+  existingFunctions: any[];
+  newFunctions: string[];
+  mapping: Record<string, number>;
+}> {
+  const existingFunctions = await prisma.companyFunction.findMany({
+    where: { name: { in: functionNames } }
+  });
+  
+  const existingNames = existingFunctions.map(f => f.name);
+  const newFunctions = functionNames.filter(name => !existingNames.includes(name));
+  
+  const mapping: Record<string, number> = {};
+  existingFunctions.forEach(func => {
+    mapping[func.name] = func.id;
+  });
+  
+  return { existingFunctions, newFunctions, mapping };
+}
+```
+
+### 5. **Cadastro Automático de Funções**
+```typescript
+// Cadastrar funções não existentes automaticamente
+async function createMissingFunctions(functionNames: string[]): Promise<Record<string, number>> {
+  const createdFunctions = await prisma.companyFunction.createMany({
+    data: functionNames.map(name => ({ name })),
+    skipDuplicates: true
+  });
+  
+  const newFunctions = await prisma.companyFunction.findMany({
+    where: { name: { in: functionNames } }
+  });
+  
+  const mapping: Record<string, number> = {};
+  newFunctions.forEach(func => {
+    mapping[func.name] = func.id;
+  });
+  
+  return mapping;
 }
 ```
 
@@ -144,6 +195,94 @@ function parseCSVWithEncoding(csvText: string): any[] {
 }
 ```
 
+#### 2.4 Implementar Sincronismo de Funções
+```typescript
+// Sistema de sincronismo entre funções CSV e tabela companyfunctions
+async function processFunctionSynchronization(csvData: any[]): Promise<{
+  processedData: any[];
+  functionMapping: Record<string, number>;
+  newFunctions: string[];
+  warnings: string[];
+}> {
+  // Extrair todas as funções únicas do CSV
+  const functionNames = [...new Set(
+    csvData
+      .map(row => row.function || row.cargo || row.role)
+      .filter(Boolean)
+  )];
+
+  // Validar funções existentes
+  const { existingFunctions, newFunctions, mapping } = await validateAndSyncFunctions(functionNames);
+  
+  const warnings = [];
+  const processedData = csvData.map(row => {
+    const functionName = row.function || row.cargo || row.role;
+    if (functionName && !mapping[functionName]) {
+      warnings.push(`Função "${functionName}" não encontrada no sistema`);
+    }
+    return {
+      ...row,
+      functionId: mapping[functionName] || null,
+      functionName: functionName
+    };
+  });
+
+  return {
+    processedData,
+    functionMapping: mapping,
+    newFunctions,
+    warnings
+  };
+}
+```
+
+#### 2.5 Interface de Confirmação de Funções
+```typescript
+// Componente para confirmar cadastro de novas funções
+interface FunctionConfirmationProps {
+  newFunctions: string[];
+  onConfirm: (functions: string[]) => void;
+  onCancel: () => void;
+}
+
+function FunctionConfirmationDialog({ newFunctions, onConfirm, onCancel }: FunctionConfirmationProps) {
+  const [selectedFunctions, setSelectedFunctions] = useState<string[]>(newFunctions);
+
+  return (
+    <Dialog>
+      <DialogTitle>Novas Funções Detectadas</DialogTitle>
+      <DialogContent>
+        <p>As seguintes funções não estão cadastradas no sistema:</p>
+        <div className="space-y-2">
+          {newFunctions.map(func => (
+            <label key={func} className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                checked={selectedFunctions.includes(func)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedFunctions([...selectedFunctions, func]);
+                  } else {
+                    setSelectedFunctions(selectedFunctions.filter(f => f !== func));
+                  }
+                }}
+              />
+              <span>{func}</span>
+            </label>
+          ))}
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onCancel}>Cancelar</Button>
+        <Button onClick={() => onConfirm(selectedFunctions)}>
+          Cadastrar {selectedFunctions.length} Funções
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+```
+
 ### FASE 3: TESTES E VALIDAÇÃO (2-3 dias)
 
 #### 3.1 Criar Dados de Teste
@@ -197,6 +336,55 @@ Joao Silva Santos;12345`; // Sem acentos
     const result = await importCSV(corruptedContent);
     
     expect(result.warnings).toContain('Possível problema de encoding detectado');
+  });
+});
+```
+
+#### 3.3 Testes de Sincronismo de Funções
+```typescript
+// Teste de sincronismo entre funções CSV e tabela companyfunctions
+describe('CSV Import - Function Synchronization', () => {
+  test('should map existing functions correctly', async () => {
+    const csvContent = `name;registration;function
+João Silva;12345;Operador de Máquina
+Maria Santos;12346;Auxiliar Administrativo`;
+
+    // Simular funções existentes no banco
+    const existingFunctions = [
+      { id: 1, name: 'Operador de Máquina' },
+      { id: 2, name: 'Auxiliar Administrativo' }
+    ];
+
+    const result = await processFunctionSynchronization(csvContent);
+    
+    expect(result.functionMapping['Operador de Máquina']).toBe(1);
+    expect(result.functionMapping['Auxiliar Administrativo']).toBe(2);
+    expect(result.newFunctions).toHaveLength(0);
+  });
+
+  test('should detect new functions and offer to create them', async () => {
+    const csvContent = `name;registration;function
+João Silva;12345;Operador de Máquina
+Maria Santos;12346;Técnico de Segurança`;
+
+    // Simular apenas uma função existente
+    const existingFunctions = [
+      { id: 1, name: 'Operador de Máquina' }
+    ];
+
+    const result = await processFunctionSynchronization(csvContent);
+    
+    expect(result.newFunctions).toContain('Técnico de Segurança');
+    expect(result.warnings).toContain('Função "Técnico de Segurança" não encontrada no sistema');
+  });
+
+  test('should create new functions when confirmed', async () => {
+    const newFunctions = ['Técnico de Segurança', 'Encarregado de Obra'];
+    
+    const result = await createMissingFunctions(newFunctions);
+    
+    expect(result['Técnico de Segurança']).toBeDefined();
+    expect(result['Encarregado de Obra']).toBeDefined();
   });
 });
 ```
@@ -321,6 +509,142 @@ function validateSpecialCharactersInRealTime(data: any[]): ValidationResult {
 }
 ```
 
+### 4. **Sistema de Sincronismo de Funções**
+```typescript
+// API para sincronizar funções durante importação
+// app/api/employees/import/route.ts
+export async function POST(req: NextRequest) {
+  try {
+    const { employees, autoCreateFunctions = false } = await req.json();
+    
+    // Processar sincronismo de funções
+    const functionSync = await processFunctionSynchronization(employees);
+    
+    if (functionSync.newFunctions.length > 0) {
+      if (autoCreateFunctions) {
+        // Criar funções automaticamente
+        const newFunctionMapping = await createMissingFunctions(functionSync.newFunctions);
+        Object.assign(functionSync.functionMapping, newFunctionMapping);
+      } else {
+        // Retornar funções para confirmação do usuário
+        return NextResponse.json({
+          status: 'pending_confirmation',
+          newFunctions: functionSync.newFunctions,
+          warnings: functionSync.warnings,
+          message: 'Novas funções detectadas. Confirme para continuar.'
+        });
+      }
+    }
+
+    // Processar funcionários com funções mapeadas
+    const processedEmployees = functionSync.processedData.map(emp => ({
+      ...emp,
+      currentFunctionId: functionSync.functionMapping[emp.functionName] || null
+    }));
+
+    // Continuar com a importação...
+    const results = [];
+    for (const employee of processedEmployees) {
+      const result = await createEmployee(employee);
+      results.push(result);
+    }
+
+    return NextResponse.json({
+      success: true,
+      imported: results.length,
+      newFunctionsCreated: functionSync.newFunctions.length,
+      warnings: functionSync.warnings
+    });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+```
+
+### 5. **Interface de Confirmação de Funções**
+```typescript
+// Componente para confirmar criação de novas funções
+// components/employees/FunctionConfirmationDialog.tsx
+export function FunctionConfirmationDialog({ 
+  newFunctions, 
+  onConfirm, 
+  onCancel 
+}: FunctionConfirmationDialogProps) {
+  const [selectedFunctions, setSelectedFunctions] = useState<string[]>(newFunctions);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleConfirm = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/employees/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employees: csvData,
+          autoCreateFunctions: true,
+          selectedFunctions
+        })
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        onConfirm(result);
+      }
+    } catch (error) {
+      console.error('Erro ao criar funções:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onCancel}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Novas Funções Detectadas</DialogTitle>
+          <DialogDescription>
+            As seguintes funções não estão cadastradas no sistema. 
+            Selecione quais deseja cadastrar automaticamente:
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-3 max-h-60 overflow-y-auto">
+          {newFunctions.map(func => (
+            <label key={func} className="flex items-center space-x-3 p-2 rounded border">
+              <input
+                type="checkbox"
+                checked={selectedFunctions.includes(func)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setSelectedFunctions([...selectedFunctions, func]);
+                  } else {
+                    setSelectedFunctions(selectedFunctions.filter(f => f !== func));
+                  }
+                }}
+                className="rounded"
+              />
+              <span className="text-sm">{func}</span>
+            </label>
+          ))}
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={isLoading}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirm} 
+            disabled={isLoading || selectedFunctions.length === 0}
+          >
+            {isLoading ? 'Processando...' : `Cadastrar ${selectedFunctions.length} Funções`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
 ## 📊 MÉTRICAS DE SUCESSO
 
 ### Indicadores de Qualidade:
@@ -328,12 +652,19 @@ function validateSpecialCharactersInRealTime(data: any[]): ValidationResult {
 - [ ] **Caracteres especiais corretos**: 100%
 - [ ] **Tempo de processamento**: < 30s para 1000 registros
 - [ ] **Detecção de problemas**: 100% dos casos de encoding
+- [ ] **Sincronismo de funções**: 100% das funções mapeadas corretamente
+- [ ] **Criação automática de funções**: > 90% de sucesso
+- [ ] **Referenciamento correto**: 100% dos funcionários com função válida
 
 ### Testes de Validação:
 - [ ] Importar arquivo com nomes portugueses complexos
 - [ ] Testar com diferentes encodings (UTF-8, ANSI, ISO)
 - [ ] Validar busca e filtros com caracteres especiais
 - [ ] Verificar relatórios e exportações
+- [ ] Testar sincronismo com funções existentes
+- [ ] Validar criação automática de novas funções
+- [ ] Verificar referenciamento correto na tabela de funcionários
+- [ ] Testar interface de confirmação de funções
 
 ## 🚀 CRONOGRAMA
 
@@ -356,6 +687,10 @@ Ao final da implementação, o sistema deve:
 4. ✅ **Fornecer feedback claro** sobre problemas
 5. ✅ **Garantir integridade** dos dados importados
 6. ✅ **Manter compatibilidade** com dados existentes
+7. ✅ **Sincronizar automaticamente** funções com a tabela companyfunctions
+8. ✅ **Oferecer opção** de cadastrar funções não existentes
+9. ✅ **Referenciar corretamente** funcionários às suas funções
+10. ✅ **Manter consistência** entre dados importados e estrutura do sistema
 
 ## 📞 SUPORTE E MANUTENÇÃO
 
@@ -371,6 +706,43 @@ Ao final da implementação, o sistema deve:
 - Otimizações de performance
 - Novos tipos de validação
 
+## 🔄 FLUXO DE SINCRONISMO DE FUNÇÕES
+
+### **Processo Completo:**
+
+1. **📥 Upload do CSV**
+   - Usuário faz upload do arquivo CSV
+   - Sistema processa e normaliza caracteres especiais
+   - Extrai todas as funções únicas do arquivo
+
+2. **🔍 Validação de Funções**
+   - Sistema consulta tabela `companyfunctions`
+   - Identifica funções existentes vs. novas funções
+   - Cria mapeamento de nomes para IDs
+
+3. **❓ Confirmação do Usuário**
+   - Se há novas funções, exibe diálogo de confirmação
+   - Usuário seleciona quais funções cadastrar
+   - Opção de cancelar ou prosseguir
+
+4. **➕ Criação de Funções**
+   - Sistema cria funções selecionadas na tabela
+   - Atualiza mapeamento com novos IDs
+   - Valida integridade dos dados
+
+5. **👥 Importação de Funcionários**
+   - Associa funcionários às funções corretas
+   - Define `currentFunctionId` apropriado
+   - Importa dados com referenciamento válido
+
+### **Benefícios do Sincronismo:**
+
+- ✅ **Consistência de dados**: Todas as funções referenciadas existem no sistema
+- ✅ **Relatórios precisos**: Filtros e análises funcionam corretamente
+- ✅ **Experiência fluida**: Usuário não precisa cadastrar funções manualmente
+- ✅ **Integridade referencial**: Sem funcionários órfãos sem função
+- ✅ **Flexibilidade**: Opção de escolher quais funções criar
+
 ---
 
-**Este planejamento garante que a importação de dados CSV funcione corretamente com caracteres especiais em português brasileiro, mantendo a integridade e qualidade dos dados.** 
+**Este planejamento garante que a importação de dados CSV funcione corretamente com caracteres especiais em português brasileiro, mantendo a integridade e qualidade dos dados, e estabelecendo sincronismo adequado entre funções importadas e a estrutura do sistema.** 

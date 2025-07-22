@@ -32,6 +32,15 @@ interface ImportResult {
   created: string[]
 }
 
+interface ImportProgress {
+  current: number;
+  total: number;
+  currentFunction: string;
+  status: 'preparing' | 'processing' | 'completed' | 'error';
+  stage: 'validation' | 'correction' | 'import' | 'finalizing';
+  message: string;
+}
+
 interface FunctionImportDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -48,6 +57,7 @@ export default function FunctionImportDialog({
   const [dragActive, setDragActive] = useState(false)
   const [encodingValidation, setEncodingValidation] = useState<ValidationResult | null>(null)
   const [autoCorrections, setAutoCorrections] = useState<string[]>([])
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -139,8 +149,19 @@ export default function FunctionImportDialog({
     setIsProcessing(true)
     setImportResult(null)
     setEncodingValidation(null)
+    setAutoCorrections([])
 
     try {
+      // Estágio 1: Validação
+      setImportProgress({
+        current: 0,
+        total: 1,
+        currentFunction: '',
+        status: 'preparing',
+        stage: 'validation',
+        message: 'Validando encoding do arquivo...'
+      });
+
       // Validar encoding do arquivo
       const validation = await validateFileEncoding(file)
       setEncodingValidation(validation)
@@ -151,6 +172,7 @@ export default function FunctionImportDialog({
           console.error('Erros de encoding:', validation.errors)
         }
         setIsProcessing(false)
+        setImportProgress(null)
         return
       }
 
@@ -158,14 +180,31 @@ export default function FunctionImportDialog({
         toast.error(`Avisos de encoding: ${validation.warnings.join(', ')}`)
       }
 
+      // Estágio 2: Processamento
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'correction',
+        message: 'Processando arquivo CSV...'
+      } : null);
+
       const text = await file.text()
       const functions = parseCSV(text)
       
       if (functions.length === 0) {
         toast.error('Nenhuma função encontrada no arquivo. Verifique se o arquivo está no formato correto.')
         setIsProcessing(false)
+        setImportProgress(null)
         return
       }
+
+      // Estágio 3: Importação
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'import',
+        current: 0,
+        total: functions.length,
+        message: 'Iniciando importação no banco de dados...'
+      } : null);
 
       // Enviar para API
       const response = await fetch('/api/functions/import', {
@@ -182,6 +221,15 @@ export default function FunctionImportDialog({
       }
 
       const result = await response.json()
+      
+      // Estágio 4: Finalização
+      setImportProgress(prev => prev ? {
+        ...prev,
+        stage: 'finalizing',
+        current: functions.length,
+        message: 'Finalizando importação...'
+      } : null);
+
       setImportResult(result.results)
       onImportComplete(result.results)
       
@@ -192,9 +240,22 @@ export default function FunctionImportDialog({
         toast.success(`${result.results.success} função(ões) importada(s) com sucesso!`)
       }
 
+      // Marcar como concluído
+      setImportProgress(prev => prev ? {
+        ...prev,
+        status: 'completed',
+        message: 'Importação concluída com sucesso!'
+      } : null);
+
     } catch (error) {
       console.error('Erro na importação:', error)
       toast.error(`Erro na importação: ${error.message}`)
+      
+      setImportProgress(prev => prev ? {
+        ...prev,
+        status: 'error',
+        message: `Erro: ${error.message}`
+      } : null);
     } finally {
       setIsProcessing(false)
     }
@@ -228,11 +289,76 @@ export default function FunctionImportDialog({
 
   const handleClose = () => {
     setImportResult(null)
-    setIsProcessing(false)
     setEncodingValidation(null)
     setAutoCorrections([])
+    setImportProgress(null)
     onClose()
   }
+
+  // Componente de progresso
+  const ProgressBar = ({ progress }: { progress: ImportProgress }) => {
+    const percentage = (progress.current / progress.total) * 100;
+    
+    const getStageColor = (stage: string) => {
+      switch (stage) {
+        case 'validation': return 'bg-blue-500';
+        case 'correction': return 'bg-yellow-500';
+        case 'import': return 'bg-green-500';
+        case 'finalizing': return 'bg-purple-500';
+        default: return 'bg-gray-500';
+      }
+    };
+
+    const getStageIcon = (stage: string) => {
+      switch (stage) {
+        case 'validation': return <FileText className="h-4 w-4" />;
+        case 'correction': return <AlertTriangle className="h-4 w-4" />;
+        case 'import': return <Upload className="h-4 w-4" />;
+        case 'finalizing': return <CheckCircle className="h-4 w-4" />;
+        default: return <Loader2 className="h-4 w-4 animate-spin" />;
+      }
+    };
+
+    const getStageName = (stage: string) => {
+      switch (stage) {
+        case 'validation': return 'Validação';
+        case 'correction': return 'Correção';
+        case 'import': return 'Importação';
+        case 'finalizing': return 'Finalização';
+        default: return 'Processando';
+      }
+    };
+
+    return (
+      <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {getStageIcon(progress.stage)}
+            <span className="font-medium text-sm">{getStageName(progress.stage)}</span>
+          </div>
+          <span className="text-sm text-gray-600">
+            {progress.current} / {progress.total}
+          </span>
+        </div>
+        
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className={`h-2 rounded-full transition-all duration-300 ${getStageColor(progress.stage)}`}
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
+        
+        <div className="text-sm text-gray-600">
+          <div className="font-medium">{progress.message}</div>
+          {progress.currentFunction && (
+            <div className="text-xs text-gray-500 mt-1">
+              Processando: {progress.currentFunction}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (!isOpen) return null
 
@@ -294,7 +420,7 @@ export default function FunctionImportDialog({
               Baixar Modelo Excel (CSV)
             </Button>
           </div>
-
+          
           {/* Área de upload */}
           <div
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -341,6 +467,13 @@ export default function FunctionImportDialog({
               )}
             </div>
           </div>
+
+          {/* Progresso da importação */}
+          {importProgress && (
+            <div className="mb-4">
+              <ProgressBar progress={importProgress} />
+            </div>
+          )}
 
           {/* Seção de Validação de Encoding */}
           {encodingValidation && (
@@ -395,17 +528,19 @@ export default function FunctionImportDialog({
                 <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
                 <div className="ml-2 text-sm text-green-800 dark:text-green-300">
                   <p className="font-medium">✅ Correções Automáticas Aplicadas ({autoCorrections.length}):</p>
-                  <div className="mt-2 max-h-32 overflow-y-auto">
-                    {autoCorrections.slice(0, 10).map((correction, index) => (
+                  <div 
+                    className="mt-2 max-h-32 overflow-y-auto"
+                    ref={(el) => {
+                      if (el) {
+                        el.scrollTop = el.scrollHeight;
+                      }
+                    }}
+                  >
+                    {autoCorrections.map((correction, index) => (
                       <div key={index} className="text-xs text-green-700 dark:text-green-400">
                         • {correction}
                       </div>
                     ))}
-                    {autoCorrections.length > 10 && (
-                      <div className="text-xs text-green-600 dark:text-green-500 italic">
-                        ... e mais {autoCorrections.length - 10} correções
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -415,86 +550,86 @@ export default function FunctionImportDialog({
           {/* Resultado da importação */}
           {importResult && (
             <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-600" />
-                      Resultado da Importação
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Resumo */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                          {importResult.success}
-                        </div>
-                        <div className="text-sm text-green-800 dark:text-green-300">
-                          Funções criadas (ativas)
-                        </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Resultado da Importação
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Resumo */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {importResult.success}
                       </div>
-                      
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
-                        <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-                          {importResult.errors.length + importResult.duplicates.length}
-                        </div>
-                        <div className="text-sm text-yellow-800 dark:text-yellow-300">
-                          Problemas encontrados
-                        </div>
+                      <div className="text-sm text-green-800 dark:text-green-300">
+                        Funções criadas (ativas)
                       </div>
                     </div>
-
-                    {/* Funções criadas */}
-                    {importResult.created.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                          ✅ Funções criadas com sucesso:
-                        </h4>
-                        <div className="max-h-32 overflow-y-auto bg-green-50 dark:bg-green-900/10 p-3 rounded border border-green-200 dark:border-green-800">
-                          {importResult.created.map((name, index) => (
-                            <div key={index} className="text-sm text-green-700 dark:text-green-400">
-                              • {name}
-                            </div>
-                          ))}
-                        </div>
+                    
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-3 rounded-lg">
+                      <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
+                        {importResult.errors.length + importResult.duplicates.length}
                       </div>
-                    )}
-
-                    {/* Duplicatas */}
-                    {importResult.duplicates.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">
-                          ⚠️ Funções já existentes (ignoradas):
-                        </h4>
-                        <div className="max-h-32 overflow-y-auto bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border border-yellow-200 dark:border-yellow-800">
-                          {importResult.duplicates.map((error, index) => (
-                            <div key={index} className="text-sm text-yellow-700 dark:text-yellow-400">
-                              • {error}
-                            </div>
-                          ))}
-                        </div>
+                      <div className="text-sm text-yellow-800 dark:text-yellow-300">
+                        Problemas encontrados
                       </div>
-                    )}
+                    </div>
+                  </div>
 
-                    {/* Erros */}
-                    {importResult.errors.length > 0 && (
-                      <div>
-                        <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">
-                          ❌ Erros encontrados:
-                        </h4>
-                        <div className="max-h-32 overflow-y-auto bg-red-50 dark:bg-red-900/10 p-3 rounded border border-red-200 dark:border-red-800">
-                          {importResult.errors.map((error, index) => (
-                            <div key={index} className="text-sm text-red-700 dark:text-red-400">
-                              • {error}
-                            </div>
-                          ))}
-                        </div>
+                  {/* Funções criadas */}
+                  {importResult.created.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                        ✅ Funções criadas com sucesso:
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto bg-green-50 dark:bg-green-900/10 p-3 rounded border border-green-200 dark:border-green-800">
+                        {importResult.created.map((name, index) => (
+                          <div key={index} className="text-sm text-green-700 dark:text-green-400">
+                            • {name}
+                          </div>
+                        ))}
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                    </div>
+                  )}
+
+                  {/* Duplicatas */}
+                  {importResult.duplicates.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-yellow-800 dark:text-yellow-300 mb-2">
+                        ⚠️ Funções já existentes (ignoradas):
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto bg-yellow-50 dark:bg-yellow-900/10 p-3 rounded border border-yellow-200 dark:border-yellow-800">
+                        {importResult.duplicates.map((error, index) => (
+                          <div key={index} className="text-sm text-yellow-700 dark:text-yellow-400">
+                            • {error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Erros */}
+                  {importResult.errors.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-red-800 dark:text-red-300 mb-2">
+                        ❌ Erros encontrados:
+                      </h4>
+                      <div className="max-h-32 overflow-y-auto bg-red-50 dark:bg-red-900/10 p-3 rounded border border-red-200 dark:border-red-800">
+                        {importResult.errors.map((error, index) => (
+                          <div key={index} className="text-sm text-red-700 dark:text-red-400">
+                            • {error}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-slate-700">

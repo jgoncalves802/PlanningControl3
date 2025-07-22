@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-// Criar uma única instância do Prisma Client
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-const prisma = globalForPrisma.prisma ?? new PrismaClient();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+import { prisma } from '@/lib/prisma';
+import { formatCPF, convertExcelNumberToDate, isExcelNumber, convertNameToUpperCase } from '@/lib/csvEncodingUtils';
 
 // Função para normalizar caracteres especiais e garantir UTF-8
 function normalizeText(text: string): string {
@@ -183,17 +173,52 @@ export async function GET(req: NextRequest) {
   }
 }
 
-function parseDateBR(dateStr) {
-  // Aceita DD/MM/YYYY ou YYYY-MM-DD
+function parseDateBR(dateStr: string | number) {
+  // Aceita DD/MM/YYYY, YYYY-MM-DD ou número do Excel
   if (!dateStr) return undefined;
-  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-    const [d, m, y] = dateStr.split('/');
-    return new Date(`${y}-${m}-${d}T00:00:00Z`).toISOString();
+  
+  // Converter para string se for número
+  const dateString = String(dateStr).trim();
+  if (!dateString) return undefined;
+  
+  try {
+    // Primeiro, verificar se é um número do Excel
+    if (isExcelNumber(dateString)) {
+      const excelDate = convertExcelNumberToDate(dateString);
+      if (excelDate) {
+        return excelDate.toISOString();
+      }
+    }
+    
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+      const [d, m, y] = dateString.split('/');
+      const day = parseInt(d, 10);
+      const month = parseInt(m, 10);
+      const year = parseInt(y, 10);
+      
+      // Validar se os valores são válidos
+      if (day < 1 || day > 31 || month < 1 || month > 12 || year < 1900 || year > 2100) {
+        return undefined;
+      }
+      
+      const date = new Date(`${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}T00:00:00Z`);
+      if (!isNaN(date.getTime())) {
+        return date.toISOString();
+      }
+    }
+    
+    if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+      const date = new Date(dateString);
+      if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+        return date.toISOString();
+      }
+    }
+    
+    return undefined;
+  } catch (error) {
+    console.warn('Erro ao processar data:', dateStr, error);
+    return undefined;
   }
-  if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-    return new Date(dateStr).toISOString();
-  }
-  return undefined;
 }
 
 export async function POST(req: NextRequest) {
@@ -204,8 +229,13 @@ export async function POST(req: NextRequest) {
     // Normalizar caracteres especiais
     const data = normalizeTextFields(rawData);
 
+    // Converter nome para maiúsculo
+    if (data.name && typeof data.name === 'string') {
+      data.name = convertNameToUpperCase(data.name);
+    }
+
     // Normalizar CPF (apenas números)
-    if (data.cpf) data.cpf = String(data.cpf).replace(/\D/g, '');
+    if (data.cpf) data.cpf = formatCPF(data.cpf);
 
     // Normalizar e tratar datas (aceita DD/MM/YYYY ou YYYY-MM-DD)
     ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'].forEach(field => {
@@ -238,7 +268,7 @@ export async function POST(req: NextRequest) {
 
     // Validações principais
     const requiredFields = [
-      'name', 'cpf', 'phone'
+      'name', 'cpf'
     ];
     const errors: Record<string, string> = {};
 
@@ -254,17 +284,24 @@ export async function POST(req: NextRequest) {
       errors.cpf = 'CPF inválido';
     }
 
+    // Validação de telefone (opcional, mas se fornecido deve ser válido)
+    if (data.phone && data.phone.trim() !== '') {
+      const cleanPhone = data.phone.replace(/\D/g, '');
+      if (!/^\d{10,11}$/.test(cleanPhone)) {
+        // Em vez de erro, definir como null e continuar
+        data.phone = null;
+        console.log('Telefone inválido removido. Deve ser inserido posteriormente.');
+      }
+    } else {
+      data.phone = null;
+    }
+
     // Validação de datas (ISO)
     ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'].forEach(field => {
       if (data[field] && isNaN(Date.parse(data[field]))) {
         errors[field] = 'Data inválida';
       }
     });
-
-    // Validação de telefone (simples)
-    if (data.phone && !/^\d{10,11}$/.test(data.phone.replace(/\D/g, ''))) {
-      errors.phone = 'Telefone inválido';
-    }
 
     // Tamanhos máximos
     const maxLengths: Record<string, number> = {

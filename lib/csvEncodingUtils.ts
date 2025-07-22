@@ -184,27 +184,166 @@ export function autoCorrectSpecialCharacters(text: string): AutoCorrectionResult
 }
 
 /**
- * Corrige automaticamente dados de funcionário
+ * Converte nome para maiúsculo
+ * @param name - Nome a ser convertido
+ * @returns Nome em maiúsculo
+ */
+export function convertNameToUpperCase(name: string): string {
+  if (!name || typeof name !== 'string') return name;
+  
+  return name.trim().toUpperCase();
+}
+
+/**
+ * Converte número do Excel para data
+ * No Excel, 1 = 01/01/1900, 2 = 02/01/1900, etc.
+ * @param excelNumber - Número do Excel (pode ser string ou número)
+ * @returns Data convertida ou null se inválida
+ */
+export function convertExcelNumberToDate(excelNumber: string | number): Date | null {
+  if (!excelNumber || excelNumber === '') return null;
+  
+  const num = parseFloat(String(excelNumber));
+  
+  // Verificar se é um número válido
+  if (isNaN(num) || num < 1) return null;
+  
+  // Excel usa 1 = 01/01/1900
+  // O Excel tem um bug: trata 1900 como bissexto quando não é
+  // Para corrigir isso, usamos 31/12/1899 como data base
+  const excelEpoch = new Date(1899, 11, 31); // 31/12/1899
+  
+  // Calcular a data adicionando os dias
+  const resultDate = new Date(excelEpoch);
+  resultDate.setDate(resultDate.getDate() + num);
+  
+  // Validar se a data está em um intervalo razoável (1900-2100)
+  if (resultDate.getFullYear() < 1900 || resultDate.getFullYear() > 2100) {
+    return null;
+  }
+  
+  return resultDate;
+}
+
+/**
+ * Detecta se uma string é um número do Excel (data)
+ * @param value - Valor a ser verificado
+ * @returns true se parece ser um número do Excel
+ */
+export function isExcelNumber(value: string | number): boolean {
+  if (!value || value === '') return false;
+  
+  const num = parseFloat(String(value));
+  if (isNaN(num)) return false;
+  
+  // Números do Excel para datas geralmente estão entre 1 e 73050
+  // (que representa aproximadamente 200 anos de datas)
+  return num >= 1 && num <= 73050 && Number.isInteger(num);
+}
+
+/**
+ * Formata CPF para garantir 11 dígitos, adicionando zeros à esquerda se necessário
+ * @param cpf - CPF a ser formatado (pode ser string ou número)
+ * @returns CPF formatado com 11 dígitos
+ */
+export function formatCPF(cpf: string | number): string {
+  if (!cpf) return '';
+  
+  // Converter para string e remover caracteres não numéricos
+  const cpfString = String(cpf).replace(/\D/g, '');
+  
+  // Se já tem 11 dígitos, retornar como está
+  if (cpfString.length === 11) {
+    return cpfString;
+  }
+  
+  // Se tem menos de 11 dígitos, adicionar zeros à esquerda
+  if (cpfString.length < 11) {
+    return cpfString.padStart(11, '0');
+  }
+  
+  // Se tem mais de 11 dígitos, pegar apenas os primeiros 11
+  return cpfString.substring(0, 11);
+}
+
+/**
+ * Aplica correções automáticas aos dados de funcionário, incluindo formatação de CPF, conversão de datas do Excel e nomes em maiúsculo
+ * @param data - Dados do funcionário
+ * @returns Dados corrigidos e lista de correções aplicadas
  */
 export function autoCorrectEmployeeData(data: any): { correctedData: any; corrections: string[] } {
   const corrections: string[] = [];
   const correctedData = { ...data };
 
-  // Campos que devem ser corrigidos
-  const fieldsToCorrect = [
-    'name', 'motherName', 'company', 'gender', 'maritalStatus', 
-    'role', 'workplace', 'nationality', 'naturalness', 'educationLevel',
-    'centroCusto', 'obra', 'mo', 'localAlojado', 'pontoReferencia', 
-    'statusBancodoc', 'status'
+  // Converter nome para maiúsculo
+  if (correctedData.name && typeof correctedData.name === 'string') {
+    const originalName = correctedData.name;
+    const upperCaseName = convertNameToUpperCase(correctedData.name);
+    
+    if (upperCaseName !== originalName) {
+      corrections.push(`Nome: "${originalName}" → "${upperCaseName}" (convertido para maiúsculo)`);
+      correctedData.name = upperCaseName;
+    }
+  }
+
+  // Lista de campos para aplicar correção de caracteres especiais
+  const textFields = [
+    'motherName', 'company', 'gender', 'maritalStatus', 'status',
+    'address', 'city', 'state', 'neighborhood', 'complement'
   ];
 
-  fieldsToCorrect.forEach(field => {
+  // Aplicar correção de caracteres especiais
+  textFields.forEach(field => {
     if (correctedData[field] && typeof correctedData[field] === 'string') {
-      const correction = autoCorrectSpecialCharacters(correctedData[field]);
+      const result = autoCorrectSpecialCharacters(correctedData[field]);
+      if (result.wasCorrected) {
+        corrections.push(`${field}: "${correctedData[field]}" → "${result.correctedText}"`);
+        correctedData[field] = result.correctedText;
+      }
+    }
+  });
+
+  // Formatar CPF para garantir 11 dígitos
+  if (correctedData.cpf) {
+    const originalCPF = correctedData.cpf;
+    const formattedCPF = formatCPF(correctedData.cpf);
+    
+    if (formattedCPF !== originalCPF) {
+      corrections.push(`CPF: "${originalCPF}" → "${formattedCPF}" (formatado para 11 dígitos)`);
+      correctedData.cpf = formattedCPF;
+    }
+  }
+
+  // Validar e corrigir telefone
+  if (correctedData.phone && correctedData.phone.trim() !== '') {
+    const originalPhone = correctedData.phone;
+    const cleanPhone = correctedData.phone.replace(/\D/g, '');
+    
+    if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
+      if (cleanPhone !== originalPhone) {
+        corrections.push(`Telefone: "${originalPhone}" → "${cleanPhone}" (formatado)`);
+        correctedData.phone = cleanPhone;
+      }
+    } else {
+      corrections.push(`Telefone: "${originalPhone}" → removido (inválido - deve ter 10 ou 11 dígitos)`);
+      correctedData.phone = null;
+    }
+  } else {
+    correctedData.phone = null;
+  }
+
+  // Converter números do Excel para datas
+  const dateFields = ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'];
+  
+  dateFields.forEach(field => {
+    if (correctedData[field] && isExcelNumber(correctedData[field])) {
+      const originalValue = correctedData[field];
+      const convertedDate = convertExcelNumberToDate(correctedData[field]);
       
-      if (correction.wasCorrected) {
-        correctedData[field] = correction.correctedText;
-        corrections.push(`${field}: ${correction.corrections.join(', ')}`);
+      if (convertedDate) {
+        const formattedDate = convertedDate.toLocaleDateString('pt-BR');
+        corrections.push(`${field}: "${originalValue}" → "${formattedDate}" (convertido de número do Excel)`);
+        correctedData[field] = convertedDate;
       }
     }
   });
