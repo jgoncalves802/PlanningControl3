@@ -5,6 +5,7 @@ import { Employee } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { Eye, Pencil, Clock, Mail, Phone } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 interface ColumnConfig {
   key: string;
@@ -40,25 +41,7 @@ const EmployeeTable = memo(function EmployeeTable({
 }: EmployeeTableProps) {
   const enabledColumns = columns.filter(col => col.enabled);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300'
-      case 'on_leave': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300'
-      case 'transferred': return 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300'
-      case 'dismissed': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300'
-    }
-  };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'active': return 'Ativo'
-      case 'on_leave': return 'Em Licença'
-      case 'transferred': return 'Transferido'
-      case 'dismissed': return 'Demitido'
-      default: return status
-    }
-  };
 
   function formatDateInput(date: Date | string) {
     if (!date) return '';
@@ -146,14 +129,12 @@ const EmployeeTable = memo(function EmployeeTable({
         return <span className="text-sm text-gray-900 dark:text-slate-100">{employee.nfcCardId || '-'}</span>;
       case 'status':
         return (
-          <span className={`inline-flex items-center px-2.5 py-1 text-xs font-semibold rounded-full shadow-sm ${getStatusColor(employee.status)}`}>
-            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-              employee.status === 'active' ? 'bg-green-600' : 
-              employee.status === 'on_leave' ? 'bg-yellow-600' : 
-              employee.status === 'transferred' ? 'bg-blue-600' : 'bg-gray-600'
-            }`}></div>
-            {getStatusLabel(employee.status)}
-          </span>
+          <div className="flex items-center justify-start">
+            <StatusBadge 
+              status={employee.status || 'ACTIVE'} 
+              size="sm" 
+            />
+          </div>
         );
       case 'cidade':
         return <span className="text-sm text-gray-900 dark:text-slate-100">São Paulo</span>;

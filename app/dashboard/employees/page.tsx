@@ -53,7 +53,6 @@ import FunctionImportDialog from '@/components/functions/FunctionImportDialog'
 import { useEmployeeFilters } from '@/lib/hooks/useEmployeeFilters'
 import { useFunctionsQuery, useCreateFunction } from '@/lib/useFunctions'
 
-
 // Configuração das colunas disponíveis
 interface ColumnConfig {
   key: string
@@ -74,8 +73,6 @@ export default function EmployeesPage() {
   const [columns, setColumns] = useState<ColumnConfig[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
-
-  const [forceRender, setForceRender] = useState(0) // Para forçar re-render
 
   // Estados para functions
   const [showCreateFunction, setShowCreateFunction] = useState(false)
@@ -119,15 +116,12 @@ export default function EmployeesPage() {
 
   // Converter dados da API para o formato esperado pelos componentes
   const processedEmployees = useMemo(() => {
-    // Criar um timestamp único para garantir re-render
-    const timestamp = Date.now();
-    return employees.map((emp, index) => ({
+    return employees.map((emp) => ({
       ...emp,
-      status: emp.isActive ? 'active' : 'inactive',
-      _renderKey: `${emp.id}-${timestamp}-${forceRender}-${index}`,
-      _forceUpdate: forceRender // Campo adicional para forçar re-render
+      // Usar o status real do banco de dados, não sobrescrever com isActive
+      status: emp.status || (emp.isActive ? 'ACTIVE' : 'DISMISSED'),
     }));
-  }, [employees, forceRender]);
+  }, [employees]);
 
   // Hook de filtros usando dados processados
   const {
@@ -157,7 +151,7 @@ export default function EmployeesPage() {
     { key: 'cpf', label: 'CPF', enabled: true, width: '150px' },
     { key: 'matricula', label: 'Matrícula', enabled: false, width: '90px' },
     { key: 'cargo', label: 'Cargo', enabled: true, width: '150px' },
-    { key: 'status', label: 'Status', enabled: true, width: '90px' },
+    { key: 'status', label: 'Status', enabled: true, width: '120px' },
     { key: 'cidade', label: 'Cidade', enabled: true, width: '110px' },
     { key: 'telefone', label: 'Telefone', enabled: false, width: '110px' },
     { key: 'dataEntrada', label: 'Data de Entrada', enabled: true, width: '150px' },
@@ -325,9 +319,9 @@ export default function EmployeesPage() {
     );
   };
 
-    const handleUpdateEmployee = async (employeeData: Partial<Employee>) => {
+  const handleUpdateEmployee = async (employeeData: Partial<Employee>) => {
     if (!selectedEmployee) return;
-
+    
     updateEmployeeMutation.mutate(
       { id: selectedEmployee.id, updates: employeeData },
       {
@@ -337,7 +331,7 @@ export default function EmployeesPage() {
           setSelectedEmployee(null);
           
           // Forçar re-render da tabela
-          setForceRender(prev => prev + 1);
+          // setForceRender(prev => prev + 1); // Removed forceRender
         },
         onError: (error: any) => {
           console.error('Erro ao atualizar funcionário:', error);
@@ -689,7 +683,7 @@ export default function EmployeesPage() {
           </CardHeader>
           <CardContent className="p-0">
             <EmployeeTable
-              key={`employees-table-${forceRender}`}
+              key={`employees-table-${Date.now()}`}
               employees={filteredEmployees}
               columns={columns}
               selectedEmployees={selectedEmployees}

@@ -14,7 +14,7 @@ export interface EmployeeFormData extends Omit<Partial<Employee>, 'primeiraExper
   previsaoObra?: string | Date;
 }
 
-export function useEmployeeForm(initialData: EmployeeFormData = { status: 'active' }) {
+export function useEmployeeForm(initialData: EmployeeFormData = { status: 'ACTIVE' }) {
   const [formData, setFormData] = useState<EmployeeFormData>(initialData);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [step, setStep] = useState(0);
@@ -211,7 +211,7 @@ export function useEmployeeForm(initialData: EmployeeFormData = { status: 'activ
   }
 
   function resetForm() {
-    setFormData({ status: 'active' });
+    setFormData({ status: 'ACTIVE' });
     setAddress({ cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' });
     setStep(0);
     setErrors({});

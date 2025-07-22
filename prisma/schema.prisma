@@ -98,7 +98,7 @@ model Employee {
   birthDate                DateTime?
   admissionDate            DateTime?
   dismissalDate            DateTime?
-  status                   String?
+  status                   EmployeeStatus @default(ACTIVE)
   workplace                String?
   shift                    String?
   phone                    String?
@@ -401,4 +401,13 @@ enum NFCBadgeStatus {
   LOST
   DAMAGED
   EXPIRED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  ON_LEAVE
+  TRANSFERRED
+  SUSPENDED
+  DISMISSED
+  RETIRED
 }

@@ -1,6 +1,7 @@
 // Mock data for demonstration purposes
 import { addDays, subDays, addHours } from 'date-fns'
 import { User, UserRole } from './auth'
+import { EmployeeStatus } from '@/components/ui/status-badge'
 
 export interface Contract {
   id: string
@@ -97,7 +98,7 @@ export interface Employee {
   birthDate?: string | Date // ou Date
   admissionDate?: string | Date // ou Date
   dismissalDate?: string | Date // ou Date
-  status: string
+  status: EmployeeStatus
   workplace?: string
   shift?: string
   phone?: string
@@ -600,7 +601,7 @@ export const mockEmployees: Employee[] = [
     currentFunction: 'Site Engineer',
     admissionDate: subDays(new Date(), 90),
     isActive: true,
-    status: 'active',
+    status: 'ACTIVE',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=john',
     email: 'john.mitchell@example.com',
     phone: '+1 (555) 123-4567',
@@ -630,7 +631,7 @@ export const mockEmployees: Employee[] = [
     currentFunction: 'Production Operator',
     admissionDate: subDays(new Date(), 150),
     isActive: true,
-    status: 'active',
+    status: 'ACTIVE',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=sarah',
     email: 'sarah.johnson@example.com',
     phone: '+1 (555) 234-5678',
@@ -654,7 +655,7 @@ export const mockEmployees: Employee[] = [
     currentFunction: 'Safety Officer',
     admissionDate: subDays(new Date(), 60),
     isActive: true,
-    status: 'active',
+    status: 'ACTIVE',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=michael',
     email: 'michael.rodriguez@example.com',
     phone: '+1 (555) 345-6789',
@@ -678,7 +679,7 @@ export const mockEmployees: Employee[] = [
     currentFunction: 'Quality Inspector',
     admissionDate: subDays(new Date(), 120),
     isActive: true,
-    status: 'active',
+    status: 'ACTIVE',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=emily',
     email: 'emily.chen@example.com',
     phone: '+1 (555) 456-7890',
@@ -702,10 +703,74 @@ export const mockEmployees: Employee[] = [
     currentFunction: 'Security Guard',
     admissionDate: subDays(new Date(), 200),
     isActive: true,
-    status: 'on_leave',
+    status: 'ON_LEAVE',
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=david',
     email: 'david.williams@example.com',
     phone: '+1 (555) 567-8901'
+  },
+  {
+    id: '6',
+    name: 'Maria Silva',
+    cpf: '678.901.234-56',
+    nfcCardId: 'NFC006',
+    currentContractId: '1',
+    currentFunctionId: '2',
+    currentContract: 'Construction Project Alpha',
+    currentFunction: 'Carpenter',
+    admissionDate: subDays(new Date(), 300),
+    isActive: false,
+    status: 'DISMISSED',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=maria',
+    email: 'maria.silva@example.com',
+    phone: '+1 (555) 678-9012'
+  },
+  {
+    id: '7',
+    name: 'Carlos Santos',
+    cpf: '789.012.345-67',
+    nfcCardId: 'NFC007',
+    currentContractId: '2',
+    currentFunctionId: '5',
+    currentContract: 'Manufacturing Unit B',
+    currentFunction: 'Maintenance Technician',
+    admissionDate: subDays(new Date(), 500),
+    isActive: false,
+    status: 'RETIRED',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=carlos',
+    email: 'carlos.santos@example.com',
+    phone: '+1 (555) 789-0123'
+  },
+  {
+    id: '8',
+    name: 'Ana Costa',
+    cpf: '890.123.456-78',
+    nfcCardId: 'NFC008',
+    currentContractId: '1',
+    currentFunctionId: '1',
+    currentContract: 'Construction Project Alpha',
+    currentFunction: 'Project Manager',
+    admissionDate: subDays(new Date(), 100),
+    isActive: true,
+    status: 'SUSPENDED',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ana',
+    email: 'ana.costa@example.com',
+    phone: '+1 (555) 890-1234'
+  },
+  {
+    id: '9',
+    name: 'Roberto Lima',
+    cpf: '901.234.567-89',
+    nfcCardId: 'NFC009',
+    currentContractId: '3',
+    currentFunctionId: '8',
+    currentContract: 'Facility Services',
+    currentFunction: 'Janitor',
+    admissionDate: subDays(new Date(), 50),
+    isActive: true,
+    status: 'TRANSFERRED',
+    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=roberto',
+    email: 'roberto.lima@example.com',
+    phone: '+1 (555) 901-2345'
   }
 ]
 

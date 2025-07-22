@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { X, Save, User, FileText, Phone, MapPin, Briefcase, Clock, StickyNote, Camera, UserCheck, CreditCard, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { Employee } from '@/lib/mock-data';
 import { useEmployeeForm } from '@/lib/hooks/useEmployeeForm';
 import { toast } from 'react-hot-toast';
 import FunctionSelector from '@/components/functions/FunctionSelector';
+import { StatusSelect } from '@/components/ui/status-select';
 
 interface EmployeeEditModalProps {
   isOpen: boolean;
@@ -109,6 +109,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
     if (employee) {
       setFormData({
         ...employee,
+        status: employee.status || 'ACTIVE', // Garantir que status seja ACTIVE por padrão
         dataEntrada: employee.admissionDate ? formatDateInput(employee.admissionDate) : '',
         cargo: (typeof employee.currentFunction === 'object' ? employee.currentFunction?.name : employee.currentFunction) || '',
         turno: employee.shift || '',
@@ -239,7 +240,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
 
       shift: formData.turno,
       address: formData.endereco,
-      isActive: formData.status === 'active',
+      isActive: formData.status === 'ACTIVE',
       avatar: avatarPreview || formData.avatar,
       companyFunctionId: formData.companyFunctionId || null
     };
@@ -325,10 +326,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
+      <div
         className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden"
       >
         {/* Header */}
@@ -767,19 +765,12 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
                       Status *
                     </label>
-                    <select
-                      value={formData.status || ''}
-                      onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 ${
-                        errors.status ? 'border-red-500' : 'border-gray-300 dark:border-slate-600'
-                      }`}
-                    >
-                      <option value="">Selecione</option>
-                      <option value="active">Ativo</option>
-                      <option value="on_leave">Em Licença</option>
-                      <option value="transferred">Transferido</option>
-                      <option value="dismissed">Demitido</option>
-                    </select>
+                    <StatusSelect
+                      value={formData.status || 'ACTIVE'}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
+                      placeholder="Selecione o status"
+                      className={errors.status ? 'border-red-500' : ''}
+                    />
                     {errors.status && <span className="text-xs text-red-500 mt-1">{errors.status}</span>}
                   </div>
                 </div>
@@ -993,7 +984,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
             </Button>
           </div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

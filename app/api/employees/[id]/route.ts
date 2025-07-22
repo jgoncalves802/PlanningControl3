@@ -225,8 +225,17 @@ export async function PUT(req: NextRequest, { params }) {
       }
     }
     
-    // Tratar campo isActive
-    if (filteredUpdates.isActive !== undefined) {
+    // Tratar campo isActive baseado no status
+    if (filteredUpdates.status !== undefined) {
+      // Apenas funcionários demitidos ou aposentados são considerados inativos
+      if (filteredUpdates.status === 'DISMISSED' || filteredUpdates.status === 'RETIRED') {
+        filteredUpdates.isActive = false;
+      } else {
+        // Todos os outros status (ACTIVE, ON_LEAVE, TRANSFERRED, SUSPENDED) são considerados ativos
+        filteredUpdates.isActive = true;
+      }
+    } else if (filteredUpdates.isActive !== undefined) {
+      // Se não há status mas há isActive, manter a lógica original
       filteredUpdates.isActive = Boolean(filteredUpdates.isActive);
     }
     

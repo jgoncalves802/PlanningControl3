@@ -92,11 +92,12 @@ export async function GET(req: NextRequest) {
     }
 
     if (status) {
-      if (status === 'active') {
-        where.isActive = true;
-      } else if (status === 'inactive') {
+      // Apenas funcionários demitidos ou aposentados são considerados inativos
+      if (status === 'DISMISSED' || status === 'RETIRED') {
         where.isActive = false;
       } else {
+        // Todos os outros status (ACTIVE, ON_LEAVE, TRANSFERRED, SUSPENDED) são considerados ativos
+        where.isActive = true;
         where.status = status;
       }
     }
@@ -129,11 +130,30 @@ export async function GET(req: NextRequest) {
       include: includeOptions
     });
 
-    // Contar total
-    const total = await prisma.employee.count();
+
+
+    // Mapear os status para garantir que estejam corretos
+    const mappedEmployees = employees.map(emp => {
+      let status = emp.status;
+      
+      // Garantir que o status seja válido
+      if (!status || !['ACTIVE', 'ON_LEAVE', 'TRANSFERRED', 'SUSPENDED', 'DISMISSED', 'RETIRED'].includes(status)) {
+        status = 'ACTIVE';
+      }
+      
+
+      
+      return {
+        ...emp,
+        status
+      };
+    });
+
+    // Contar total com os mesmos filtros
+    const total = await prisma.employee.count({ where });
 
     return NextResponse.json({
-      employees,
+      employees: mappedEmployees,
       pagination: {
         page,
         limit,
@@ -343,6 +363,7 @@ export async function POST(req: NextRequest) {
       if (typeof data[field] === 'undefined' || data[field] === null) {
         if (field === 'dependents') data[field] = [];
         else if (field === 'isActive') data[field] = true;
+        else if (field === 'status') data[field] = 'ACTIVE';
         else if (field === 'address') data[field] = { cep: '' };
         else if (field === 'createdAt' || field === 'updatedAt') data[field] = new Date().toISOString();
         else data[field] = '';

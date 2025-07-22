@@ -1,45 +1,10 @@
-feat: Simplificar lógica de atualização em tempo real da tabela de funcionários
+fix: corrigir erros de linting no workforce-control page
 
-## Mudanças principais:
+- Remover imports não utilizados (framer-motion, useFunctionsQuery, ícones)
+- Remover variáveis não utilizadas (nfcReadValue, selectedEntryId, functionsList, limit)
+- Corrigir tipos any para tipos específicos (filtros, formatTime, logs, entries)
+- Limpar catch blocks removendo variáveis de erro não utilizadas
+- Corrigir map functions removendo parâmetros index não utilizados
+- Substituir motion.div por div normais removendo dependência do framer-motion
 
-### 🔧 Simplificação da lógica de estado
-- Removidos estados complexos: `localEmployees`, `forceUpdate`, `autoReload`
-- Tabela usa diretamente: `employees = employeesData?.employees || []`
-- SSE callback simplificado: apenas `setLastSSEUpdate()` + `refetch()`
-
-### ⚡ Otimização do React Query
-- Configuração global no `ReactQueryProvider`: `staleTime: 0`, `gcTime: 5min`
-- Removidas configurações duplicadas do `useEmployeesQuery`
-- SSE apenas invalida queries, React Query cuida do refetch automático
-
-### 🎯 Fluxo simplificado
-1. Usuário edita funcionário
-2. API atualiza dados e chama `emitEmployeeEvent()`
-3. SSE emite evento para clientes conectados
-4. `useEmployeesSSE` recebe evento e invalida queries
-5. React Query refetch automaticamente
-6. Componente re-renderiza com dados atualizados
-7. Callback `onUpdate` executa `refetch()` adicional
-
-### 🚀 Benefícios
-- ✅ Código muito mais simples e limpo
-- ✅ Menos estados para gerenciar
-- ✅ Menos chance de bugs e race conditions  
-- ✅ React Query gerencia cache de forma otimizada
-- ✅ Atualização automática sem complexidade desnecessária
-- ✅ Botão manual "🔄 Atualizar" como fallback confiável
-
-### 📁 Arquivos modificados:
-- `app/dashboard/employees/page.tsx` - Lógica simplificada
-- `lib/ReactQueryProvider.tsx` - Configuração global otimizada
-- `lib/useEmployeesQuery.ts` - Removidas configurações duplicadas
-- `lib/hooks/useSSEConnection.ts` - SSE callback simplificado
-- `scripts/test-simple-update.js` - Script de teste
-- `scripts/test-sse-simple.js` - Guia de teste no navegador
-
-### 🧪 Como testar:
-1. Abrir página de funcionários
-2. Editar qualquer funcionário
-3. Verificar se tabela atualiza automaticamente
-4. Verificar logs SSE no console do navegador
-5. Usar botão "🔄 Atualizar" se necessário 
+Melhora a qualidade do código e remove warnings do ESLint 

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { EmployeeStatus } from '@/components/ui/status-badge';
 
 interface EmployeeFilters {
   search?: string;
@@ -15,6 +16,7 @@ interface Employee {
   company: string | null;
   avatar: string | null;
   isActive: boolean;
+  status: EmployeeStatus; // Campo status tipado corretamente
   nfcBadge?: {
     id: string;
     badgeId: string;

@@ -1,52 +1,37 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { 
   Users, 
   Building, 
   Clock, 
   Zap, 
   Search, 
-  Filter,
-  MapPin,
   CheckCircle,
   AlertTriangle,
   UserCheck,
   UserX,
-  BarChart3,
   RefreshCw,
   Download,
-  Timer,
   Settings,
-  Activity,
   Shield,
-  Eye,
-  EyeOff,
   Loader2,
   History,
   Trash2
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatDateTime } from '@/lib/utils'
 import NFCReadModal from '@/components/nfc/NFCReadModal'
 import { useWorkforceRealTime, useProcessNFC } from '@/lib/useWorkforce'
 import { useContractsQuery } from '@/lib/useContracts'
-import { useFunctionsQuery } from '@/lib/useFunctions'
-import { WorkforceFilters } from '@/lib/types/workforce'
 import { 
   getCurrentUser, 
   getUserPermissions, 
   getAccessibleContracts, 
-  canUserAccessContract,
-  User,
   UserRole
 } from '@/lib/auth'
 import { toast } from 'react-hot-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { MultiSelect } from '@/components/ui/multiselect';
-import { useRef } from 'react'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 
 export default function WorkforceControlPage() {
@@ -58,15 +43,13 @@ export default function WorkforceControlPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [nfcStatus, setNfcStatus] = useState('idle');
-  const [nfcReadValue, setNfcReadValue] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
   const [auditModalOpen, setAuditModalOpen] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<Array<{ id: string; createdAt: string; action: string; user?: { name: string }; details: Record<string, unknown> }>>([]);
   const [auditLoading, setAuditLoading] = useState(false);
-  const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [pointHistoryModalOpen, setPointHistoryModalOpen] = useState(false);
-  const [pointHistoryLogs, setPointHistoryLogs] = useState<any[]>([]);
+  const [pointHistoryLogs, setPointHistoryLogs] = useState<Array<{ id: string; createdAt: string; details: { status?: string; location?: string; checkIn?: string; checkOut?: string } }>>([]);
   const [pointHistoryLoading, setPointHistoryLoading] = useState(false);
   const [pointHistoryEmployee, setPointHistoryEmployee] = useState<{ id: string, name: string } | null>(null);
   const [pointHistorySearch, setPointHistorySearch] = useState('');
@@ -80,7 +63,6 @@ export default function WorkforceControlPage() {
   const [filterCheckOutFrom, setFilterCheckOutFrom] = useState('');
   const [filterCheckOutTo, setFilterCheckOutTo] = useState('');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
-  const { data: functionsList } = useFunctionsQuery({ isActive: true });
   const { data: contractsData } = useContractsQuery();
   const contracts = contractsData?.contracts || [];
 
@@ -91,7 +73,7 @@ export default function WorkforceControlPage() {
   const debouncedCheckOutFrom = useDebounce(filterCheckOutFrom, 400);
   const debouncedCheckOutTo = useDebounce(filterCheckOutTo, 400);
 
-  const filters: any = {
+  const filters: Record<string, unknown> = {
     contractId: selectedContract === 'all' ? undefined : selectedContract,
     search: debouncedSearchTerm || undefined,
     dateRange: {
@@ -107,7 +89,7 @@ export default function WorkforceControlPage() {
     checkOutTimeTo: debouncedCheckOutTo || undefined,
   };
   const safePage = currentPage < 1 ? 1 : currentPage;
-  const { entries, stats, isLoading, error, refetch, page, totalPages, total, limit } = useWorkforceRealTime(filters, safePage, pageSize);
+  const { entries, stats, isLoading, error, refetch, page, totalPages, total } = useWorkforceRealTime(filters, safePage, pageSize);
   const processNFCMutation = useProcessNFC();
   const contractGroups = entries?.contractGroups || [];
   const accessibleContracts = currentUser ? getAccessibleContracts(currentUser, contracts) : [];
@@ -169,7 +151,7 @@ export default function WorkforceControlPage() {
       const res = await fetch('/api/workforce/fix-entries', { method: 'POST' });
       if (!res.ok) throw new Error('Erro ao corrigir registros antigos');
       toast.success('Registros antigos corrigidos com sucesso!');
-    } catch (err) {
+    } catch {
       toast.error('Erro ao corrigir registros antigos');
     } finally {
       refetch(); // Atualiza os dados sem piscar a tela
@@ -245,7 +227,6 @@ export default function WorkforceControlPage() {
   const handleNFCRead = async (nfcData: string) => {
     try {
       
-      setNfcReadValue(nfcData)
       setNfcStatus('processing')
       
       await processNFCMutation.mutateAsync({
@@ -260,10 +241,9 @@ export default function WorkforceControlPage() {
       setTimeout(() => {
         setShowNFCReader(false)
         setNfcStatus('idle')
-        setNfcReadValue(null)
       }, 2000)
       
-    } catch (error) {
+    } catch {
       setNfcStatus('error')
       setTimeout(() => setNfcStatus('idle'), 3000)
     }
@@ -290,7 +270,7 @@ export default function WorkforceControlPage() {
       a.remove();
       window.URL.revokeObjectURL(downloadUrl);
       toast.success('Exportação concluída!');
-    } catch (err) {
+    } catch {
       toast.error('Erro ao exportar dados');
     }
   };
@@ -338,7 +318,7 @@ export default function WorkforceControlPage() {
     }
   }
 
-  const formatTime = (dateValue: any): string => {
+  const formatTime = (dateValue: string | Date | null | undefined): string => {
     if (!dateValue || dateValue === 'null' || dateValue === null || dateValue === undefined) {
       return ''
     }
@@ -364,36 +344,14 @@ export default function WorkforceControlPage() {
     }
   }
 
-  // Feedback visual customizado para NFC
-  const getNFCFeedback = (mutation) => {
-    if (mutation.isSuccess && mutation.data) {
-      const { action, status, isLate } = mutation.data
-      if (action === 'check_in') {
-        if (status === 'LATE' || isLate) {
-          return { type: 'warning', message: 'Check-in realizado (ATRASADO)' }
-        }
-        return { type: 'success', message: 'Check-in realizado com sucesso!' }
-      }
-      if (action === 'check_out') {
-        return { type: 'success', message: 'Check-out realizado com sucesso!' }
-      }
-      return { type: 'success', message: 'Registro realizado com sucesso!' }
-    }
-    if (mutation.isError && mutation.error) {
-      return { type: 'error', message: mutation.error.message }
-    }
-    return null
-  }
-
   const openAuditModal = async (entryId: string) => {
-    setSelectedEntryId(entryId)
     setAuditModalOpen(true)
     setAuditLoading(true)
     try {
       const res = await fetch(`/api/audit-logs?entityId=${entryId}`)
       const logs = await res.json()
       setAuditLogs(logs)
-    } catch (e) {
+    } catch {
       setAuditLogs([])
     } finally {
       setAuditLoading(false)
@@ -408,7 +366,7 @@ export default function WorkforceControlPage() {
       const res = await fetch(`/api/audit-logs?employeeId=${employeeId}&action=TIME_RECORD`)
       const logs = await res.json()
       setPointHistoryLogs(logs)
-    } catch (e) {
+    } catch {
       setPointHistoryLogs([])
     } finally {
       setPointHistoryLoading(false)
@@ -461,7 +419,7 @@ export default function WorkforceControlPage() {
         refreshData();
         setShowBulkDeleteModal(false);
       }
-    } catch (err) {
+    } catch {
       toast.error('Erro ao excluir registros');
     } finally {
       setBulkDeleteLoading(false);
@@ -550,12 +508,9 @@ export default function WorkforceControlPage() {
             { label: 'Ausentes', value: entries?.globalStats?.absent ?? 0, color: 'red', icon: UserX },
             { label: 'Atrasados', value: entries?.globalStats?.late ?? 0, color: 'yellow', icon: AlertTriangle },
             { label: 'Saíram', value: entries?.globalStats?.left ?? 0, color: 'gray', icon: CheckCircle }
-          ].map((stat, index) => (
-            <motion.div
+          ].map((stat) => (
+            <div
               key={stat.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3, delay: index * 0.1 }}
             >
               <Card>
                 <CardContent className="p-6">
@@ -573,12 +528,12 @@ export default function WorkforceControlPage() {
                   </div>
                 </CardContent>
               </Card>
-            </motion.div>
+            </div>
           ))}
         </div>
       ) : (!!filters.contractId || !!filters.location) ? (
         <div className="space-y-6">
-          {(entries?.contractGroups && entries.contractGroups.length > 0 ? entries.contractGroups : [{ contractId: 'none', contractName: 'Sem Contrato', entries: [], stats: { total: 0, present: 0, absent: 0, late: 0, left: 0 } }]).map((c: any) => (
+          {(entries?.contractGroups && entries.contractGroups.length > 0 ? entries.contractGroups : [{ contractId: 'none', contractName: 'Sem Contrato', entries: [], stats: { total: 0, present: 0, absent: 0, late: 0, left: 0 } }]).map((c: { contractId: string; contractName: string; entries: Array<Record<string, unknown>>; stats: { total: number; present: number; absent: number; late: number; left: number } }) => (
             <div key={c.contractId}>
               <div className="flex items-center gap-3 mb-2">
                 <Building className="h-5 w-5 text-blue-600" />
@@ -592,12 +547,9 @@ export default function WorkforceControlPage() {
                   { label: 'Ausentes', value: c.stats?.absent ?? 0, color: 'red', icon: UserX },
                   { label: 'Atrasados', value: c.stats?.late ?? 0, color: 'yellow', icon: AlertTriangle },
                   { label: 'Saíram', value: c.stats?.left ?? 0, color: 'gray', icon: CheckCircle }
-                ].map((stat, index) => (
-                  <motion.div
+                ].map((stat) => (
+                  <div
                     key={stat.label}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
                   >
                     <Card>
                       <CardContent className="p-6">
@@ -615,7 +567,7 @@ export default function WorkforceControlPage() {
                         </div>
                       </CardContent>
                     </Card>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -798,7 +750,7 @@ export default function WorkforceControlPage() {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {entries.entries.map((entry: any) => (
+                    {entries.entries.map((entry: { id: string; employeeName: string; employeeRegistration?: string; functionName?: string; status: string; checkInTime?: string | Date; checkOutTime?: string | Date; hoursWorked?: number; location?: string; nfcCardId?: string; isLate?: boolean }) => (
                       <tr key={entry.id}>
                         <td className="px-2 py-2"><input type="checkbox" checked={selectedRows.includes(entry.id)} onChange={() => toggleSelectRow(entry.id)} /></td>
                         <td className="px-4 py-2">{entry.employeeName}</td>
@@ -873,10 +825,10 @@ export default function WorkforceControlPage() {
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">NFC</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Observações</th>
                       <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 uppercase">Ações</th>
-                  </tr>
-                </thead>
+                    </tr>
+                  </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {group.entries.map((entry) => (
+                    {group.entries.map((entry: { id: string; employeeName: string; employeeRegistration?: string; functionName?: string; status: string; checkInTime?: string | Date; checkOutTime?: string | Date; hoursWorked?: number; location?: string; nfcCardId?: string; employeeId: string }) => (
                       <tr key={entry.id} className={`hover:bg-blue-50 transition-colors ${selectedRows.includes(entry.id) ? 'bg-blue-100' : ''}`}>
                         <td className="px-2 py-2"><input type="checkbox" checked={selectedRows.includes(entry.id)} onChange={() => toggleSelectRow(entry.id)} /></td>
                         <td className="px-4 py-2 whitespace-nowrap font-medium text-gray-900">{entry.employeeName}</td>
@@ -884,7 +836,7 @@ export default function WorkforceControlPage() {
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.functionName || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full border text-xs font-semibold ${getStatusColor(entry.status)}`}>{getStatusIcon(entry.status)} {getStatusText(entry.status)}</span>
-                      </td>
+                        </td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{formatTime(entry.checkInTime) || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{formatTime(entry.checkOutTime) || '-'}</td>
                         <td className="px-4 py-2 whitespace-nowrap text-gray-700">{entry.hoursWorked?.toFixed(1) || '0.0'}h</td>
