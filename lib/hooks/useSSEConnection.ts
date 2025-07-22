@@ -31,12 +31,12 @@ export function useSSEConnection({
       eventSourceRef.current.close();
     }
 
-    console.log('[SSE] Connecting to:', url);
+
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
     eventSource.onopen = (event) => {
-      console.log('[SSE] Connection opened successfully');
+
       reconnectCountRef.current = 0; // Reset reconnect count on successful connection
       onOpen?.(event);
     };
@@ -44,7 +44,7 @@ export function useSSEConnection({
     eventSource.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[SSE] Message received:', data);
+
         onMessage?.(data);
       } catch (error) {
         console.error('[SSE] Failed to parse message:', error);
@@ -55,7 +55,7 @@ export function useSSEConnection({
     eventSource.addEventListener('employee-update', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[SSE] Employee update received:', data);
+
         onMessage?.(data);
       } catch (error) {
         console.error('[SSE] Failed to parse employee update:', error);
@@ -68,7 +68,7 @@ export function useSSEConnection({
 
       if (autoReconnect && reconnectCountRef.current < 5) {
         const delay = reconnectDelay * Math.pow(2, reconnectCountRef.current); // Exponential backoff
-        console.log(`[SSE] Reconnecting in ${delay}ms...`);
+
         
         reconnectTimeoutRef.current = setTimeout(() => {
           reconnectCountRef.current++;
@@ -79,17 +79,17 @@ export function useSSEConnection({
 
     // Add specific event listeners
     eventSource.addEventListener('connection', (event) => {
-      console.log('[SSE] Connection established:', event.data);
+
     });
 
     eventSource.addEventListener('heartbeat', (event) => {
-      console.log('[SSE] Heartbeat received');
+
     });
 
     eventSource.addEventListener('nfc-badge-update', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[SSE] NFC Badge update received:', data.eventType, data.data?.badgeId);
+
         
         // Invalidate and refetch relevant queries immediately
         queryClient.invalidateQueries({ queryKey: ['nfc-badges'] });
@@ -107,7 +107,7 @@ export function useSSEConnection({
     eventSource.addEventListener('stats-update', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('[SSE] Stats update:', data);
+
         
         // Invalidate stats queries specifically
         queryClient.invalidateQueries({ queryKey: ['nfc-badges', 'stats'] });
@@ -120,7 +120,7 @@ export function useSSEConnection({
   };
 
   const disconnect = () => {
-    console.log('[SSE] Disconnecting...');
+
     
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
@@ -158,7 +158,7 @@ export function useNFCBadgeSSE() {
     onMessage: (data) => {
       // Handle specific NFC badge events
       if (data.type === 'nfc-badge-update') {
-        console.log(`[NFC SSE] Badge ${data.eventType}:`, data.data);
+
         
         // Trigger immediate refetch for better responsiveness
         queryClient.refetchQueries({ queryKey: ['nfc-badges'] });
@@ -172,7 +172,7 @@ export function useNFCBadgeSSE() {
       // Optionally enable polling as fallback here
     },
     onOpen: () => {
-      console.log('[NFC SSE] Real-time updates enabled');
+
     },
   });
 } 
@@ -196,7 +196,7 @@ export function useContractsSSE() {
       console.warn('[Contracts SSE] Connection error, falling back to polling');
     },
     onOpen: () => {
-      console.log('[Contracts SSE] Real-time updates enabled');
+
     },
   });
 } 
@@ -207,14 +207,14 @@ export function useEmployeesSSE(onUpdate?: () => void) {
   const { isConnected } = useSSEConnection({
     url: '/api/employees/events',
     onMessage: (data) => {
-      console.log('[Employees SSE] Received event:', data);
+
       
       if (data.type === 'created' || data.type === 'updated' || data.type === 'deleted') {
-        console.log('[Employees SSE] Processing event:', data.type);
-        console.log('[Employees SSE] Employee data:', data.employee);
+
+
         
         // Invalidar todas as queries relacionadas a funcionários (incluindo as com filtros)
-        console.log('[Employees SSE] Invalidating queries...');
+
         
         // Invalidar queries relacionadas (simples e direto)
         queryClient.invalidateQueries({ 
@@ -226,11 +226,11 @@ export function useEmployeesSSE(onUpdate?: () => void) {
         queryClient.invalidateQueries({ queryKey: ['dashboard'] });
         queryClient.invalidateQueries({ queryKey: ['workforce'] });
         
-        console.log('[Employees SSE] All queries invalidated and refetched');
+
         
         // Chamar callback para forçar re-renderização
         if (onUpdate) {
-          console.log('[Employees SSE] Calling onUpdate callback...');
+
           onUpdate();
         }
         
@@ -249,7 +249,7 @@ export function useEmployeesSSE(onUpdate?: () => void) {
       toast.error('Conexão de tempo real perdida', { duration: 5000 });
     },
     onOpen: () => {
-      console.log('[Employees SSE] Real-time updates enabled');
+
     },
   });
 

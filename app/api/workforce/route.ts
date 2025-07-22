@@ -288,9 +288,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== DEBUG: Iniciando POST workforce ===')
+
     const body = await request.json()
-    console.log('=== DEBUG: Body recebido:', body, '===')
+
     // ... lógica de criação real aqui ...
     // Após criar o registro:
     broadcastWorkforceUpdate();

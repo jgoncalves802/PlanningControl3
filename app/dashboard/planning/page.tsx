@@ -274,7 +274,7 @@ export default function PlanningPage() {
   }
 
   const handleUpdateASOExpirationDays = (contractId: string, days: number) => {
-    console.log(`Atualizando prazo ASO do contrato ${contractId} para ${days} dias`)
+    
   }
 
   if (!currentUser || !userPermissions) {

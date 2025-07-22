@@ -123,26 +123,26 @@ export async function testEmployeeImport(data: any[] = sampleEmployeesData) {
 
     const result = await response.json();
     
-    console.log('=== RESULTADO DA IMPORTAÇÃO ===');
-    console.log(`Status HTTP: ${response.status}`);
-    console.log(`Total de registros: ${result.summary?.total || 0}`);
-    console.log(`Criados com sucesso: ${result.summary?.created || 0}`);
-    console.log(`Falharam: ${result.summary?.failed || 0}`);
+
+
+
+
+
     
     if (result.failedEmployees && result.failedEmployees.length > 0) {
-      console.log('\n=== FUNCIONÁRIOS COM ERRO ===');
+
       result.failedEmployees.forEach((emp: any) => {
-        console.log(`\nFuncionário ${emp.index}: ${emp.name}`);
+
         Object.entries(emp.errors).forEach(([field, error]) => {
-          console.log(`  - ${field}: ${error}`);
+
         });
       });
     }
     
     if (result.createdEmployees && result.createdEmployees.length > 0) {
-      console.log('\n=== FUNCIONÁRIOS CRIADOS ===');
+
       result.createdEmployees.forEach((emp: any) => {
-        console.log(`- ${emp.name} (ID: ${emp.id}, CPF: ${emp.cpf})`);
+
       });
     }
     

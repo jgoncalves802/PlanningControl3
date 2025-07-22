@@ -174,7 +174,7 @@ export default function AnalyticsPage() {
 
   const handleExport = () => {
     // Futura implementação de exportação
-    console.log('Exportando relatório...', { period: selectedPeriod, category: selectedCategory })
+    
   }
 
   const formatCurrency = (value: number) => {

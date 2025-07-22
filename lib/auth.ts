@@ -155,5 +155,5 @@ export const validateUserAccess = (user: User, requiredPermission: string): bool
 // Função para log de auditoria (implementar em produção)
 export const logUserAction = (user: User, action: string, details?: any): void => {
   // Em produção, enviar para sistema de auditoria
-  console.log(`[AUDIT] ${user.email} - ${action}`, details)
+
 }

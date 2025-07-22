@@ -175,7 +175,7 @@ export default function NFCManagementPage() {
       <NFCBadgeRealTimeUpdater
         updateOnFocus={true}
         updateOnOnline={true}
-        onUpdate={() => console.log('NFC badges updated via SSE')}
+        onUpdate={() => {}}
       />
 
       {/* Modais */}

@@ -313,8 +313,7 @@ const EmployeeEditModal: React.FC<EmployeeEditModalProps> = ({
         const compressedImage = await compressImage(file, 300, 0.8);
         setAvatarPreview(compressedImage);
         
-        console.log('Avatar original size:', file.size);
-        console.log('Avatar compressed size:', compressedImage.length);
+
       } catch (error) {
         console.error('Erro ao processar imagem:', error);
         toast.error('Erro ao processar imagem');

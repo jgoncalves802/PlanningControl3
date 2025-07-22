@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== DEBUG /api/contracts/debug ===')
+
     
     // Teste 1: Verificar se a API básica funciona
-    console.log('Teste 1: API básica - OK')
+
     
     // Teste 2: Verificar se o Prisma pode ser importado
     let prisma
     try {
       const { prisma: prismaClient } = await import('@/lib/prisma')
       prisma = prismaClient
-      console.log('Teste 2: Import do Prisma - OK')
+
     } catch (importError) {
       console.error('Teste 2: Erro no import do Prisma:', importError)
       return NextResponse.json({ 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Teste 3: Verificar conexão com Prisma
     try {
       await prisma.$connect()
-      console.log('Teste 3: Conexão Prisma - OK')
+
     } catch (connectionError) {
       console.error('Teste 3: Erro de conexão Prisma:', connectionError)
       return NextResponse.json({ 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // Teste 4: Verificar se a tabela existe com query simples
     try {
       const result = await prisma.$queryRaw`SELECT 1 as test`
-      console.log('Teste 4: Query raw básica - OK', result)
+
     } catch (queryError) {
       console.error('Teste 4: Erro query raw:', queryError)
       return NextResponse.json({ 
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     let contractCount
     try {
       contractCount = await prisma.contract.count()
-      console.log('Teste 5: Count de contratos - OK:', contractCount)
+
     } catch (countError) {
       console.error('Teste 5: Erro ao contar contratos:', countError)
       return NextResponse.json({ 
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     let firstContract
     try {
       firstContract = await prisma.contract.findFirst()
-      console.log('Teste 6: FindFirst contrato - OK:', firstContract ? 'Encontrado' : 'Nenhum contrato')
+
     } catch (findError) {
       console.error('Teste 6: Erro ao buscar contrato:', findError)
       return NextResponse.json({ 

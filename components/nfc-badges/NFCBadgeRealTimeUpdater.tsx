@@ -38,7 +38,7 @@ export default function NFCBadgeRealTimeUpdater({
   // Callback quando recebemos atualizações via SSE
   useEffect(() => {
     if (isConnected && onUpdate) {
-      console.log('[NFCBadgeRealTimeUpdater] SSE connected, real-time updates active');
+  
       onUpdate();
     }
   }, [isConnected, onUpdate]);
@@ -47,21 +47,21 @@ export default function NFCBadgeRealTimeUpdater({
   useEffect(() => {
     const handleFocus = () => {
       if (updateOnFocus && onUpdate) {
-        console.log('[NFCBadgeRealTimeUpdater] Window focus - triggering update');
+  
         onUpdate();
       }
     };
 
     const handleOnline = () => {
       if (updateOnOnline && onUpdate) {
-        console.log('[NFCBadgeRealTimeUpdater] Back online - triggering update');
+
         onUpdate();
       }
     };
 
     const handleVisibilityChange = () => {
       if (!document.hidden && updateOnFocus && onUpdate) {
-        console.log('[NFCBadgeRealTimeUpdater] Page visible - triggering update');
+
         onUpdate();
       }
     };
@@ -106,21 +106,21 @@ export function useNFCBadgeAutoUpdater(options: NFCBadgeRealTimeUpdaterProps = {
     // Listeners mantidos como fallback
     const handleFocus = () => {
       if (updateOnFocus && onUpdate) {
-        console.log('[useNFCBadgeAutoUpdater] Window focus fallback update');
+
         onUpdate();
       }
     };
 
     const handleOnline = () => {
       if (updateOnOnline && onUpdate) {
-        console.log('[useNFCBadgeAutoUpdater] Online fallback update');
+
         onUpdate();
       }
     };
 
     const handleVisibilityChange = () => {
       if (!document.hidden && updateOnFocus && onUpdate) {
-        console.log('[useNFCBadgeAutoUpdater] Visibility fallback update');
+
         onUpdate();
       }
     };
@@ -145,7 +145,7 @@ export function useNFCBadgeAutoUpdater(options: NFCBadgeRealTimeUpdaterProps = {
     isConnected, // Novo: status da conexão SSE
     // Mantido para compatibilidade:
     forceRefreshAll: () => {
-      console.log('[useNFCBadgeAutoUpdater] forceRefreshAll called - using SSE invalidation');
+
     }
   };
 } 

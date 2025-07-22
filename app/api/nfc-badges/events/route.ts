@@ -65,19 +65,19 @@ export async function GET(request: NextRequest) {
         cleanup,
       };
       clients.set(clientId, client);
-      console.log(`[SSE] Client ${clientId} connected. Total clients: ${clients.size}`);
+
       sendEventToClient(client, { type: 'connected', clientId, timestamp: new Date().toISOString() }, 'connection');
       request.signal.addEventListener('abort', () => {
         client.isActive = false;
         client.cleanup();
-        console.log(`[SSE] Client ${clientId} disconnected. Total clients: ${clients.size}`);
+
       });
       heartbeat = setInterval(() => {
         if (!clients.has(clientId) || !client.isActive) return;
         if (!sendEventToClient(client, { type: 'heartbeat', timestamp: new Date().toISOString() }, 'heartbeat')) {
           client.isActive = false;
           client.cleanup();
-          console.log(`[SSE] Client ${clientId} removed due to heartbeat failure. Total clients: ${clients.size}`);
+
         }
       }, 30000);
     },
@@ -111,13 +111,13 @@ export async function broadcastNFCBadgeUpdate(
     data: badgeData,
     timestamp: new Date().toISOString(),
   };
-  console.log(`[SSE] Broadcasting ${eventType} to ${clients.size} clients:`, badgeData.badgeId);
+
   // Itera sobre uma cópia dos clientes
   for (const [clientId, client] of Array.from(clients)) {
     if (!clients.has(clientId)) continue;
     sendEventToClient(client, message, 'nfc-badge-update');
   }
-  console.log(`[SSE] Broadcast completed. Active clients: ${clients.size}`);
+
 }
 
 export async function broadcastStatsUpdate(stats: any) {
@@ -126,12 +126,12 @@ export async function broadcastStatsUpdate(stats: any) {
     data: stats,
     timestamp: new Date().toISOString(),
   };
-  console.log(`[SSE] Broadcasting stats to ${clients.size} clients`);
+
   for (const [clientId, client] of Array.from(clients)) {
     if (!clients.has(clientId)) continue;
     sendEventToClient(client, message, 'stats-update');
   }
-  console.log(`[SSE] Stats broadcast completed. Active clients: ${clients.size}`);
+
 }
 
 export { clients }; 

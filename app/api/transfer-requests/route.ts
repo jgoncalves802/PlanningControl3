@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { TransferStatus } from '@prisma/client';
+
 import { emitTransferRequestEvent } from './events/route';
 
 // Fallback para o enum caso não esteja disponível
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    console.log('Dados recebidos:', data);
+
     
     // Remover toFunctionId dos campos obrigatórios
     const requiredFields = ['employeeId', 'toContractId', 'requestedById', 'scheduledDate'];
@@ -84,17 +84,17 @@ export async function POST(request: NextRequest) {
       if (!data[field]) errors[field] = 'Campo obrigatório';
     });
     if (Object.keys(errors).length > 0) {
-      console.log('Erros de validação:', errors);
+
       return NextResponse.json({ errors }, { status: 400 });
     }
     // Validação de data
     if (isNaN(Date.parse(data.scheduledDate))) {
       errors.scheduledDate = 'Data inválida';
-      console.log('Erro de data inválida:', errors);
+
       return NextResponse.json({ errors }, { status: 400 });
     }
     // Buscar função atual do funcionário
-    console.log('Buscando funcionário:', data.employeeId);
+
     const employee = await prisma.employee.findUnique({
       where: { id: data.employeeId },
       select: { 
@@ -103,10 +103,10 @@ export async function POST(request: NextRequest) {
         cpf: true 
       },
     });
-    console.log('Funcionário encontrado:', employee);
+
     
     if (!employee) {
-      console.log('Funcionário não encontrado');
+
       return NextResponse.json({ error: 'Funcionário não encontrado' }, { status: 404 });
     }
     
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
     let toFunctionId = data.toFunctionId || employee.currentFunctionId;
     
     if (!toFunctionId) {
-      console.log('Funcionário sem função atual e nenhuma função fornecida');
+
       return NextResponse.json({ 
         error: 'Funcionário não possui função atual definida',
         details: `Funcionário ${employee.name} (${employee.cpf}) não possui função atual definida. É necessário selecionar uma função para a transferência.`
@@ -122,14 +122,14 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar se a função existe
-    console.log('Verificando função:', toFunctionId);
+
     const functionExists = await prisma.contractFunction.findUnique({
       where: { id: toFunctionId },
       select: { id: true, name: true, contractId: true },
     });
     
     if (!functionExists) {
-      console.log('Função não encontrada');
+
       return NextResponse.json({ 
         error: 'Função não encontrada',
         details: `Função com ID ${toFunctionId} não foi encontrada no sistema.`
@@ -137,18 +137,18 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar se o usuário que está fazendo a requisição existe
-    console.log('Verificando usuário que fez a requisição:', data.requestedById);
+
     
     // Se não houver requestedById, usar um usuário padrão para demonstração
     let requestingUser;
     if (!data.requestedById) {
-      console.log('Usando usuário padrão para demonstração');
+
       requestingUser = await prisma.user.findFirst({
         select: { id: true, name: true, email: true },
       });
       
       if (!requestingUser) {
-        console.log('Nenhum usuário encontrado no sistema');
+
         return NextResponse.json({ 
           error: 'Nenhum usuário encontrado no sistema',
           details: 'É necessário ter pelo menos um usuário cadastrado no sistema.'
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       });
       
       if (!requestingUser) {
-        console.log('Usuário que fez a requisição não encontrado');
+
         return NextResponse.json({ 
           error: 'Usuário que fez a requisição não encontrado',
           details: `Usuário com ID ${data.requestedById} não foi encontrado no sistema.`
@@ -172,14 +172,14 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar se o contrato de destino existe
-    console.log('Verificando contrato de destino:', data.toContractId);
+
     const destinationContract = await prisma.contract.findUnique({
       where: { id: data.toContractId },
       select: { id: true, name: true, code: true, isActive: true },
     });
     
     if (!destinationContract) {
-      console.log('Contrato de destino não encontrado');
+
       return NextResponse.json({ 
         error: 'Contrato de destino não encontrado',
         details: `Contrato com ID ${data.toContractId} não foi encontrado no sistema.`
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     }
     
     if (!destinationContract.isActive) {
-      console.log('Contrato de destino inativo');
+
       return NextResponse.json({ 
         error: 'Contrato de destino inativo',
         details: `Contrato ${destinationContract.name} (${destinationContract.code}) está inativo e não pode receber transferências.`
@@ -195,15 +195,6 @@ export async function POST(request: NextRequest) {
     }
     
     // Criar transferência
-    console.log('Criando transferência com dados:', {
-      employeeId: data.employeeId,
-      toContractId: data.toContractId,
-      toFunctionId: toFunctionId,
-      requestedById: data.requestedById,
-      scheduledDate: new Date(data.scheduledDate),
-      status: (TransferStatus?.PENDING || TRANSFER_STATUS.PENDING) as any,
-    });
-    
     const transferRequest = await prisma.transferRequest.create({
       data: {
         employeeId: data.employeeId,
@@ -211,7 +202,7 @@ export async function POST(request: NextRequest) {
         toFunctionId: toFunctionId,
         requestedById: data.requestedById,
         scheduledDate: new Date(data.scheduledDate),
-        status: (TransferStatus?.PENDING || TRANSFER_STATUS.PENDING) as any,
+        status: 'PENDING',
       },
       include: {
         employee: { select: { id: true, name: true, registration: true, cpf: true } },
@@ -219,7 +210,7 @@ export async function POST(request: NextRequest) {
       },
     });
     
-    console.log('Transferência criada com sucesso:', transferRequest);
+
     
     try {
       emitTransferRequestEvent('created', transferRequest);

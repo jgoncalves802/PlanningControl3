@@ -22,7 +22,8 @@
   "dependencies": {
     "@prisma/client": "^6.11.1",
     "@supabase/supabase-js": "^2.50.3",
-    "@tanstack/react-query": "^5.81.5",
+    "@tanstack/react-query": "^5.83.0",
+    "@types/file-saver": "^2.0.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.0.0",
     "daisyui": "^5.0.43",
@@ -35,7 +36,8 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.344.0",
     "next": "^14.2.5",
-    "next-intl": "^4.3.3",
+    "next-intl": "^4.3.4",
+    "node-fetch": "^3.3.2",
     "papaparse": "^5.5.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -46,7 +48,8 @@
     "zod": "^3.25.75"
   },
   "devDependencies": {
-    "@types/node": "^20.10.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.19.9",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.18",

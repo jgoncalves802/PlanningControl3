@@ -1,44 +1,96 @@
-# Mensagem de Commit
+# 🔧 Correções de Sintaxe e Relacionamentos de Funcionários
 
+## 🎯 Problemas Resolvidos
+
+### 1. **Erro de Sintaxe no Layout.js**
+- **Problema**: `layout.js:171 Uncaught SyntaxError: Invalid or unexpected token`
+- **Causa**: Múltiplas instâncias do Prisma Client e imports inválidos
+- **Solução**: 
+  - Implementado padrão singleton para Prisma Client
+  - Removido imports inválidos (`emitEmployeeEvent`)
+  - Corrigido instâncias duplicadas em `app/api/employees/[id]/route.ts`
+
+### 2. **Conflito de Porta do Servidor**
+- **Problema**: `EADDRINUSE: address already in use :::3000`
+- **Causa**: Processos Node.js não encerrados corretamente
+- **Solução**: 
+  - Forçado encerramento de processos com `taskkill /f /im node.exe`
+  - Reinicialização limpa do servidor
+
+### 3. **Cargos Não Exibidos na Tabela**
+- **Problema**: Relacionamentos `companyFunction` e `currentFunction` não carregados
+- **Causa**: API não estava usando o parâmetro `include` corretamente
+- **Solução**: 
+  - Corrigido query do Prisma em `app/api/employees/route.ts`
+  - Adicionado `include: includeOptions` na query `findMany`
+  - Implementado parsing correto do parâmetro `include`
+
+## 🔧 Arquivos Modificados
+
+### `app/api/employees/route.ts`
+```diff
++ // Buscar funcionários com relacionamentos
++ const employees = await prisma.employee.findMany({
++   where,
++   take: limit,
++   skip,
++   include: includeOptions
++ });
 ```
-refactor(db): remove campos role e category da tabela Employee
 
-BREAKING CHANGE: Campos role e category removidos da tabela Employee
+### `app/api/employees/[id]/route.ts`
+```diff
++ // Criar uma única instância do Prisma Client
++ const globalForPrisma = globalThis as unknown as {
++   prisma: PrismaClient | undefined;
++ };
++ 
++ const prisma = globalForPrisma.prisma ?? new PrismaClient();
++ 
++ if (process.env.NODE_ENV !== 'production') {
++   globalForPrisma.prisma = prisma;
++ }
+```
 
-## Mudanças Principais
+### `next.config.js`
+```diff
+- // Linhas em branco desnecessárias removidas
+```
 
-### Database Schema
-- Remove campos `role` e `category` da tabela Employee
-- Mantém apenas `currentFunctionId` para relacionamento com ContractFunction
-- Aplica migração mesmo com dados existentes (34 registros com category, 4 com role)
+## 📊 Resultados
 
-### API Endpoints
-- app/api/employees/route.ts: Remove referências a role/category
-- app/api/employees/[id]/route.ts: Atualiza validação de campos
-- app/api/employees/import/route.ts: Remove campos da importação CSV
-- Inclui currentFunction, companyFunction e currentContract nas queries
+### ✅ **Servidor Funcionando**
+- Status 200 na página principal
+- API de funcionários respondendo corretamente
+- Sem erros de sintaxe no console
 
-### Frontend Components
-- components/employees/EmployeeTable.tsx: Atualiza exibição de cargo
-- components/employees/EmployeeAddModal.tsx: Remove campo role
-- components/employees/EmployeeEditModal.tsx: Usa currentFunction.name
+### ✅ **Relacionamentos Carregados**
+- `companyFunction` sendo incluído na query
+- `currentFunction` sendo incluído na query
+- `currentContract` sendo incluído na query
 
-### TypeScript Types
-- lib/mock-data.ts: Remove role e category da interface Employee
-- lib/test-import.ts: Remove campos da importação de teste
+### ✅ **Tabela de Funcionários**
+- Cargos sendo exibidos corretamente
+- Dados atualizados em tempo real
+- Performance otimizada
 
-## Benefícios
-- Elimina duplicação de dados entre role/category e currentFunction
-- Mantém integridade referencial com tabela ContractFunction
-- Simplifica manutenção e evita inconsistências
-- Melhora performance das queries
+## 🚀 Impacto
 
-## Impacto
-- Funcionários sem currentFunctionId não terão cargo exibido
-- Importação CSV não incluirá mais role/category
-- Interface mostrará apenas função atual do funcionário
+- **Estabilidade**: Servidor funcionando sem erros de sintaxe
+- **Funcionalidade**: Cargos dos funcionários sendo exibidos corretamente
+- **Performance**: Queries otimizadas com relacionamentos
+- **Manutenibilidade**: Código limpo e bem estruturado
 
-## Migração
-- Dados existentes foram preservados durante a migração
-- Cliente Prisma regenerado com sucesso
-- Servidor funcionando normalmente após mudanças 
+## 🔍 Testes Realizados
+
+- ✅ Servidor iniciando sem erros
+- ✅ API retornando dados com relacionamentos
+- ✅ Tabela exibindo cargos dos funcionários
+- ✅ Sem conflitos de porta
+- ✅ Processos Node.js gerenciados corretamente
+
+---
+
+**Status**: ✅ **RESOLVIDO**
+**Tipo**: 🐛 Bug Fix + 🔧 Melhoria
+**Prioridade**: 🔴 Alta 

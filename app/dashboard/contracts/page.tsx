@@ -123,7 +123,7 @@ export default function ContractsPage() {
   // Debug: forçar refetch se não houver dados
   useEffect(() => {
     if (!contractsLoading && !contractsData && !contractsError) {
-      console.log('Forçando refetch dos contratos...')
+
       refetch()
     }
   }, [contractsLoading, contractsData, contractsError, refetch])
@@ -278,7 +278,7 @@ export default function ContractsPage() {
       criadoEm: formatDate(new Date(contract.createdAt))
     }))
     
-    console.log('Exportando dados:', dataToExport)
+    
     toast.success('Dados exportados com sucesso!')
     // TODO: Implementar download real do arquivo
   }

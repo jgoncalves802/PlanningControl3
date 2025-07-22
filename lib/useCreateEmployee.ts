@@ -6,35 +6,54 @@ export function useCreateEmployee() {
   return useMutation({
     mutationFn: createEmployee,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      // Invalidar TODAS as queries de funcionários (com e sem filtros)
+      queryClient.invalidateQueries({ 
+        queryKey: ['employees'],
+        exact: false 
+      });
+      
+      // Invalidar também a query com relacionamentos
+      queryClient.invalidateQueries({ 
+        queryKey: ['employees', 'with-relations'],
+        exact: false 
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['functions'] });
+      
+      // Forçar refetch imediato
+      queryClient.refetchQueries({ 
+        queryKey: ['employees'],
+        exact: false 
+      });
+      
+      queryClient.refetchQueries({ 
+        queryKey: ['employees', 'with-relations'],
+        exact: false 
+      });
     },
   });
 }
 
 export function useUpdateEmployee() {
   const queryClient = useQueryClient();
-  return useMutation<{ id: string; updates: any }, any, { id: string; updates: any }>(
+  return useMutation<any, any, { id: string; updates: any }>(
     {
       mutationFn: ({ id, updates }) => updateEmployee(id, updates),
-      onSuccess: (data, variables) => {
-        // Invalidar e refazer fetch de todas as queries relevantes
-        queryClient.invalidateQueries({ queryKey: ['employees'] });
-        queryClient.refetchQueries({ queryKey: ['employees'] });
-        queryClient.invalidateQueries({ queryKey: ['functions'] });
-        queryClient.refetchQueries({ queryKey: ['functions'] });
-        queryClient.invalidateQueries({ queryKey: ['workforce'] });
-        queryClient.refetchQueries({ queryKey: ['workforce'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        queryClient.refetchQueries({ queryKey: ['dashboard'] });
-        queryClient.invalidateQueries({ queryKey: ['contracts'] });
-        queryClient.refetchQueries({ queryKey: ['contracts'] });
-        // Remover dados específicos do cache para forçar reload
-        queryClient.removeQueries({ queryKey: ['employees'] });
+      onSuccess: async (serverResponse, variables) => {
+            // Invalidar todas as queries de funcionários
+    queryClient.invalidateQueries({ 
+      queryKey: ['employees'],
+      exact: false 
+    });
+    
+    // Forçar refetch imediato
+    await queryClient.refetchQueries({ 
+      queryKey: ['employees'],
+      exact: false 
+    });
       },
       onError: (error, variables) => {
-        console.error('Erro na mutação de atualização:', error);
-        console.error('Variáveis usadas:', variables);
+        console.error('Erro ao atualizar funcionário:', error);
       }
     }
   );

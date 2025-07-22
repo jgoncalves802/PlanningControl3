@@ -28,7 +28,7 @@ function normalizeContractFields(data: any): any {
 // GET /api/contracts - Listar contratos com filtros e paginação
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== GET /api/contracts ===')
+
     
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     
     const skip = (page - 1) * limit
     
-    console.log('Parâmetros:', { page, limit, search, isActive, skip })
+
 
     // Construir where clause
     const where: any = {}
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       where.isActive = isActive === 'true'
     }
 
-    console.log('Where clause:', JSON.stringify(where, null, 2))
+
 
     // Buscar contratos com paginação simples
     const [contracts, totalCount] = await Promise.all([
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       prisma.contract.count({ where })
     ])
 
-    console.log(`Encontrados ${contracts.length} contratos de ${totalCount} total`)
+
 
     // Normalizar dados dos contratos
     const normalizedContracts = contracts.map((contract) => {
@@ -102,11 +102,6 @@ export async function GET(request: NextRequest) {
       timestamp: new Date().toISOString()
     }
 
-    console.log('Resposta preparada:', {
-      contractsCount: response.contracts.length,
-      pagination: response.pagination
-    })
-
     return NextResponse.json(response, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
@@ -121,9 +116,9 @@ export async function GET(request: NextRequest) {
     }
     // Logar headers da request para debug
     try {
-      console.log('Request headers:', Object.fromEntries(request.headers.entries()))
+
     } catch (e) {
-      console.log('Não foi possível logar os headers da request')
+
     }
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: error.message, stack: error.stack },
@@ -140,11 +135,11 @@ export async function GET(request: NextRequest) {
 // POST /api/contracts - Criar novo contrato
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== POST /api/contracts ===')
+
     
     const rawData = await request.json()
     const data = normalizeContractFields(rawData)
-    console.log('Dados recebidos:', data)
+
 
     const { name, code, workdayHours, includesWeekends, includesHolidays } = data
 
@@ -221,7 +216,7 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    console.log('Contrato criado:', newContract)
+
 
     // Emitir evento SSE
     emitContractEvent('created', newContract);

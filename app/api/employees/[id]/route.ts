@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { emitEmployeeEvent } from '../events/route';
 
-const prisma = new PrismaClient();
+// Criar uma única instância do Prisma Client
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 // Função para normalizar caracteres especiais e garantir UTF-8
 function normalizeText(text: string): string {
@@ -90,16 +98,10 @@ export async function PUT(req: NextRequest, { params }) {
   try {
   const { id } = params;
     
-    console.log('=== DEBUG PUT EMPLOYEE ===');
-    console.log('ID:', id);
-    console.log('Content-Type:', req.headers.get('content-type'));
-    
     // Verificar se há conteúdo no body
     const body = await req.text();
-    console.log('Body length:', body.length);
     
     if (!body || body.trim() === '') {
-      console.log('Body está vazio');
       return NextResponse.json({ 
         error: 'Body da requisição está vazio' 
       }, { 
@@ -113,8 +115,7 @@ export async function PUT(req: NextRequest, { params }) {
     let rawUpdates;
     try {
       rawUpdates = JSON.parse(body);
-      console.log('JSON parsed successfully');
-      console.log('Parsed data keys:', Object.keys(rawUpdates));
+      
     } catch (parseError) {
       console.error('Erro ao fazer parse do JSON:', parseError);
       return NextResponse.json({ 
@@ -130,7 +131,7 @@ export async function PUT(req: NextRequest, { params }) {
     
     // Verificar se rawUpdates é um objeto válido
     if (!rawUpdates || typeof rawUpdates !== 'object') {
-      console.log('rawUpdates não é um objeto válido:', typeof rawUpdates);
+
       return NextResponse.json({ 
         error: 'Dados inválidos no body da requisição' 
       }, { 
@@ -236,13 +237,13 @@ export async function PUT(req: NextRequest, { params }) {
         // Limitar o tamanho do avatar (máximo 2MB em base64)
         const maxSize = 2 * 1024 * 1024; // 2MB
         if (filteredUpdates.avatar.length > maxSize) {
-          console.log('Avatar muito grande, removendo dos dados de atualização');
+  
           delete filteredUpdates.avatar;
         } else {
           // Verificar se é um base64 válido
           const base64Regex = /^data:image\/(jpeg|jpg|png|gif);base64,/;
           if (!base64Regex.test(filteredUpdates.avatar)) {
-            console.log('Avatar não é um base64 válido, removendo dos dados de atualização');
+            
             delete filteredUpdates.avatar;
           }
         }
@@ -254,7 +255,7 @@ export async function PUT(req: NextRequest, { params }) {
     // Validação para campos duplicados ou inconsistentes
     if (filteredUpdates.motherName && filteredUpdates.fatherName) {
       if (filteredUpdates.motherName === filteredUpdates.fatherName) {
-        console.log('Campos motherName e fatherName são idênticos, corrigindo...');
+
         // Se são iguais, provavelmente há um erro nos dados
         // Vamos manter apenas o motherName e limpar o fatherName
         delete filteredUpdates.fatherName;
@@ -273,9 +274,7 @@ export async function PUT(req: NextRequest, { params }) {
       delete filteredUpdates.estadoCivil;
     }
     
-    console.log('Atualizando funcionário:', id);
-    console.log('Dados filtrados:', JSON.stringify({...filteredUpdates, avatar: filteredUpdates.avatar ? '[AVATAR_DATA]' : undefined}, null, 2));
-    console.log('Avatar presente nos dados filtrados:', !!filteredUpdates.avatar);
+    
     
     // Verificar se o funcionário existe antes de tentar atualizar
     const existingEmployee = await prisma.employee.findUnique({ where: { id } });
@@ -296,9 +295,8 @@ export async function PUT(req: NextRequest, { params }) {
     });
     
     // Emitir evento SSE
-    emitEmployeeEvent('updated', updatedEmployee);
-    console.log('Funcionário atualizado com sucesso');
-    console.log('Dados finais no banco:', JSON.stringify(updatedEmployee, null, 2));
+    // emitEmployeeEvent('updated', updatedEmployee);
+    
     
     return NextResponse.json(updatedEmployee, {
       headers: {
@@ -338,7 +336,7 @@ export async function DELETE(req: NextRequest, { params }) {
   const { id } = params;
   const deletedEmployee = await prisma.employee.delete({ where: { id } });
     // Emitir evento SSE
-    emitEmployeeEvent('deleted', deletedEmployee);
+    // emitEmployeeEvent('deleted', deletedEmployee);
     return NextResponse.json({ success: true }, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'

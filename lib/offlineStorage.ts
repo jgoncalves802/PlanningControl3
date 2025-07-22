@@ -70,7 +70,7 @@ class OfflineStorageManager {
     const store = transaction.objectStore('pendingActions');
     await store.add(fullAction);
     
-    console.log('Action added to offline queue:', fullAction);
+
     return fullAction.id;
   }
 

@@ -444,13 +444,7 @@ function NewTransferModal({ open, onClose, onSuccess, currentUser }: { open: boo
         return;
       }
       
-      console.log('Enviando dados para criar transferência:', {
-        employeeId: selectedEmployee.id,
-        toContractId: selectedContractId,
-        toFunctionId: selectedEmployee.currentFunctionId,
-        scheduledDate,
-        requestedById: currentUser?.id,
-      });
+
       
       // Chamada para criar transferência
       const res = await fetch('/api/transfer-requests', {
@@ -467,12 +461,12 @@ function NewTransferModal({ open, onClose, onSuccess, currentUser }: { open: boo
       
       if (!res.ok) {
         const errorData = await res.json();
-        console.log('Erro da API:', errorData);
+
         throw new Error(errorData.error || errorData.details || 'Erro ao criar transferência');
       }
       
       const result = await res.json();
-      console.log('Transferência criada com sucesso:', result);
+      
       onSuccess();
       onClose();
     } catch (e: any) {

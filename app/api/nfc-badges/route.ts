@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status') || '';
     const assignedEmployee = searchParams.get('assignedEmployee') || 'all';
 
-    console.log('GET /api/nfc-badges - Filters:', { search, status, assignedEmployee });
+
 
     // Construir filtros WHERE dinamicamente
     const whereClause: Prisma.NFCBadgeWhereInput = {};
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       }
     }
 
-    console.log('WHERE clause:', JSON.stringify(whereClause, null, 2));
+
 
     const [badges, totalCount, availableCount, assignedCount] = await Promise.all([
       prisma.nFCBadge.findMany({
@@ -75,8 +75,8 @@ export async function GET(request: Request) {
       })
     ]);
 
-    console.log('Found badges:', badges.length);
-    console.log('Badge stats - Total:', totalCount, 'Available:', availableCount, 'Assigned:', assignedCount);
+
+
 
     // Transformar os dados para o formato esperado pelo frontend
     const transformedBadges = badges.map(badge => ({
@@ -127,11 +127,11 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { badgeId, notes } = body as CreateNFCBadgeData;
 
-    console.log('Creating badge with data:', { badgeId, notes });
+
 
     // Validação dos dados
     if (!badgeId || typeof badgeId !== 'string') {
-      console.log('Validation failed: badgeId is required');
+
       return NextResponse.json(
         { error: 'ID do crachá é obrigatório' },
         { status: 400 }
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
     }
 
     // Verificar se o crachá já existe
-    console.log('Checking if badge exists:', badgeId);
+
     const existingBadge = await prisma.nFCBadge.findUnique({
       where: { badgeId },
       include: {
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
     });
 
     if (existingBadge) {
-      console.log('Badge already exists:', existingBadge.id);
+
       
       // Retornar o crachá existente em vez de erro, para permitir atribuição
       const transformedBadge = {
@@ -173,7 +173,7 @@ export async function POST(request: Request) {
     }
 
     // Criar o crachá
-    console.log('Creating new badge...');
+
     const badge = await prisma.nFCBadge.create({
       data: {
         badgeId,
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
       }
     });
 
-    console.log('Badge created successfully:', badge.id);
+
 
     // Transformar os dados para o formato esperado pelo frontend
     const transformedBadge = {
@@ -221,8 +221,8 @@ export async function POST(request: Request) {
     console.error('Error creating badge:', error);
     
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      console.log('Prisma error code:', error.code);
-      console.log('Prisma error message:', error.message);
+
+
       
       if (error.code === 'P2002') {
         return NextResponse.json(

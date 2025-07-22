@@ -432,7 +432,7 @@ export function useNFCBadgeRealtimeUpdates() {
 
   // Função para ser chamada quando um evento externo indica que os dados mudaram
   const handleExternalUpdate = (eventType: 'assign' | 'revoke' | 'create' | 'update' | 'delete', badgeId?: string) => {
-    console.log(`[NFC Badge Realtime] External update detected: ${eventType}`, badgeId);
+
     
     // Forçar atualização imediata
     forceRefreshAll();

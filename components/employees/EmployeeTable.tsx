@@ -243,7 +243,7 @@ const EmployeeTable = memo(function EmployeeTable({
             const isLinkedToSelected = selectedContractId && employee.currentContractId === selectedContractId;
             return (
               <tr 
-                key={employee.id} 
+                key={(employee as any)._renderKey || employee.id || index} 
                 className={`hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors duration-150 ${
                   index % 2 === 0 ? 'bg-white dark:bg-slate-800' : 'bg-gray-50/30 dark:bg-slate-800/50'
                 }`}

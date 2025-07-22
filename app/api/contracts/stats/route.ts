@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 // GET /api/contracts/stats - Estatísticas de contratos
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== GET /api/contracts/stats ===')
+
 
     // Buscar estatísticas básicas
     const [
@@ -198,12 +198,6 @@ export async function GET(request: NextRequest) {
         functionCount: contract._count.functions
       }))
     }
-
-    console.log('Estatísticas calculadas:', {
-      totalContracts: stats.totalContracts,
-      activeContracts: stats.activeContracts,
-      totalEmployees: stats.totalEmployees
-    })
 
     return NextResponse.json(stats, {
       headers: {

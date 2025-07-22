@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    console.log('=== GET /api/functions/[id] ===', id)
+  
     
     const companyFunction = await prisma.companyFunction.findUnique({
       where: { id },
@@ -55,10 +55,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    console.log('=== PUT /api/functions/[id] ===', id)
-    
     const body = await request.json()
-    console.log('Dados para atualização:', body)
     
     const { name, laborType, isActive } = body
     
@@ -145,7 +142,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       }
     })
     
-    console.log('Função atualizada:', updatedFunction)
+    
     
     return NextResponse.json(updatedFunction, {
       headers: {
@@ -170,7 +167,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { id } = params
-    console.log('=== DELETE /api/functions/[id] ===', id)
+
     
     // Verificar se a função existe
     const existingFunction = await prisma.companyFunction.findUnique({
@@ -217,7 +214,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       where: { id }
     })
     
-    console.log('Função excluída:', id)
+    
     
     return NextResponse.json(
       { message: 'Função excluída com sucesso' },

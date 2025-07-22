@@ -42,7 +42,7 @@ export default function NFCBadgesList({ className }: NFCBadgesListProps) {
 
   // Log do status da conexão SSE
   useEffect(() => {
-    console.log('[NFCBadgesList] SSE connection status:', isConnected ? 'connected' : 'disconnected');
+
   }, [isConnected]);
 
   const handleFiltersChange = (newFilters: any) => {

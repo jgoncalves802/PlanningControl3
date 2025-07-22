@@ -142,7 +142,7 @@ export default function SafetyPage() {
 
   const handleUpdateASOExpirationDays = (contractId: string, days: number) => {
     // Em produção, isso seria uma chamada à API
-    console.log(`Atualizando prazo ASO do contrato ${contractId} para ${days} dias`)
+    
   }
 
   if (!currentUser || !userPermissions) {

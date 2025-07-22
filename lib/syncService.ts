@@ -45,7 +45,7 @@ class SyncService {
     if (!this.isClient || this.syncInProgress || !this.isOnline) return;
 
     this.syncInProgress = true;
-    console.log('Starting sync process...');
+
 
     try {
       await this.syncPendingActions();
@@ -61,7 +61,7 @@ class SyncService {
     if (!this.isClient) return;
 
     const pendingActions = await offlineStorage.getPendingActions();
-    console.log(`Found ${pendingActions.length} pending actions`);
+
 
     // Processar em lotes de 10
     const batchSize = 10;
@@ -132,7 +132,7 @@ class SyncService {
       if (response.ok) {
         await offlineStorage.updateActionStatus(action.id, 'synced');
         await offlineStorage.removeAction(action.id);
-        console.log(`Action ${action.id} synced successfully`);
+
       } else {
         throw new Error(`Server error: ${response.status}`);
       }

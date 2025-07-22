@@ -99,7 +99,7 @@ export default function NFCBadgeCreateModal({ isOpen, onClose }: NFCBadgeCreateM
         notes: notes.trim() || undefined, // Garantir que não há espaços
       };
       
-      console.log('Creating badge with data:', createData); // Debug
+
       
       const createdBadge = await createMutation.mutateAsync(createData);
 

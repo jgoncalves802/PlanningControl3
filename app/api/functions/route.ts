@@ -6,7 +6,7 @@ const prisma = new PrismaClient()
 // GET /api/functions - Listar todas as funções
 export async function GET(request: NextRequest) {
   try {
-    console.log('=== GET /api/functions ===')
+
     
     const { searchParams } = new URL(request.url)
     const laborType = searchParams.get('laborType')
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       ]
     })
     
-    console.log(`Encontradas ${functions.length} funções`)
+
     
     return NextResponse.json(functions, {
       headers: {
@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
 // POST /api/functions - Criar nova função
 export async function POST(request: NextRequest) {
   try {
-    console.log('=== POST /api/functions ===')
+
     
     const body = await request.json()
-    console.log('Dados recebidos:', body)
+
     
     const { name, laborType } = body
     
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       }
     })
     
-    console.log('Função criada:', newFunction)
+
     
     return NextResponse.json(newFunction, {
       status: 201,

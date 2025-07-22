@@ -29,7 +29,7 @@ export default function EmployeeAssignmentPage() {
         }
         
         const data = await response.json();
-        console.log('Contratos carregados:', data);
+  
         setContracts(data.contracts || []);
       } catch (error) {
         console.error('Erro ao buscar contratos:', error);
@@ -282,23 +282,7 @@ export default function EmployeeAssignmentPage() {
               ))}
             </select>
             
-            {/* Botão de teste temporário */}
-            <button
-              onClick={async () => {
-                console.log('=== TESTE MANUAL ===');
-                console.log('Employees data:', employeesData);
-                console.log('Contracts:', contracts);
-                console.log('Active contracts:', activeContracts);
-                console.log('Selected contract ID:', selectedContractId);
-                console.log('Available employees:', availableEmployees.length);
-                console.log('Linked employees:', linkedEmployees.length);
-                await refetchEmployees();
-                console.log('Refetch completed');
-              }}
-              className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-            >
-              Debug
-            </button>
+
           </div>
           
           {/* Status info */}

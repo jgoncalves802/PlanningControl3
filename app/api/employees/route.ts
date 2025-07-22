@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
-import { emitEmployeeEvent } from './events/route';
 
-const prisma = new PrismaClient();
+// Criar uma única instância do Prisma Client
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
+const prisma = globalForPrisma.prisma ?? new PrismaClient();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
 
 // Função para normalizar caracteres especiais e garantir UTF-8
 function normalizeText(text: string): string {
@@ -67,7 +75,8 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || '';
     const sortBy = searchParams.get('sortBy') || 'name';
     const sortOrder = searchParams.get('sortOrder') || 'asc';
-    const isActive = searchParams.get('isActive'); // Adicionar este parâmetro
+    const isActive = searchParams.get('isActive');
+    const include = searchParams.get('include');
 
     const skip = (page - 1) * limit;
 
@@ -78,8 +87,7 @@ export async function GET(req: NextRequest) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
         { cpf: { contains: search, mode: 'insensitive' } },
-        { registration: { contains: search, mode: 'insensitive' } },
-        { currentFunction: { name: { contains: search, mode: 'insensitive' } } }
+        { registration: { contains: search, mode: 'insensitive' } }
       ];
     }
 
@@ -93,28 +101,36 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Filtro específico para isActive
     if (isActive !== null && isActive !== undefined) {
       where.isActive = isActive === 'true';
     }
 
-    // Buscar funcionários
+    // Construir include baseado no parâmetro
+    const includeOptions: any = {};
+    
+    if (include) {
+      const includes = include.split(',');
+      if (includes.includes('currentFunction')) {
+        includeOptions.currentFunction = true;
+      }
+      if (includes.includes('companyFunction')) {
+        includeOptions.companyFunction = true;
+      }
+      if (includes.includes('currentContract')) {
+        includeOptions.currentContract = true;
+      }
+    }
+
+    // Buscar funcionários com relacionamentos
     const employees = await prisma.employee.findMany({
       where,
-      skip,
       take: limit,
-      orderBy: {
-        [sortBy]: sortOrder
-      },
-      include: {
-        currentFunction: true,
-        companyFunction: true,
-        currentContract: true
-      }
+      skip,
+      include: includeOptions
     });
 
     // Contar total
-    const total = await prisma.employee.count({ where });
+    const total = await prisma.employee.count();
 
     return NextResponse.json({
       employees,
@@ -126,7 +142,11 @@ export async function GET(req: NextRequest) {
       }
     }, {
       headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
       }
     });
   } catch (error) {
@@ -333,7 +353,7 @@ export async function POST(req: NextRequest) {
     const employee = await prisma.employee.create({ data });
     
     // Emitir evento SSE
-    emitEmployeeEvent('created', employee);
+          // emitEmployeeEvent('created', employee);
 
     // Garantir que a resposta também tenha UTF-8 correto
     return NextResponse.json(employee, {

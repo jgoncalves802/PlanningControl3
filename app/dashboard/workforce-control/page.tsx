@@ -127,7 +127,7 @@ export default function WorkforceControlPage() {
       console.error('[NFC] Erro na mutação:', processNFCMutation.error)
     }
     if (processNFCMutation.isSuccess) {
-      console.log('[NFC] Mutação de registro de ponto bem-sucedida:', processNFCMutation.data)
+      
       refetch(); // Atualiza a tabela após registro
     }
   }, [processNFCMutation.isError, processNFCMutation.isSuccess])
@@ -244,7 +244,7 @@ export default function WorkforceControlPage() {
 
   const handleNFCRead = async (nfcData: string) => {
     try {
-      console.log('[NFC] Valor lido:', nfcData)
+      
       setNfcReadValue(nfcData)
       setNfcStatus('processing')
       

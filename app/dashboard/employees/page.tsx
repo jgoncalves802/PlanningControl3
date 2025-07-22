@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect, useRef, useMemo } from 'react'
+
 import { 
   Users, 
   Plus, 
@@ -36,8 +36,9 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { getEmployees } from '@/lib/employeeService'
 import { useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useAddAdmission, useAddDismissal } from '@/lib/useCreateEmployee'
-import { useEmployeesQuery } from '@/lib/useEmployeesQuery'
-import { useEmployeesSSE } from '@/lib/hooks/useSSEConnection';
+import { useEmployeesWithRelationsQuery } from '@/lib/useEmployeesQuery'
+
+
 import { ImportEmployeesDialog } from '@/components/employees/ImportEmployeesDialog'
 import EmployeeTable from '@/components/employees/EmployeeTable'
 import EmployeeFilters from '@/components/employees/EmployeeFilters'
@@ -51,7 +52,7 @@ import FunctionModal from '@/components/functions/FunctionModal'
 import FunctionImportDialog from '@/components/functions/FunctionImportDialog'
 import { useEmployeeFilters } from '@/lib/hooks/useEmployeeFilters'
 import { useFunctionsQuery, useCreateFunction } from '@/lib/useFunctions'
-import { EmployeeRealTimeUpdater } from '@/components/employees/EmployeeRealTimeUpdater'
+
 
 // Configuração das colunas disponíveis
 interface ColumnConfig {
@@ -73,7 +74,8 @@ export default function EmployeesPage() {
   const [columns, setColumns] = useState<ColumnConfig[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
-  const [lastSSEUpdate, setLastSSEUpdate] = useState<Date | null>(null) // Timestamp da última atualização SSE
+
+  const [forceRender, setForceRender] = useState(0) // Para forçar re-render
 
   // Estados para functions
   const [showCreateFunction, setShowCreateFunction] = useState(false)
@@ -97,23 +99,35 @@ export default function EmployeesPage() {
   const deleteEmployeeMutation = useDeleteEmployee();
   const addAdmissionMutation = useAddAdmission();
   const addDismissalMutation = useAddDismissal();
-  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery({ page, limit });
+  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesWithRelationsQuery({ page, limit });
   
   // Functions queries
   const { data: functions = [] } = useFunctionsQuery({});
   const createFunctionMutation = useCreateFunction();
+  
+  // Debug hook
+
 
   // Extrair array de funcionários da resposta da API
   const employees = employeesData?.employees || [];
   const pagination = employeesData?.pagination || { page: 1, limit: 10, total: 0, pages: 1 };
+  
+  // Log para debug
+
 
 
 
   // Converter dados da API para o formato esperado pelos componentes
-  const processedEmployees = employees.map(emp => ({
-    ...emp,
-    status: emp.isActive ? 'active' : 'inactive' // Adicionar campo status baseado em isActive
-  }));
+  const processedEmployees = useMemo(() => {
+    // Criar um timestamp único para garantir re-render
+    const timestamp = Date.now();
+    return employees.map((emp, index) => ({
+      ...emp,
+      status: emp.isActive ? 'active' : 'inactive',
+      _renderKey: `${emp.id}-${timestamp}-${forceRender}-${index}`,
+      _forceUpdate: forceRender // Campo adicional para forçar re-render
+    }));
+  }, [employees, forceRender]);
 
   // Hook de filtros usando dados processados
   const {
@@ -179,51 +193,11 @@ export default function EmployeesPage() {
     }
   }, [])
 
-  // Ativar SSE para funcionários - LÓGICA SIMPLIFICADA
-  const { isConnected: sseConnected } = useEmployeesSSE(() => {
-    console.log('[Employees Page] SSE callback - dados atualizados!');
-    const now = new Date();
-    setLastSSEUpdate(now);
-    
-    // Simplesmente forçar refetch - React Query cuidará do resto
-    refetch();
-    
-    toast.success('Dados atualizados automaticamente!', { duration: 2000 });
-  });
-
-  // Forçar refetch quando SSE conectar
-  useEffect(() => {
-    if (sseConnected) {
-      console.log('[Employees Page] SSE connected, refetching data...');
-      refetch();
-    }
-  }, [sseConnected, refetch]);
 
 
 
-  // Log quando dados mudam
-  useEffect(() => {
-    if (employees.length > 0) {
-      console.log('[Employees Page] Data updated, employees count:', employees.length);
-      const bruno = employees.find(emp => emp.name === 'BRUNO SERGIO SANTOS LOBO');
-      if (bruno) {
-        console.log('[Employees Page] BRUNO data:', {
-          name: bruno.name,
-          cargo: (bruno as any).companyFunction?.name || '-',
-          status: bruno.isActive ? 'active' : 'inactive'
-        });
-      }
-      
-      // Log de todos os funcionários para debug
-      console.log('[Employees Page] All employees:');
-      employees.forEach((emp, index) => {
-        console.log(`[Employees Page] ${index + 1}. ${emp.name}:`, {
-          cargo: (emp as any).companyFunction?.name || '-',
-          status: emp.isActive ? 'active' : 'inactive'
-        });
-      });
-    }
-  }, [employees]);
+
+
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -351,17 +325,19 @@ export default function EmployeesPage() {
     );
   };
 
-  const handleUpdateEmployee = async (employeeData: Partial<Employee>) => {
+    const handleUpdateEmployee = async (employeeData: Partial<Employee>) => {
     if (!selectedEmployee) return;
-    
+
     updateEmployeeMutation.mutate(
       { id: selectedEmployee.id, updates: employeeData },
       {
-        onSuccess: () => {
+        onSuccess: (updatedEmployee) => {
           toast.success('Funcionário atualizado com sucesso!');
           setShowEditModal(false);
           setSelectedEmployee(null);
-          refetch();
+          
+          // Forçar re-render da tabela
+          setForceRender(prev => prev + 1);
         },
         onError: (error: any) => {
           console.error('Erro ao atualizar funcionário:', error);
@@ -507,7 +483,7 @@ export default function EmployeesPage() {
     return (
       <div className="flex items-center justify-center h-96 text-red-600">
         <X className="h-5 w-5 mr-2" /> Erro ao carregar funcionários.
-        <Button variant="outline" size="sm" className="ml-4" onClick={() => refetch()}>Tentar novamente</Button>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
       </div>
     );
   }
@@ -596,6 +572,8 @@ export default function EmployeesPage() {
               Adicionar Funcionário
             </Button>
           )}
+          
+
         </div>
         )}
         
@@ -685,31 +663,14 @@ export default function EmployeesPage() {
           />
 
       {/* Employees Table */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
-      >
+      <div className="animate-fade-in">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
                 Funcionários ({pagination.total})
-                {lastSSEUpdate && (
-                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded">
-                    Última atualização: {lastSSEUpdate.toLocaleTimeString()}
-                  </span>
-                )}
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => refetch()}
-                  >
-                    🔄 Atualizar
-                  </Button>
-                </div>
+
               </CardTitle>
               {selectedEmployees.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -728,6 +689,7 @@ export default function EmployeesPage() {
           </CardHeader>
           <CardContent className="p-0">
             <EmployeeTable
+              key={`employees-table-${forceRender}`}
               employees={filteredEmployees}
               columns={columns}
               selectedEmployees={selectedEmployees}
@@ -774,7 +736,7 @@ export default function EmployeesPage() {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
+      </div>
         </>
       ) : (
         <FunctionsTab currentUser={currentUser} />
@@ -888,8 +850,8 @@ export default function EmployeesPage() {
         </div>
       )}
       
-      {/* Componente de atualizações em tempo real */}
-      <EmployeeRealTimeUpdater />
+      
+      
     </div>
     </>
   );

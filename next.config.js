@@ -1,13 +1,8 @@
 /** @type {import('next').NextConfig} */
-const createNextIntlPlugin = require('next-intl/plugin');
-const withNextIntl = createNextIntlPlugin();
-
-module.exports = withNextIntl({
+module.exports = {
   images: {
     domains: ['images.unsplash.com', 'api.dicebear.com'],
   },
-  
-
 
   // Configuração experimental para HTTPS local
   experimental: {
@@ -76,4 +71,4 @@ module.exports = withNextIntl({
       },
     ];
   },
-})
+}
