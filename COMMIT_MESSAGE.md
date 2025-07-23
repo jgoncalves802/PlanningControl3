@@ -3,27 +3,44 @@
 ## 🎯 Commit Principal
 
 ```
-feat: implementar sistema de atualização automática dos cards de estatísticas
+feat: implementar página de configurações do usuário (funcionário)
 
-- Adicionar atualização automática a cada 30 segundos
-- Implementar sistema de eventos para atualização em tempo real
-- Criar indicador visual de última atualização
-- Integrar disparo automático nas APIs de funcionários
-- Melhorar UX com atualizações sem recarregamento da página
+- Criar estrutura base da página de configurações com 3 níveis de acesso
+- Implementar sistema de permissões hierárquico (Super Admin, Admin da Empresa, Usuário)
+- Criar componentes de configurações pessoais, interface e notificações
+- Implementar APIs para gerenciar configurações do usuário
+- Criar hooks e validações para configurações
+- Adicionar componentes UI necessários (Tabs, Badge, Switch, Select, Avatar)
 
-Funcionalidades:
-- Cards se atualizam automaticamente sem reload
-- Indicador "Última atualização: Xs atrás"
-- Atualização por foco da janela
-- Disparo automático após criar/editar/importar funcionários
-- Sistema de eventos para sincronização em tempo real
+Funcionalidades implementadas:
+- Configurações Pessoais: nome, email, telefone, idioma, fuso horário, tema, avatar
+- Configurações de Interface: layout, barra lateral, notificações, ações rápidas, modo compacto
+- Configurações de Notificações: push, email, tipos de notificação, horário silencioso
+- Sistema de navegação por abas baseado em permissões
+- Validação de dados com Zod
+- Feedback visual com loading states e notificações
+- Interface responsiva e acessível
 
-Arquivos modificados:
-- lib/hooks/useEmployeeStats.ts: sistema de atualização automática
-- components/employees/EmployeeStats.tsx: indicador visual e melhorias UX
-- app/api/employees/route.ts: disparo de evento após criação
-- app/api/employees/[id]/route.ts: disparo de evento após edição
-- app/api/employees/import/route.ts: disparo de evento após importação
+Arquivos criados/modificados:
+- app/dashboard/settings/page.tsx: página principal com sistema de abas
+- app/dashboard/settings/components/UserSettings/PersonalSettings.tsx: configurações pessoais
+- app/dashboard/settings/components/UserSettings/InterfaceSettings.tsx: configurações de interface
+- app/dashboard/settings/components/UserSettings/NotificationSettings.tsx: configurações de notificações
+- app/api/settings/user/[userId]/route.ts: API para gerenciar configurações
+- lib/hooks/useSettings.ts: hook principal para configurações
+- lib/validations/settings.ts: validações com Zod
+- components/ui/tabs.tsx: componente de abas
+- components/ui/badge.tsx: componente de badge
+- components/ui/switch.tsx: componente de switch
+- components/ui/select.tsx: componente de select
+- components/ui/avatar.tsx: componente de avatar
+
+Próximos passos:
+- Implementar configurações Super Admin
+- Implementar configurações Admin da Empresa
+- Adicionar sistema de permissões real
+- Implementar persistência no banco de dados
+- Adicionar testes unitários
 ```
 
 ## 🔧 Commits Separados (Opcional)

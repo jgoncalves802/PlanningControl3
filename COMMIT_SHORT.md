@@ -3,52 +3,45 @@
 ## 🎯 Versão Principal
 
 ```
-feat: implementar atualização automática dos cards de estatísticas
+fix: corrigir imports e dependências da página de configurações
 
-- Atualização automática a cada 30 segundos
-- Indicador visual de última atualização
-- Disparo automático após operações de funcionários
-- Melhorias de UX sem recarregamento da página
+- Corrigir import do useToast (react-hot-toast)
+- Instalar dependências Radix UI necessárias
+- Remover variáveis não utilizadas
+- Limpar imports desnecessários
 ```
 
 ## 🔧 Versão Separada
 
 ### Commit 1
 ```
-feat: adicionar atualização automática dos cards
+feat: implementar página de configurações do usuário
 
-- Intervalo de 30 segundos para atualização
-- Sistema de eventos para sincronização
-- Atualização por foco da janela
+- Sistema de 3 níveis de acesso (Super Admin, Admin da Empresa, Usuário)
+- Configurações pessoais, interface e notificações
+- APIs, hooks e validações completas
+- Interface responsiva com feedback visual
 ```
 
 ### Commit 2
 ```
-feat: melhorar interface dos cards de estatísticas
+fix: corrigir imports e dependências
 
-- Indicador "Última atualização: Xs atrás"
-- Estados visuais para loading e erro
-- Hover effects nos cards
-```
-
-### Commit 3
-```
-feat: integrar disparo automático nas APIs
-
-- Disparo após criar funcionário
-- Disparo após editar funcionário
-- Disparo após importar funcionários
+- Corrigir import do useToast (react-hot-toast)
+- Instalar @radix-ui/react-switch, @radix-ui/react-tabs, @radix-ui/react-select, @radix-ui/react-avatar
+- Remover variáveis não utilizadas
+- Limpar imports desnecessários
 ```
 
 ## 📋 Resumo Rápido
 
-**Funcionalidades:**
-- ✅ Atualização automática a cada 30s
-- ✅ Indicador de última atualização
-- ✅ Disparo automático nas APIs
-- ✅ Sem recarregamento da página
+**Correções:**
+- ✅ Import do useToast corrigido
+- ✅ Dependências Radix UI instaladas
+- ✅ Variáveis não utilizadas removidas
+- ✅ Imports limpos
 
 **Impacto:**
-- Dados sempre atualizados
-- UX melhorada
-- Sincronização em tempo real 
+- Build funcionando sem erros
+- Componentes UI funcionais
+- Código mais limpo e otimizado 
