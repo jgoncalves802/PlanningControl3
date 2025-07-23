@@ -148,7 +148,7 @@ export default function EmployeesPage() {
   // Configuração das colunas da tabela
   const defaultColumns: ColumnConfig[] = [
     { key: 'name', label: 'Nome', enabled: true, width: '230px' },
-    { key: 'cpf', label: 'CPF', enabled: true, width: '150px' },
+    { key: 'cpf', label: 'CPF', enabled: true, width: '180px' },
     { key: 'matricula', label: 'Matrícula', enabled: false, width: '90px' },
     { key: 'cargo', label: 'Cargo', enabled: true, width: '150px' },
     { key: 'status', label: 'Status', enabled: true, width: '120px' },
@@ -633,7 +633,7 @@ export default function EmployeesPage() {
       {activeTab === 'employees' ? (
         <>
           {/* Stats Cards */}
-          <EmployeeStats employees={processedEmployees} />
+          <EmployeeStats />
 
           {/* Filters and Search */}
           <EmployeeFilters

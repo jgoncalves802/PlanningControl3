@@ -3,50 +3,52 @@
 ## 🎯 Versão Principal
 
 ```
-feat: implementar formatação de CPF e conversão de nomes para maiúsculo
+feat: implementar atualização automática dos cards de estatísticas
 
-- CPF formatado na tabela (XXX.XXX.XXX-XX)
-- Nomes convertidos automaticamente para maiúsculo
-- Validação de telefones inválidos (permite cadastro sem telefone)
-- Logs detalhados de correções aplicadas
+- Atualização automática a cada 30 segundos
+- Indicador visual de última atualização
+- Disparo automático após operações de funcionários
+- Melhorias de UX sem recarregamento da página
 ```
 
 ## 🔧 Versão Separada
 
 ### Commit 1
 ```
-feat: adicionar formatação de CPF na tabela
+feat: adicionar atualização automática dos cards
 
-- Exibir CPF como XXX.XXX.XXX-XX
-- Fonte monoespaçada para melhor visualização
+- Intervalo de 30 segundos para atualização
+- Sistema de eventos para sincronização
+- Atualização por foco da janela
 ```
 
 ### Commit 2
 ```
-feat: converter nomes para maiúsculo automaticamente
+feat: melhorar interface dos cards de estatísticas
 
-- Padronizar todos os nomes em maiúsculo
-- Preservar acentos e caracteres especiais
-- Aplicar em criação, edição e importação
+- Indicador "Última atualização: Xs atrás"
+- Estados visuais para loading e erro
+- Hover effects nos cards
 ```
 
 ### Commit 3
 ```
-feat: permitir cadastro sem telefone válido
+feat: integrar disparo automático nas APIs
 
-- Telefones inválidos removidos automaticamente
-- Cadastro permitido sem telefone
-- Notificação para inserção posterior
+- Disparo após criar funcionário
+- Disparo após editar funcionário
+- Disparo após importar funcionários
 ```
 
 ## 📋 Resumo Rápido
 
 **Funcionalidades:**
-- ✅ CPF formatado: `017.280.602-06`
-- ✅ Nomes em maiúsculo: `JOÃO SILVA`
-- ✅ Telefone opcional com notificação
+- ✅ Atualização automática a cada 30s
+- ✅ Indicador de última atualização
+- ✅ Disparo automático nas APIs
+- ✅ Sem recarregamento da página
 
 **Impacto:**
-- Interface mais profissional
-- Dados padronizados
-- Flexibilidade no cadastro 
+- Dados sempre atualizados
+- UX melhorada
+- Sincronização em tempo real 

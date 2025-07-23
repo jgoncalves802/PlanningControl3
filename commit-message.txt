@@ -1,10 +1,6 @@
-fix: corrigir erros de linting no workforce-control page
+feat: atualização automática dos cards de estatísticas
 
-- Remover imports não utilizados (framer-motion, useFunctionsQuery, ícones)
-- Remover variáveis não utilizadas (nfcReadValue, selectedEntryId, functionsList, limit)
-- Corrigir tipos any para tipos específicos (filtros, formatTime, logs, entries)
-- Limpar catch blocks removendo variáveis de erro não utilizadas
-- Corrigir map functions removendo parâmetros index não utilizados
-- Substituir motion.div por div normais removendo dependência do framer-motion
-
-Melhora a qualidade do código e remove warnings do ESLint 
+- Cards se atualizam automaticamente a cada 30 segundos
+- Indicador visual de última atualização
+- Disparo automático após criar/editar/importar funcionários
+- Melhorias de UX sem recarregamento da página 

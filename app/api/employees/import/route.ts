@@ -384,6 +384,16 @@ export async function POST(req: NextRequest) {
       })),
       failedEmployees
     };
+
+    // Disparar evento de atualização das estatísticas
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/employees/stats`, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+    } catch (error) {
+      console.log('⚠️ Erro ao atualizar estatísticas:', error);
+    }
     
     return NextResponse.json(response, {
       headers: { 'Content-Type': 'application/json; charset=utf-8' }

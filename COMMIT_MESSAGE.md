@@ -3,98 +3,96 @@
 ## 🎯 Commit Principal
 
 ```
-feat: implementar formatação de CPF e conversão de nomes para maiúsculo
+feat: implementar sistema de atualização automática dos cards de estatísticas
 
-- Adicionar formatação de CPF na tabela (XXX.XXX.XXX-XX)
-- Implementar conversão automática de nomes para maiúsculo
-- Integrar validação de telefones inválidos (permite cadastro sem telefone)
-- Aplicar correções em todas as APIs de funcionários
-- Melhorar experiência do usuário com formatação consistente
+- Adicionar atualização automática a cada 30 segundos
+- Implementar sistema de eventos para atualização em tempo real
+- Criar indicador visual de última atualização
+- Integrar disparo automático nas APIs de funcionários
+- Melhorar UX com atualizações sem recarregamento da página
 
 Funcionalidades:
-- CPF formatado na tabela com fonte monoespaçada
-- Nomes convertidos automaticamente para maiúsculo
-- Telefones inválidos removidos com notificação
-- Logs detalhados de todas as correções aplicadas
-- Compatibilidade total com importação CSV e edição individual
+- Cards se atualizam automaticamente sem reload
+- Indicador "Última atualização: Xs atrás"
+- Atualização por foco da janela
+- Disparo automático após criar/editar/importar funcionários
+- Sistema de eventos para sincronização em tempo real
 
 Arquivos modificados:
-- lib/utils.ts: função formatCPFForDisplay()
-- lib/csvEncodingUtils.ts: função convertNameToUpperCase()
-- components/employees/EmployeeTable.tsx: formatação de CPF
-- app/api/employees/route.ts: conversão de nomes e validação de telefone
-- app/api/employees/import/route.ts: conversão de nomes e validação de telefone
-- app/api/employees/[id]/route.ts: conversão de nomes e validação de telefone
+- lib/hooks/useEmployeeStats.ts: sistema de atualização automática
+- components/employees/EmployeeStats.tsx: indicador visual e melhorias UX
+- app/api/employees/route.ts: disparo de evento após criação
+- app/api/employees/[id]/route.ts: disparo de evento após edição
+- app/api/employees/import/route.ts: disparo de evento após importação
 ```
 
 ## 🔧 Commits Separados (Opcional)
 
-### Commit 1: Formatação de CPF
+### Commit 1: Sistema de Atualização Automática
 ```
-feat: adicionar formatação de CPF na tabela de funcionários
+feat: adicionar atualização automática dos cards de estatísticas
 
-- Criar função formatCPFForDisplay() para exibir CPF como XXX.XXX.XXX-XX
-- Aplicar formatação na tabela com fonte monoespaçada
-- Tratar CPFs inválidos ou vazios adequadamente
-- Melhorar legibilidade dos dados na interface
+- Implementar intervalo de 30 segundos para atualização
+- Adicionar listener para eventos de atualização
+- Criar sistema de disparo de eventos customizados
+- Integrar atualização por foco da janela
+- Melhorar performance com useCallback
 
 Arquivos:
-- lib/utils.ts: nova função de formatação
-- components/employees/EmployeeTable.tsx: aplicar formatação na tabela
+- lib/hooks/useEmployeeStats.ts: hook com atualização automática
 ```
 
-### Commit 2: Conversão de Nomes
+### Commit 2: Interface Melhorada
 ```
-feat: implementar conversão automática de nomes para maiúsculo
+feat: melhorar interface dos cards de estatísticas
 
-- Criar função convertNameToUpperCase() para padronizar nomes
-- Integrar conversão em todas as APIs de funcionários
-- Preservar acentos e caracteres especiais
-- Aplicar em criação, edição e importação de funcionários
+- Adicionar indicador de última atualização
+- Implementar formatação relativa de tempo
+- Criar estados visuais para loading e erro
+- Adicionar hover effects nos cards
+- Melhorar feedback visual para o usuário
 
 Arquivos:
-- lib/csvEncodingUtils.ts: função de conversão
-- app/api/employees/route.ts: conversão na criação
-- app/api/employees/import/route.ts: conversão na importação
-- app/api/employees/[id]/route.ts: conversão na atualização
+- components/employees/EmployeeStats.tsx: interface melhorada
 ```
 
-### Commit 3: Validação de Telefones
+### Commit 3: Integração com APIs
 ```
-feat: permitir cadastro sem telefone válido
+feat: integrar disparo automático nas APIs de funcionários
 
-- Modificar validação de telefone para ser opcional
-- Permitir cadastro de funcionários sem telefone
-- Informar usuário que telefone deve ser inserido posteriormente
-- Manter logs detalhados de telefones removidos
+- Adicionar disparo de evento após criação de funcionário
+- Integrar disparo após edição de funcionário
+- Implementar disparo após importação em massa
+- Garantir atualização em tempo real dos dados
+- Melhorar sincronização entre operações
 
 Arquivos:
-- app/api/employees/route.ts: validação opcional
-- app/api/employees/import/route.ts: tratamento na importação
-- app/api/employees/[id]/route.ts: validação na atualização
-- lib/csvEncodingUtils.ts: correção automática de telefones
+- app/api/employees/route.ts: disparo após criação
+- app/api/employees/[id]/route.ts: disparo após edição
+- app/api/employees/import/route.ts: disparo após importação
 ```
 
 ## 📋 Resumo das Funcionalidades
 
-### ✅ Formatação de CPF
-- Exibição: `017.280.602-06` (formato XXX.XXX.XXX-XX)
-- Fonte monoespaçada para melhor visualização
-- Tratamento de CPFs inválidos
+### ✅ Atualização Automática
+- **Intervalo**: A cada 30 segundos
+- **Por Foco**: Quando a janela ganha foco
+- **Por Eventos**: Após operações de funcionários
+- **Manual**: Botão "Atualizar"
 
-### ✅ Conversão de Nomes
-- Automática para maiúsculo: `João Silva` → `JOÃO SILVA`
-- Preservação de acentos e caracteres especiais
-- Aplicada em todas as operações
+### ✅ Indicador Visual
+- **Tempo Relativo**: "30s atrás", "2m atrás"
+- **Ícone de Relógio**: Para melhor identificação
+- **Estados Visuais**: Loading, erro, sucesso
 
-### ✅ Validação de Telefones
-- Telefones inválidos são removidos automaticamente
-- Cadastro permitido sem telefone
-- Notificação clara para inserção posterior
+### ✅ Integração com APIs
+- **Criação**: Dispara após criar funcionário
+- **Edição**: Dispara após editar funcionário
+- **Importação**: Dispara após importar funcionários
 
 ## 🎉 Impacto
 
-- **UX Melhorada**: Interface mais limpa e profissional
-- **Consistência**: Dados padronizados em todo o sistema
-- **Flexibilidade**: Permite cadastro mesmo com dados incompletos
-- **Rastreabilidade**: Logs detalhados de todas as correções 
+- **UX Melhorada**: Dados sempre atualizados sem reload
+- **Performance**: Atualizações otimizadas e eficientes
+- **Tempo Real**: Sincronização automática de dados
+- **Feedback Visual**: Usuário sempre informado do status 

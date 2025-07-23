@@ -413,6 +413,16 @@ export async function POST(req: NextRequest) {
     // Emitir evento SSE
           // emitEmployeeEvent('created', employee);
 
+    // Disparar evento de atualização das estatísticas
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/employees/stats`, {
+        method: 'GET',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
+    } catch (error) {
+      console.log('⚠️ Erro ao atualizar estatísticas:', error);
+    }
+
     // Garantir que a resposta também tenha UTF-8 correto
     return NextResponse.json(employee, {
       headers: {
