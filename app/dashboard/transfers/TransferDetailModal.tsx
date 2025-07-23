@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { X, User, FileText, Briefcase, Calendar, CheckCircle, XCircle, Clock, Users, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar } from '@/components/ui/avatar';
+import { AvatarWithImage as Avatar } from '@/components/ui/avatar';
 import { useTransferHistory } from '@/lib/hooks/useTransferHistory';
 import { formatDate } from '@/lib/utils';
 

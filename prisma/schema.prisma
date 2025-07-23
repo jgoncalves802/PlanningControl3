@@ -405,9 +405,75 @@ enum NFCBadgeStatus {
 
 enum EmployeeStatus {
   ACTIVE
+  INACTIVE
   ON_LEAVE
-  TRANSFERRED
-  SUSPENDED
-  DISMISSED
-  RETIRED
+  TERMINATED
+}
+
+// Configurações do Usuário
+model UserSettings {
+  id                    String                    @id @default(cuid())
+  userId                String                    @unique
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  personalSettings      PersonalSettings?
+  interfaceSettings     InterfaceSettings?
+  notificationSettings  NotificationSettings?
+
+  @@map("user_settings")
+}
+
+model PersonalSettings {
+  id       String      @id @default(cuid())
+  userId   String      @unique
+  name     String?
+  email    String?
+  phone    String?
+  language String      @default("pt-BR")
+  timezone String      @default("America/Sao_Paulo")
+  theme    String      @default("system")
+  avatar   String?
+  user     UserSettings @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("personal_settings")
+}
+
+model InterfaceSettings {
+  id                String      @id @default(cuid())
+  userId            String      @unique
+  dashboardLayout   String      @default("grid")
+  sidebarCollapsed  Boolean     @default(false)
+  showNotifications Boolean     @default(true)
+  showQuickActions  Boolean     @default(true)
+  autoRefresh       Boolean     @default(true)
+  refreshInterval   Int         @default(30)
+  compactMode       Boolean     @default(false)
+  showAnimations    Boolean     @default(true)
+  colorScheme       String      @default("blue")
+  user              UserSettings @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("interface_settings")
+}
+
+model NotificationSettings {
+  id              String      @id @default(cuid())
+  userId          String      @unique
+  pushEnabled     Boolean     @default(true)
+  pushWorkHours   Boolean     @default(true)
+  pushAfterHours  Boolean     @default(false)
+  emailEnabled    Boolean     @default(true)
+  emailDaily      Boolean     @default(false)
+  emailWeekly     Boolean     @default(true)
+  emailUrgent     Boolean     @default(true)
+  newAssignments  Boolean     @default(true)
+  scheduleChanges Boolean     @default(true)
+  systemUpdates   Boolean     @default(false)
+  reminders       Boolean     @default(true)
+  alerts          Boolean     @default(true)
+  quietHours      Boolean     @default(true)
+  quietStart      String      @default("22:00")
+  quietEnd        String      @default("07:00")
+  user            UserSettings @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
 }

@@ -47,4 +47,30 @@ const AvatarFallback = React.forwardRef<
 ))
 AvatarFallback.displayName = AvatarPrimitive.Fallback.displayName
 
-export { Avatar, AvatarImage, AvatarFallback } 
+// Componente Avatar com props src e alt para compatibilidade
+const AvatarWithImage = React.forwardRef<
+  React.ElementRef<typeof AvatarPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof AvatarPrimitive.Root> & {
+    src?: string
+    alt?: string
+  }
+>(({ className, src, alt, children, ...props }, ref) => (
+  <AvatarPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+      className
+    )}
+    {...props}
+  >
+    {src && (
+      <AvatarImage src={src} alt={alt || ''} />
+    )}
+    <AvatarFallback>
+      {children || (alt ? alt.charAt(0).toUpperCase() : '?')}
+    </AvatarFallback>
+  </AvatarPrimitive.Root>
+))
+AvatarWithImage.displayName = "AvatarWithImage"
+
+export { Avatar, AvatarImage, AvatarFallback, AvatarWithImage } 

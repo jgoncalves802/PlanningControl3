@@ -30,7 +30,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Avatar } from '@/components/ui/avatar';
+import { AvatarWithImage as Avatar } from '@/components/ui/avatar';
 import { Dialog } from '@/components/ui/dialog';
 import { 
   formatDate

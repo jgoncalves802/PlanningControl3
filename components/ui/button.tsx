@@ -5,10 +5,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger'
   size?: 'sm' | 'md' | 'lg'
   loading?: boolean
+  asChild?: boolean
 }
 
 const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(
-  ({ className, variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
+  ({ className, variant = 'primary', size = 'md', loading, children, disabled, asChild, ...props }, ref) => {
     const baseClasses = "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
     
     const variants = {
@@ -25,7 +26,7 @@ const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(
       lg: "px-6 py-3 text-base"
     }
 
-    return (
+    const buttonElement = (
       <button
         ref={ref}
         className={cn(baseClasses, variants[variant], sizes[size], className)}
@@ -38,6 +39,13 @@ const Button = forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(
         {children}
       </button>
     )
+
+    // Se asChild for true, retorna apenas o children
+    if (asChild) {
+      return children as React.ReactElement
+    }
+
+    return buttonElement
   }
 )
 

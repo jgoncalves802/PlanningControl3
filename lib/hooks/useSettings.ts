@@ -61,7 +61,8 @@ export function useSettings(userId: string = 'current') {
       const response = await fetch(`/api/settings/user/${userId}`);
       
       if (!response.ok) {
-        throw new Error('Erro ao buscar configurações');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao buscar configurações');
       }
 
       const data = await response.json();
@@ -94,7 +95,8 @@ export function useSettings(userId: string = 'current') {
       });
 
       if (!response.ok) {
-        throw new Error('Erro ao salvar configurações');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao salvar configurações');
       }
 
       const data = await response.json();
@@ -105,7 +107,7 @@ export function useSettings(userId: string = 'current') {
     } catch (err: any) {
       console.error('Erro ao salvar configurações:', err);
       setError(err.message || 'Erro desconhecido');
-      toast.error('Erro ao salvar configurações');
+      toast.error(err.message || 'Erro ao salvar configurações');
       throw err;
     } finally {
       setIsSaving(false);

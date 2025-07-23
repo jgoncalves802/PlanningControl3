@@ -26,7 +26,16 @@ export default function PersonalSettings() {
 
   useEffect(() => {
     if (settings?.personal) {
-      setData(settings.personal);
+      // Garantir que os tipos sejam compatíveis
+      setData({
+        name: settings.personal.name || '',
+        email: settings.personal.email || '',
+        phone: settings.personal.phone || '',
+        language: settings.personal.language as 'pt-BR' | 'en-US' | 'es-ES' || 'pt-BR',
+        timezone: settings.personal.timezone || 'America/Sao_Paulo',
+        theme: settings.personal.theme as 'system' | 'light' | 'dark' || 'system',
+        avatar: settings.personal.avatar,
+      });
     }
   }, [settings?.personal]);
 
