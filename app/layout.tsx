@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import ReactQueryProvider from '@/lib/ReactQueryProvider'
+import AppProviders from '@/components/providers/AppProviders'
 
 export const metadata: Metadata = {
   title: 'Planning Control',
@@ -34,7 +35,9 @@ export default function RootLayout({
       </head>
       <body className="antialiased min-h-screen bg-background">
         <ReactQueryProvider>
+          <AppProviders>
             {children}
+          </AppProviders>
         </ReactQueryProvider>
       </body>
     </html>

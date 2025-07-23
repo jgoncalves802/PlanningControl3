@@ -8,6 +8,7 @@ import { Settings, User, Building, Shield } from 'lucide-react';
 import PersonalSettings from './components/UserSettings/PersonalSettings';
 import InterfaceSettings from './components/UserSettings/InterfaceSettings';
 import NotificationSettings from './components/UserSettings/NotificationSettings';
+import AppProviders from '@/components/providers/AppProviders';
 
 // Mock de permissões - em produção viria do sistema de auth
 const getUserRole = () => {
@@ -65,103 +66,99 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
-          <p className="text-muted-foreground">
-            Gerencie as configurações do sistema de acordo com seu nível de acesso
-          </p>
+    <AppProviders>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Configurações</h1>
+            <p className="text-muted-foreground">
+              Gerencie as configurações do sistema de acordo com seu nível de acesso
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="flex items-center gap-1">
+              {getRoleIcon(userRole)}
+              {getRoleDisplayName(userRole)}
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="flex items-center gap-1">
-            {getRoleIcon(userRole)}
-            {getRoleDisplayName(userRole)}
-          </Badge>
-        </div>
-      </div>
 
-      {/* Tabs de Configurações */}
-      <Tabs defaultValue="user" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-          {permissions.includes('super-admin') && (
-            <TabsTrigger value="super-admin" className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Super Admin
-            </TabsTrigger>
-          )}
-          {permissions.includes('company-admin') && (
-            <TabsTrigger value="company-admin" className="flex items-center gap-2">
-              <Building className="h-4 w-4" />
-              Empresa
-            </TabsTrigger>
-          )}
+        {/* Tabs de Configurações */}
+        <Tabs defaultValue="user" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
+            {permissions.includes('super-admin') && (
+              <TabsTrigger value="super-admin" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Super Admin
+              </TabsTrigger>
+            )}
+            {permissions.includes('company-admin') && (
+              <TabsTrigger value="company-admin" className="flex items-center gap-2">
+                <Building className="h-4 w-4" />
+                Empresa
+              </TabsTrigger>
+            )}
+            {permissions.includes('user') && (
+              <TabsTrigger value="user" className="flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Usuário
+              </TabsTrigger>
+            )}
+          </TabsList>
+
+          {/* Conteúdo das Tabs */}
           {permissions.includes('user') && (
-            <TabsTrigger value="user" className="flex items-center gap-2">
-              <User className="h-4 w-4" />
-              Usuário
-            </TabsTrigger>
+            <TabsContent value="user" className="space-y-6">
+              <PersonalSettings />
+              <InterfaceSettings />
+              <NotificationSettings />
+            </TabsContent>
           )}
-        </TabsList>
 
-        {/* Conteúdo das Abas */}
-        {permissions.includes('super-admin') && (
-          <TabsContent value="super-admin" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Shield className="h-5 w-5" />
-                  Configurações Super Administrador
-                </CardTitle>
-                <CardDescription>
-                  Gerencie configurações globais do sistema, infraestrutura e clientes
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          {permissions.includes('company-admin') && (
+            <TabsContent value="company-admin" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building className="h-5 w-5" />
+                    Configurações da Empresa
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie as configurações da sua empresa
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
                   <p className="text-muted-foreground">
-                    Configurações de Super Administrador em desenvolvimento
+                    Configurações de empresa serão implementadas em breve.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
-        {permissions.includes('company-admin') && (
-          <TabsContent value="company-admin" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building className="h-5 w-5" />
-                  Configurações da Empresa
-                </CardTitle>
-                <CardDescription>
-                  Gerencie configurações da empresa, usuários e contratos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8">
-                  <Settings className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+          {permissions.includes('super-admin') && (
+            <TabsContent value="super-admin" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Configurações Super Admin
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie as configurações globais do sistema
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
                   <p className="text-muted-foreground">
-                    Configurações da Empresa em desenvolvimento
+                    Configurações de super admin serão implementadas em breve.
                   </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-
-        {permissions.includes('user') && (
-          <TabsContent value="user" className="space-y-6">
-            <PersonalSettings />
-            <InterfaceSettings />
-            <NotificationSettings />
-          </TabsContent>
-        )}
-      </Tabs>
-    </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
+        </Tabs>
+      </div>
+    </AppProviders>
   );
 } 

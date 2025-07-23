@@ -8,46 +8,87 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User, Camera, Save, Loader2 } from 'lucide-react';
-import { useSettings } from '@/lib/hooks/useSettings';
-import { PersonalSettings as PersonalSettingsType } from '@/lib/validations/settings';
 import toast from 'react-hot-toast';
 
+interface PersonalSettings {
+  name: string;
+  email: string;
+  phone: string;
+  language: string;
+  timezone: string;
+  theme: string;
+  avatar?: string;
+}
+
+const defaultSettings: PersonalSettings = {
+  name: '',
+  email: '',
+  phone: '',
+  language: 'pt-BR',
+  timezone: 'America/Sao_Paulo',
+  theme: 'system',
+  avatar: undefined,
+};
+
 export default function PersonalSettings() {
-  const { settings, isLoading, isSaving, updatePersonalSettings } = useSettings();
-  const [data, setData] = useState<PersonalSettingsType>({
-    name: '',
-    email: '',
-    phone: '',
-    language: 'pt-BR',
-    timezone: 'America/Sao_Paulo',
-    theme: 'system',
-    avatar: undefined,
-  });
+  const [data, setData] = useState<PersonalSettings>(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
+  // Carregar configurações do localStorage
   useEffect(() => {
-    if (settings?.personal) {
-      // Garantir que os tipos sejam compatíveis
-      setData({
-        name: settings.personal.name || '',
-        email: settings.personal.email || '',
-        phone: settings.personal.phone || '',
-        language: settings.personal.language as 'pt-BR' | 'en-US' | 'es-ES' || 'pt-BR',
-        timezone: settings.personal.timezone || 'America/Sao_Paulo',
-        theme: settings.personal.theme as 'system' | 'light' | 'dark' || 'system',
-        avatar: settings.personal.avatar,
-      });
+    try {
+      const savedSettings = localStorage.getItem('personal-settings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setData({ ...defaultSettings, ...parsedSettings });
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações pessoais:', error);
+    } finally {
+      setIsLoading(false);
     }
-  }, [settings?.personal]);
+  }, []);
 
-  const handleInputChange = (field: keyof PersonalSettingsType, value: string) => {
+  const handleInputChange = (field: keyof PersonalSettings, value: string) => {
     setData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSave = async () => {
     try {
-      await updatePersonalSettings(data);
+      setIsSaving(true);
+      
+      // Salvar no localStorage
+      localStorage.setItem('personal-settings', JSON.stringify(data));
+      
+      // Aplicar tema
+      if (data.theme === 'dark') {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+      } else if (data.theme === 'light') {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+      } else {
+        // system - usar preferência do sistema
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+          document.documentElement.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+        }
+      }
+
+      // Aplicar idioma
+      localStorage.setItem('locale', data.language);
+      
+      toast.success('Configurações aplicadas com sucesso!');
     } catch (error) {
-      // Erro já tratado no hook
+      console.error('Erro ao salvar configurações:', error);
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -72,7 +113,7 @@ export default function PersonalSettings() {
             Configurações Pessoais
           </CardTitle>
           <CardDescription>
-            Carregando configurações...
+            Carregando...
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -96,7 +137,7 @@ export default function PersonalSettings() {
           Configurações Pessoais
         </CardTitle>
         <CardDescription>
-          Gerencie suas informações pessoais e preferências básicas
+          Gerencie suas informações pessoais e preferências
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -113,7 +154,7 @@ export default function PersonalSettings() {
               <Button variant="outline" size="sm" asChild>
                 <span>
                   <Camera className="h-4 w-4 mr-2" />
-                  Alterar Foto
+                  Alterar Avatar
                 </span>
               </Button>
             </Label>
@@ -125,7 +166,7 @@ export default function PersonalSettings() {
               onChange={handleAvatarUpload}
             />
             <p className="text-sm text-muted-foreground">
-              JPG, PNG ou GIF. Máximo 2MB.
+              Formatos aceitos: JPG, PNG. Tamanho máximo: 2MB
             </p>
           </div>
         </div>
@@ -133,22 +174,22 @@ export default function PersonalSettings() {
         {/* Informações Básicas */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Nome Completo</Label>
+            <Label htmlFor="name">Nome</Label>
             <Input
               id="name"
               value={data.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
-              placeholder="Seu nome completo"
+              placeholder="Digite seu nome"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">E-mail</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
               value={data.email}
               onChange={(e) => handleInputChange('email', e.target.value)}
-              placeholder="seu@email.com"
+              placeholder="Digite seu email"
             />
           </div>
           <div className="space-y-2">
@@ -157,7 +198,7 @@ export default function PersonalSettings() {
               id="phone"
               value={data.phone}
               onChange={(e) => handleInputChange('phone', e.target.value)}
-              placeholder="(11) 99999-9999"
+              placeholder="Digite seu telefone"
             />
           </div>
         </div>
@@ -171,8 +212,8 @@ export default function PersonalSettings() {
                 <SelectValue placeholder="Selecione o idioma" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="pt-BR">Português (Brasil)</SelectItem>
-                <SelectItem value="en-US">English (US)</SelectItem>
+                <SelectItem value="pt-BR">Português</SelectItem>
+                <SelectItem value="en-US">English</SelectItem>
                 <SelectItem value="es-ES">Español</SelectItem>
               </SelectContent>
             </Select>

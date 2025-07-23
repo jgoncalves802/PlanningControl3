@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Sidebar } from '@/components/layout/sidebar'
+import Sidebar from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { Toaster } from 'react-hot-toast'
 
@@ -47,10 +47,7 @@ export default function DashboardLayout({
   return (
     <div className="min-h-screen bg-gray-50 flex">
       <Toaster position="top-center" />
-      <Sidebar 
-        collapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-      />
+      <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header user={user} />
         <main className="flex-1 overflow-y-auto p-6">

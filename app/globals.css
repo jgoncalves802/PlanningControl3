@@ -25,28 +25,38 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --radius: 0.5rem;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
   }
 
   .dark {
-    --background: 220 27% 8%;
+    --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
-    --card: 220 27% 10%;
+    --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
-    --popover: 220 27% 10%;
+    --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 200 100% 60%;
-    --primary-foreground: 220 27% 8%;
-    --secondary: 220 27% 12%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
-    --muted: 220 27% 12%;
+    --muted: 217.2 32.6% 17.5%;
     --muted-foreground: 215 20.2% 65.1%;
-    --accent: 220 27% 12%;
+    --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 27% 15%;
-    --input: 220 27% 15%;
-    --ring: 200 100% 60%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
   }
 }
 
@@ -55,17 +65,143 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground font-sans;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Configurações de Interface - Modo Compacto */
+.compact-mode {
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 0.75rem;
+  --spacing-lg: 1rem;
+  --spacing-xl: 1.25rem;
+}
+
+.compact-mode .space-y-1 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--spacing-xs);
+}
+
+.compact-mode .space-y-2 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--spacing-sm);
+}
+
+.compact-mode .space-y-3 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--spacing-md);
+}
+
+.compact-mode .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--spacing-lg);
+}
+
+.compact-mode .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: var(--spacing-xl);
+}
+
+.compact-mode .p-2 { padding: var(--spacing-sm); }
+.compact-mode .p-3 { padding: var(--spacing-md); }
+.compact-mode .p-4 { padding: var(--spacing-lg); }
+.compact-mode .p-6 { padding: var(--spacing-xl); }
+
+/* Configurações de Interface - Animações */
+.animations-enabled * {
+  transition: all 0.2s ease-in-out;
+}
+
+.animations-enabled .animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animations-enabled .animate-slide-in {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Configurações de Interface - Esquemas de Cores */
+.color-scheme-blue {
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+}
+
+.color-scheme-green {
+  --primary: 142.1 76.2% 36.3%;
+  --primary-foreground: 355.7 100% 97.3%;
+}
+
+.color-scheme-purple {
+  --primary: 262.1 83.3% 57.8%;
+  --primary-foreground: 210 40% 98%;
+}
+
+.color-scheme-orange {
+  --primary: 24.6 95% 53.1%;
+  --primary-foreground: 60 9.1% 97.8%;
+}
+
+/* Configurações de Interface - Layout do Dashboard */
+[data-dashboard-layout="grid"] .dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+[data-dashboard-layout="list"] .dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+[data-dashboard-layout="compact"] .dashboard-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.5rem;
+}
+
+/* Configurações de Interface - Sidebar */
+[data-sidebar-collapsed="true"] .sidebar {
+  width: 4rem;
+}
+
+[data-sidebar-collapsed="true"] .sidebar .sidebar-text {
+  display: none;
+}
+
+[data-sidebar-collapsed="true"] .main-content {
+  margin-left: 4rem;
+}
+
+/* Configurações de Interface - Notificações */
+[data-show-notifications="false"] .notifications-container {
+  display: none;
+}
+
+/* Configurações de Interface - Ações Rápidas */
+[data-show-quick-actions="false"] .quick-actions {
+  display: none;
+}
+
+/* Configurações de Interface - Atualização Automática */
+[data-auto-refresh="false"] .auto-refresh-indicator {
+  display: none;
+}
+
+/* Responsividade para configurações */
+@media (max-width: 768px) {
+  .compact-mode .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: var(--spacing-sm);
   }
   
-  h1, h2, h3, h4, h5, h6 {
-    line-height: 1.2;
-  }
-  
-  p, li, td {
-    line-height: 1.5;
-  }
+  .compact-mode .p-4 { padding: var(--spacing-sm); }
+  .compact-mode .p-6 { padding: var(--spacing-md); }
 }
 
 @layer components {

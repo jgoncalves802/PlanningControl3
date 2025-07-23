@@ -1,75 +1,67 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Layout, Save, Loader2, RefreshCw } from 'lucide-react';
-import toast from 'react-hot-toast';
-
-interface InterfaceSettingsData {
-  dashboardLayout: string;
-  sidebarCollapsed: boolean;
-  showNotifications: boolean;
-  showQuickActions: boolean;
-  autoRefresh: boolean;
-  refreshInterval: number;
-  compactMode: boolean;
-  showAnimations: boolean;
-  colorScheme: string;
-}
+import { useSettings } from '@/lib/hooks/useSettings';
+import { useTheme } from '@/lib/providers/ThemeProvider';
+import { useLanguage } from '@/lib/providers/LanguageProvider';
+import { useAppSettings } from '@/lib/contexts/AppSettingsContext';
 
 export default function InterfaceSettings() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [data, setData] = useState<InterfaceSettingsData>({
-    dashboardLayout: 'grid',
-    sidebarCollapsed: false,
-    showNotifications: true,
-    showQuickActions: true,
-    autoRefresh: true,
-    refreshInterval: 30,
-    compactMode: false,
-    showAnimations: true,
-    colorScheme: 'blue'
-  });
+  const { settings, updateInterfaceSettings, isLoading, resetToDefault } = useSettings();
+  const { theme, setTheme } = useTheme();
+  const { language, setLanguage } = useLanguage();
+  const { settings: appSettings, updateSettings } = useAppSettings();
+  
+  const [localSettings, setLocalSettings] = useState(settings.interface);
 
-  const handleToggle = (field: keyof InterfaceSettingsData) => {
-    setData(prev => ({ ...prev, [field]: !prev[field] }));
+  // Sincronizar com configurações carregadas
+  useEffect(() => {
+    setLocalSettings(settings.interface);
+  }, [settings.interface]);
+
+  const handleToggle = (field: keyof typeof localSettings) => {
+    const newSettings = { ...localSettings, [field]: !localSettings[field] };
+    setLocalSettings(newSettings);
+    
+    // Aplicar mudança imediatamente
+    updateSettings({ [field]: !localSettings[field] });
   };
 
-  const handleSelectChange = (field: keyof InterfaceSettingsData, value: string | number) => {
-    setData(prev => ({ ...prev, [field]: value }));
+  const handleSelectChange = (field: keyof typeof localSettings, value: string | number) => {
+    const newSettings = { ...localSettings, [field]: value };
+    setLocalSettings(newSettings);
+    
+    // Aplicar mudança imediatamente
+    updateSettings({ [field]: value });
   };
 
   const handleSave = async () => {
-    setIsLoading(true);
-    try {
-      // Simular chamada da API
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Configurações de interface salvas com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao salvar configurações');
-    } finally {
-      setIsLoading(false);
+    const success = await updateInterfaceSettings(localSettings);
+    if (success) {
+      // As mudanças já foram aplicadas em tempo real
+      console.log('Configurações salvas e aplicadas com sucesso!');
     }
   };
 
-  const handleReset = () => {
-    setData({
-      dashboardLayout: 'grid',
-      sidebarCollapsed: false,
-      showNotifications: true,
-      showQuickActions: true,
-      autoRefresh: true,
-      refreshInterval: 30,
-      compactMode: false,
-      showAnimations: true,
-      colorScheme: 'blue'
-    });
-    toast.success('Configurações resetadas para o padrão!');
+  const handleReset = async () => {
+    await resetToDefault();
+    // As configurações padrão serão aplicadas automaticamente via useEffect
+  };
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme as any);
+    setLocalSettings(prev => ({ ...prev, colorScheme: newTheme }));
+    updateSettings({ colorScheme: newTheme });
+  };
+
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage as any);
   };
 
   return (
@@ -91,7 +83,7 @@ export default function InterfaceSettings() {
             <div className="space-y-2">
               <Label htmlFor="dashboard-layout">Layout do Dashboard</Label>
               <Select 
-                value={data.dashboardLayout} 
+                value={localSettings.dashboardLayout} 
                 onValueChange={(value) => handleSelectChange('dashboardLayout', value)}
               >
                 <SelectTrigger>
@@ -107,8 +99,8 @@ export default function InterfaceSettings() {
             <div className="space-y-2">
               <Label htmlFor="color-scheme">Esquema de Cores</Label>
               <Select 
-                value={data.colorScheme} 
-                onValueChange={(value) => handleSelectChange('colorScheme', value)}
+                value={localSettings.colorScheme} 
+                onValueChange={handleThemeChange}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione o esquema" />
@@ -136,7 +128,7 @@ export default function InterfaceSettings() {
                 </p>
               </div>
               <Switch
-                checked={data.sidebarCollapsed}
+                checked={localSettings.sidebarCollapsed}
                 onCheckedChange={() => handleToggle('sidebarCollapsed')}
               />
             </div>
@@ -148,7 +140,7 @@ export default function InterfaceSettings() {
                 </p>
               </div>
               <Switch
-                checked={data.showNotifications}
+                checked={localSettings.showNotifications}
                 onCheckedChange={() => handleToggle('showNotifications')}
               />
             </div>
@@ -160,7 +152,7 @@ export default function InterfaceSettings() {
                 </p>
               </div>
               <Switch
-                checked={data.showQuickActions}
+                checked={localSettings.showQuickActions}
                 onCheckedChange={() => handleToggle('showQuickActions')}
               />
             </div>
@@ -172,7 +164,7 @@ export default function InterfaceSettings() {
                 </p>
               </div>
               <Switch
-                checked={data.compactMode}
+                checked={localSettings.compactMode}
                 onCheckedChange={() => handleToggle('compactMode')}
               />
             </div>
@@ -184,7 +176,7 @@ export default function InterfaceSettings() {
                 </p>
               </div>
               <Switch
-                checked={data.showAnimations}
+                checked={localSettings.showAnimations}
                 onCheckedChange={() => handleToggle('showAnimations')}
               />
             </div>
@@ -203,15 +195,15 @@ export default function InterfaceSettings() {
                 </p>
               </div>
               <Switch
-                checked={data.autoRefresh}
+                checked={localSettings.autoRefresh}
                 onCheckedChange={() => handleToggle('autoRefresh')}
               />
             </div>
-            {data.autoRefresh && (
+            {localSettings.autoRefresh && (
               <div className="space-y-2">
                 <Label htmlFor="refresh-interval">Intervalo de atualização (segundos)</Label>
                 <Select 
-                  value={data.refreshInterval.toString()} 
+                  value={localSettings.refreshInterval.toString()} 
                   onValueChange={(value) => handleSelectChange('refreshInterval', parseInt(value))}
                 >
                   <SelectTrigger>
@@ -229,9 +221,48 @@ export default function InterfaceSettings() {
           </div>
         </div>
 
+        {/* Tema e Idioma */}
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium">Aparência</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="theme">Tema</Label>
+              <Select 
+                value={theme} 
+                onValueChange={handleThemeChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tema" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="light">Claro</SelectItem>
+                  <SelectItem value="dark">Escuro</SelectItem>
+                  <SelectItem value="system">Sistema</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="language">Idioma</Label>
+              <Select 
+                value={language} 
+                onValueChange={handleLanguageChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o idioma" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pt-BR">Português</SelectItem>
+                  <SelectItem value="en-US">English</SelectItem>
+                  <SelectItem value="es-ES">Español</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+
         {/* Botões de Ação */}
         <div className="flex justify-between">
-          <Button variant="outline" onClick={handleReset}>
+          <Button variant="outline" onClick={handleReset} disabled={isLoading}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Restaurar Padrão
           </Button>

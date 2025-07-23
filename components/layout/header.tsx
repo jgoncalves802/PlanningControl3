@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { 
   Bell, 
   Search, 
@@ -100,107 +99,82 @@ export function Header({ user }: HeaderProps) {
 
         {/* Right side */}
         <div className="flex items-center space-x-4">
+          {/* Notifications */}
+          <div className="relative">
+            <button className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors">
+              <Bell className="h-5 w-5" />
+              {notifications > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {notifications}
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Language Selector */}
           <div className="relative">
-            <label htmlFor="language-select" className="sr-only">Idioma</label>
             <select
-              id="language-select"
-              aria-label="Selecionar idioma"
               value={locale}
               onChange={handleLocaleChange}
-              className="appearance-none bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              className="appearance-none bg-transparent border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-slate-100"
             >
-              <option value="pt-BR">Português</option>
-              <option value="en-US">English</option>
+              <option value="pt-BR">
+                <FlagBR />
+                PT-BR
+              </option>
+              <option value="en-US">
+                <FlagUS />
+                EN-US
+              </option>
             </select>
           </div>
 
-          {/* Notifications */}
-          <button className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors">
-            <Bell className="h-5 w-5 text-gray-600 dark:text-slate-400" />
-            {notifications > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                {notifications}
-              </span>
-            )}
-          </button>
-
-          {/* Theme toggle */}
-          <button 
+          {/* Theme Toggle */}
+          <button
             onClick={toggleTheme}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:text-slate-400 dark:hover:text-slate-200 transition-colors"
           >
-            {isDark ? (
-              <Sun className="h-5 w-5 text-gray-600 dark:text-slate-400" />
-            ) : (
-              <Moon className="h-5 w-5 text-gray-600 dark:text-slate-400" />
-            )}
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
 
-          {/* User menu */}
+          {/* User Menu */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+              className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
             >
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                {user?.avatar ? (
-                  <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full" />
-                ) : (
-                  <User className="h-4 w-4 text-white" />
-                )}
+              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                <User className="h-4 w-4 text-white" />
               </div>
-              <div className="text-left">
-                <p className="text-sm font-medium text-gray-900 dark:text-slate-100">{user?.name || 'Usuário'}</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">{user?.email}</p>
+              <div className="hidden md:block text-left">
+                <p className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                  {user?.name || 'Usuário'}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">
+                  {user?.email || 'usuario@exemplo.com'}
+                </p>
               </div>
               <ChevronDown className="h-4 w-4 text-gray-400 dark:text-slate-500" />
             </button>
 
+            {/* Dropdown Menu */}
             {showUserMenu && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 py-2 z-50"
-              >
-                <a
-                  href="/dashboard/settings"
-                  className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50">
+                <button
+                  onClick={() => router.push('/dashboard/settings')}
+                  className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                 >
                   <Settings className="h-4 w-4" />
                   <span>Configurações</span>
-                </a>
-                {/* Seletor de idioma com bandeiras */}
-                <div className="px-4 py-2">
-                  <span className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Idioma</span>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleLocaleChange({ target: { value: 'pt-BR' } } as any)}
-                      className={`flex items-center px-2 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${locale === 'pt-BR' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200'}`}
-                      aria-label="Português"
-                      tabIndex={0}
-                    >
-                      <FlagBR /> Português
-                    </button>
-                    <button
-                      onClick={() => handleLocaleChange({ target: { value: 'en-US' } } as any)}
-                      className={`flex items-center px-2 py-1 rounded-md text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${locale === 'en-US' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200' : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-200'}`}
-                      aria-label="English"
-                      tabIndex={0}
-                    >
-                      <FlagUS /> English
-                    </button>
-                  </div>
-                </div>
+                </button>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left"
+                  className="flex items-center space-x-2 w-full px-4 py-2 text-sm text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>Sair</span>
                 </button>
-              </motion.div>
+              </div>
             )}
           </div>
         </div>

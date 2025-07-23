@@ -3,138 +3,152 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { motion } from 'framer-motion'
-import { 
-  Building2, 
-  LayoutDashboard, 
-  Users, 
-  FileText, 
-  Shield, 
-  ArrowLeftRight,
-  BarChart3,
-  Settings,
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
+import { useAppSettings } from '@/lib/contexts/AppSettingsContext'
+import {
   ChevronLeft,
   ChevronRight,
-  UserCheck,
+  Home,
+  Users,
+  Building,
+  Shield,
+  Settings,
+  BarChart3,
   Calendar,
-  CreditCard,
-  UserPlus
+  FileText,
+  MapPin,
+  Smartphone,
+  ArrowRightLeft,
+  UserCheck
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
-interface SidebarProps {
-  collapsed: boolean
-  onToggle: () => void
-}
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Funcionários', href: '/dashboard/employees', icon: Users },
-  { name: 'Alocação de Efetivo', href: '/dashboard/employee-assignment', icon: UserPlus },
-  { name: 'Contratos', href: '/dashboard/contracts', icon: FileText },
-  { name: 'Planejamento', href: '/dashboard/planning', icon: Calendar },
-  { name: 'Controle de Efetivo', href: '/dashboard/workforce-control', icon: UserCheck },
-  { name: 'Crachás NFC', href: '/dashboard/nfc-management', icon: CreditCard },
-  { name: 'Transferências', href: '/dashboard/transfers', icon: ArrowLeftRight },
-  { name: 'Segurança', href: '/dashboard/safety', icon: Shield },
-  { name: 'Análises', href: '/dashboard/analytics', icon: BarChart3 },
-  { name: 'Configurações', href: '/dashboard/settings', icon: Settings },
+const menuItems = [
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+    icon: Home,
+  },
+  {
+    title: 'Funcionários',
+    href: '/dashboard/employees',
+    icon: Users,
+  },
+  {
+    title: 'Contratos',
+    href: '/dashboard/contracts',
+    icon: Building,
+  },
+  {
+    title: 'Segurança',
+    href: '/dashboard/safety',
+    icon: Shield,
+  },
+  {
+    title: 'Planejamento',
+    href: '/dashboard/planning',
+    icon: Calendar,
+  },
+  {
+    title: 'Transferências',
+    href: '/dashboard/transfers',
+    icon: ArrowRightLeft,
+  },
+  {
+    title: 'Alocação de Efetivo',
+    href: '/dashboard/employee-assignment',
+    icon: UserCheck,
+  },
+  {
+    title: 'Controle de Efetivo',
+    href: '/dashboard/workforce-control',
+    icon: Users,
+  },
+  {
+    title: 'Gestão NFC',
+    href: '/dashboard/nfc-management',
+    icon: Smartphone,
+  },
+  {
+    title: 'Analytics',
+    href: '/dashboard/analytics',
+    icon: BarChart3,
+  },
+  {
+    title: 'Configurações',
+    href: '/dashboard/settings',
+    icon: Settings,
+  },
 ]
 
-export function Sidebar({ collapsed, onToggle }: SidebarProps) {
+export default function Sidebar() {
   const pathname = usePathname()
+  const { settings } = useAppSettings()
+  const [isCollapsed, setIsCollapsed] = useState(settings.sidebarCollapsed)
+
+  const toggleSidebar = () => {
+    setIsCollapsed(!isCollapsed)
+  }
 
   return (
-    <motion.div
-      initial={false}
-      animate={{ width: collapsed ? 80 : 280 }}
-      className="bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-700 flex flex-col h-full"
-    >
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200 dark:border-slate-700">
-        <div className="flex items-center justify-between">
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center space-x-3"
-            >
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-slate-100">PlanningControl</h1>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Empresa Demo</p>
-              </div>
-            </motion.div>
+    <div className={cn(
+      "sidebar bg-background border-r border-border transition-all duration-300 ease-in-out",
+      isCollapsed ? "w-16" : "w-64"
+    )}>
+      <div className="flex flex-col h-full">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          {!isCollapsed && (
+            <h2 className="text-lg font-semibold sidebar-text">Planning Control</h2>
           )}
-          
-          <button
-            onClick={onToggle}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors"
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleSidebar}
+            className="ml-auto"
           >
-            {collapsed ? (
-              <ChevronRight className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-            ) : (
-              <ChevronLeft className="h-4 w-4 text-gray-600 dark:text-slate-400" />
-            )}
-          </button>
+            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </Button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 p-4 space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                )}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                {!isCollapsed && (
+                  <span className="sidebar-text">{item.title}</span>
+                )}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-border">
+          {!isCollapsed && (
+            <div className="text-xs text-muted-foreground sidebar-text">
+              Planning Control v1.0
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors relative",
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 hover:bg-gray-100 dark:hover:bg-slate-800"
-              )}
-            >
-              <item.icon className={cn("h-5 w-5 flex-shrink-0")} />
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  {item.name}
-                </motion.span>
-              )}
-              
-              {isActive && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute inset-0 bg-blue-600 rounded-lg -z-10"
-                  initial={false}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
-              )}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-slate-700">
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-xs text-gray-500 dark:text-slate-400 text-center"
-          >
-            v3.0.0
-          </motion.div>
-        )}
-      </div>
-    </motion.div>
+    </div>
   )
 }
+
+// Export nomeado para compatibilidade
+export { Sidebar }

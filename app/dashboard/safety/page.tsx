@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { 
   Shield, 
   Search, 
@@ -23,28 +22,166 @@ import {
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { 
-  mockASOs, 
-  mockEmployeeTrainings, 
-  mockContracts,
-  mockTrainings,
-  ASO, 
-  EmployeeTraining,
-  Training,
-  ContractTraining
-} from '@/lib/mock-data'
 import { formatDate } from '@/lib/utils'
-import { 
-  getCurrentUser, 
-  getUserPermissions, 
-  validateUserAccess,
-  User as AuthUser,
-  UserRole
-} from '@/lib/auth'
+import { toast } from 'react-hot-toast'
+
+// Tipos básicos para segurança
+interface ASO {
+  id: string
+  employeeId: string
+  employeeName: string
+  examType: string
+  examDate: Date
+  validUntil: Date
+  result: string
+  status: 'valid' | 'expiring' | 'expired'
+}
+
+interface EmployeeTraining {
+  id: string
+  employeeId: string
+  trainingName: string
+  completedAt: Date
+  validUntil: Date
+  status: 'valid' | 'expiring' | 'expired'
+}
+
+interface Training {
+  id: string
+  name: string
+  category: string
+  description: string
+  duration: number
+  isActive: boolean
+}
+
+interface ContractTraining {
+  id: string
+  contractId: string
+  trainingId: string
+  trainingName: string
+  isRequired: boolean
+  isImpeditive: boolean
+  addedBy: string
+  addedByRole: string
+  addedAt: Date
+  notes?: string
+}
+
+interface Contract {
+  id: string
+  name: string
+  code: string
+  asoExpirationDays: number
+  requiredTrainings: ContractTraining[]
+}
+
+// Mock de dados para demonstração
+const mockASOs: ASO[] = [
+  {
+    id: '1',
+    employeeId: 'emp-1',
+    employeeName: 'João Silva',
+    examType: 'ADMISSION',
+    examDate: new Date('2024-01-15'),
+    validUntil: new Date('2025-01-15'),
+    result: 'FIT',
+    status: 'valid'
+  },
+  {
+    id: '2',
+    employeeId: 'emp-2',
+    employeeName: 'Maria Santos',
+    examType: 'PERIODIC',
+    examDate: new Date('2024-06-01'),
+    validUntil: new Date('2024-12-01'),
+    result: 'FIT_WITH_RESTRICTIONS',
+    status: 'expiring'
+  },
+  {
+    id: '3',
+    employeeId: 'emp-3',
+    employeeName: 'Pedro Costa',
+    examType: 'ADMISSION',
+    examDate: new Date('2023-12-01'),
+    validUntil: new Date('2024-06-01'),
+    result: 'FIT',
+    status: 'expired'
+  }
+]
+
+const mockEmployeeTrainings: EmployeeTraining[] = [
+  {
+    id: '1',
+    employeeId: 'emp-1',
+    trainingName: 'NR-10 - Segurança em Instalações Elétricas',
+    completedAt: new Date('2024-02-01'),
+    validUntil: new Date('2025-02-01'),
+    status: 'valid'
+  },
+  {
+    id: '2',
+    employeeId: 'emp-2',
+    trainingName: 'NR-35 - Trabalho em Altura',
+    completedAt: new Date('2024-03-15'),
+    validUntil: new Date('2024-09-15'),
+    status: 'expiring'
+  },
+  {
+    id: '3',
+    employeeId: 'emp-3',
+    trainingName: 'NR-11 - Transporte de Cargas',
+    completedAt: new Date('2023-11-01'),
+    validUntil: new Date('2024-05-01'),
+    status: 'expired'
+  }
+]
+
+const mockTrainings: Training[] = [
+  {
+    id: '1',
+    name: 'NR-10 - Segurança em Instalações Elétricas',
+    category: 'Elétrica',
+    description: 'Treinamento obrigatório para trabalhos com eletricidade',
+    duration: 40,
+    isActive: true
+  },
+  {
+    id: '2',
+    name: 'NR-35 - Trabalho em Altura',
+    category: 'Altura',
+    description: 'Treinamento para trabalhos em altura',
+    duration: 16,
+    isActive: true
+  },
+  {
+    id: '3',
+    name: 'NR-11 - Transporte de Cargas',
+    category: 'Movimentação',
+    description: 'Treinamento para operação de equipamentos',
+    duration: 24,
+    isActive: true
+  }
+]
+
+const mockContracts: Contract[] = [
+  {
+    id: '1',
+    name: 'Contrato Operacional',
+    code: 'CONT-001',
+    asoExpirationDays: 30,
+    requiredTrainings: []
+  },
+  {
+    id: '2',
+    name: 'Contrato Administrativo',
+    code: 'CONT-002',
+    asoExpirationDays: 15,
+    requiredTrainings: []
+  }
+]
 
 export default function SafetyPage() {
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
-  const [userPermissions, setUserPermissions] = useState<any>(null)
   const [asos] = useState<ASO[]>(mockASOs)
   const [trainings] = useState<EmployeeTraining[]>(mockEmployeeTrainings)
   const [availableTrainings] = useState<Training[]>(mockTrainings)
@@ -55,15 +192,8 @@ export default function SafetyPage() {
   const [showConfigModal, setShowConfigModal] = useState(false)
   const [contractTrainings, setContractTrainings] = useState<ContractTraining[]>([])
 
-  // Inicializar usuário e permissões
+  // Carregar treinamentos dos contratos
   useEffect(() => {
-    const user = getCurrentUser()
-    setCurrentUser(user)
-    
-    const permissions = getUserPermissions(user)
-    setUserPermissions(permissions)
-
-    // Carregar treinamentos dos contratos
     const allContractTrainings = mockContracts.flatMap(contract => contract.requiredTrainings)
     setContractTrainings(allContractTrainings)
   }, [])
@@ -100,24 +230,11 @@ export default function SafetyPage() {
     }
   }
 
-  const getRoleDisplayName = (role: UserRole) => {
-    switch (role) {
-      case UserRole.TENANT_ADMIN: return 'Admin Geral'
-      case UserRole.CONTRACT_MANAGER: return 'Gerente de Contrato'
-      case UserRole.HR: return 'Recursos Humanos'
-      case UserRole.PLANNING: return 'Planejamento'
-      case UserRole.SAFETY: return 'Segurança'
-      case UserRole.SUPERVISOR: return 'Supervisor'
-      case UserRole.OPERATOR: return 'Operador'
-      default: return role
-    }
-  }
-
   const handleAddTrainingToContract = (contractId: string, trainingId: string, isImpeditive: boolean, notes: string) => {
     const training = availableTrainings.find(t => t.id === trainingId)
     const contract = mockContracts.find(c => c.id === contractId)
     
-    if (training && contract && currentUser) {
+    if (training && contract) {
       const newContractTraining: ContractTraining = {
         id: `ct-${Date.now()}`,
         contractId,
@@ -125,51 +242,26 @@ export default function SafetyPage() {
         trainingName: training.name,
         isRequired: true,
         isImpeditive,
-        addedBy: currentUser.name,
-        addedByRole: currentUser.role,
+        addedBy: 'Administrador',
+        addedByRole: 'Admin',
         addedAt: new Date(),
         notes
       }
       
       setContractTrainings(prev => [...prev, newContractTraining])
       setShowAddTrainingModal(false)
+      toast.success('Treinamento adicionado com sucesso!')
     }
   }
 
   const handleRemoveTrainingFromContract = (contractTrainingId: string) => {
     setContractTrainings(prev => prev.filter(ct => ct.id !== contractTrainingId))
+    toast.success('Treinamento removido com sucesso!')
   }
 
   const handleUpdateASOExpirationDays = (contractId: string, days: number) => {
     // Em produção, isso seria uma chamada à API
-    
-  }
-
-  if (!currentUser || !userPermissions) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-600">Carregando permissões...</span>
-        </div>
-      </div>
-    )
-  }
-
-  // Verificar se usuário tem permissão para acessar segurança
-  if (!validateUserAccess(currentUser, 'MANAGE_SAFETY')) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Shield className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h2>
-          <p className="text-gray-600 mb-4">Você não tem permissão para acessar esta página.</p>
-          <p className="text-sm text-gray-500">
-            {`Perfil atual: ${getRoleDisplayName(currentUser.role)}`}
-          </p>
-        </div>
-      </div>
-    )
+    toast.success('Configuração atualizada com sucesso!')
   }
 
   const safetyStats = {
@@ -187,7 +279,7 @@ export default function SafetyPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header com Informações de Permissão */}
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Segurança</h1>
@@ -196,7 +288,7 @@ export default function SafetyPage() {
             <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-lg">
               <Shield className="h-4 w-4 text-blue-600" />
               <span className="text-sm font-medium text-blue-900">
-                {getRoleDisplayName(currentUser.role)}
+                Administrador
               </span>
             </div>
           </div>
@@ -256,11 +348,9 @@ export default function SafetyPage() {
             icon: AlertTriangle
           }
         ].map((stat, index) => (
-          <motion.div
+          <div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: index * 0.1 }}
+            className="transition-all duration-300 ease-in-out"
           >
             <Card>
               <CardContent className="p-6">
@@ -284,7 +374,7 @@ export default function SafetyPage() {
                 </div>
               </CardContent>
             </Card>
-          </motion.div>
+          </div>
         ))}
       </div>
 
@@ -319,12 +409,10 @@ export default function SafetyPage() {
                     </option>
                   ))}
                 </select>
-                {validateUserAccess(currentUser, 'MANAGE_CONTRACT_TRAININGS') && (
-                  <Button size="sm" onClick={() => setShowAddTrainingModal(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar Treinamento
-                  </Button>
-                )}
+                <Button size="sm" onClick={() => setShowAddTrainingModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar Treinamento
+                </Button>
               </div>
             )}
             
@@ -365,11 +453,9 @@ export default function SafetyPage() {
       </Card>
 
       {/* Content */}
-      <motion.div
+      <div
         key={activeTab}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
+        className="transition-all duration-300 ease-in-out"
       >
         {activeTab === 'asos' && (
           <Card>
@@ -573,7 +659,7 @@ export default function SafetyPage() {
                           <td className="p-4">
                             <div>
                               <p className="text-sm text-gray-900">{contractTraining.addedBy}</p>
-                              <p className="text-xs text-gray-500">{getRoleDisplayName(contractTraining.addedByRole)}</p>
+                              <p className="text-xs text-gray-500">{contractTraining.addedByRole}</p>
                             </div>
                           </td>
                           <td className="p-4">
@@ -587,21 +673,17 @@ export default function SafetyPage() {
                               <Button variant="ghost" size="sm">
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {validateUserAccess(currentUser, 'MANAGE_CONTRACT_TRAININGS') && (
-                                <>
-                                  <Button variant="ghost" size="sm">
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm"
-                                    onClick={() => handleRemoveTrainingFromContract(contractTraining.id)}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => handleRemoveTrainingFromContract(contractTraining.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -613,14 +695,12 @@ export default function SafetyPage() {
             </CardContent>
           </Card>
         )}
-      </motion.div>
+      </div>
 
       {/* Add Training to Contract Modal */}
-      {showAddTrainingModal && validateUserAccess(currentUser, 'MANAGE_CONTRACT_TRAININGS') && (
+      {showAddTrainingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <div
             className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4"
           >
             <div className="flex items-center justify-between mb-6">
@@ -724,16 +804,14 @@ export default function SafetyPage() {
                 </Button>
               </div>
             </form>
-          </motion.div>
+          </div>
         </div>
       )}
 
       {/* Configuration Modal */}
-      {showConfigModal && validateUserAccess(currentUser, 'MANAGE_CONTRACT_TRAININGS') && (
+      {showConfigModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
+          <div
             className="bg-white rounded-2xl p-8 max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto"
           >
             <div className="flex items-center justify-between mb-6">
@@ -802,7 +880,7 @@ export default function SafetyPage() {
                 Fechar
               </Button>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>

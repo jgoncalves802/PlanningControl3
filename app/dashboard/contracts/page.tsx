@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+// import { motion } from 'framer-motion'
 import { 
   FileText, 
   Search, 
@@ -33,25 +33,77 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { 
-  getCurrentUser, 
-  getUserPermissions, 
-  validateUserAccess,
-  User,
-  UserRole
-} from '@/lib/auth'
-import { 
-  useContractsQuery, 
-  useContractStatsQuery, 
-  useCreateContract, 
-  useUpdateContract, 
-  useDeleteContract
-} from '@/lib/hooks/useContracts'
-import { useContractsSSE } from '@/lib/hooks/useSSEConnection';
-import { Contract, CreateContractData, UpdateContractData, ContractFilters } from '@/lib/types/contracts'
 import { toast } from 'react-hot-toast'
 
-// Configuração das colunas disponíveis baseada na imagem
+// Tipos básicos para contratos
+interface Contract {
+  id: string
+  name: string
+  code: string
+  workdayHours: number
+  includesWeekends: boolean
+  includesHolidays: boolean
+  isActive: boolean
+  employeeCount?: number
+  functions?: any[]
+  createdAt: string
+  updatedAt: string
+}
+
+interface ContractFilters {
+  page: number
+  limit: number
+  search: string
+  isActive?: boolean
+  sortBy: string
+  sortOrder: 'asc' | 'desc'
+}
+
+interface CreateContractData {
+  name: string
+  code: string
+  workdayHours: number
+  includesWeekends: boolean
+  includesHolidays: boolean
+  isActive: boolean
+}
+
+interface UpdateContractData {
+  id: string
+  data: CreateContractData
+}
+
+// Mock de dados para demonstração
+const mockContracts: Contract[] = [
+  {
+    id: '1',
+    name: 'Contrato Operacional',
+    code: 'CONT-001',
+    workdayHours: 8,
+    includesWeekends: false,
+    includesHolidays: false,
+    isActive: true,
+    employeeCount: 25,
+    functions: [],
+    createdAt: '2024-01-15T10:00:00Z',
+    updatedAt: '2024-01-15T10:00:00Z'
+  },
+  {
+    id: '2',
+    name: 'Contrato Administrativo',
+    code: 'CONT-002',
+    workdayHours: 6,
+    includesWeekends: true,
+    includesHolidays: true,
+    isActive: true,
+    employeeCount: 12,
+    functions: [],
+    createdAt: '2024-01-20T10:00:00Z',
+    updatedAt: '2024-01-20T10:00:00Z'
+  }
+]
+
+// Configuração das colunas disponíveis
 interface ColumnConfig {
   key: string
   label: string
@@ -61,7 +113,7 @@ interface ColumnConfig {
 }
 
 const defaultColumns: ColumnConfig[] = [
-  // Colunas sugeridas (baseadas na imagem)
+  // Colunas sugeridas
   { key: 'name', label: 'Nome do Contrato', enabled: true, width: '200px', category: 'suggested' },
   { key: 'code', label: 'Código', enabled: true, width: '120px', category: 'suggested' },
   { key: 'status', label: 'Status', enabled: true, width: '100px', category: 'suggested' },
@@ -77,9 +129,6 @@ const defaultColumns: ColumnConfig[] = [
 ]
 
 export default function ContractsPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [userPermissions, setUserPermissions] = useState<any>(null)
-  
   // Estados para filtros e busca
   const [filters, setFilters] = useState<ContractFilters>({
     page: 1,
@@ -110,42 +159,18 @@ export default function ContractsPage() {
     isActive: true
   })
 
-  // Hooks para APIs
-  const { data: contractsData, isLoading: contractsLoading, error: contractsError, refetch } = useContractsQuery(filters)
-  const { data: stats, isLoading: statsLoading } = useContractStatsQuery()
-  const createContractMutation = useCreateContract()
-  const updateContractMutation = useUpdateContract()
-  const deleteContractMutation = useDeleteContract()
+  // Estados para dados
+  const [contracts, setContracts] = useState<Contract[]>(mockContracts)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Ativar SSE para contratos
-  useContractsSSE();
-
-  // Debug: forçar refetch se não houver dados
-  useEffect(() => {
-    if (!contractsLoading && !contractsData && !contractsError) {
-
-      refetch()
-    }
-  }, [contractsLoading, contractsData, contractsError, refetch])
-
-  // Inicializar usuário e permissões
-  useEffect(() => {
-    const user = getCurrentUser()
-    setCurrentUser(user)
-    
-    const permissions = getUserPermissions(user)
-    setUserPermissions(permissions)
-
-    // Carregar configuração de colunas salva
-    const savedColumns = localStorage.getItem('contract-columns')
-    if (savedColumns) {
-      try {
-        setColumns(JSON.parse(savedColumns))
-      } catch (error) {
-        console.error('Erro ao carregar configuração de colunas:', error)
-      }
-    }
-  }, [])
+  // Mock de estatísticas
+  const stats = {
+    total: contracts.length,
+    active: contracts.filter(c => c.isActive).length,
+    totalFunctions: contracts.reduce((acc, c) => acc + (c.functions?.length || 0), 0),
+    totalEmployees: contracts.reduce((acc, c) => acc + (c.employeeCount || 0), 0)
+  }
 
   // Atualizar filtros
   const updateFilters = (newFilters: Partial<ContractFilters>) => {
@@ -169,7 +194,6 @@ export default function ContractsPage() {
   }
 
   const handleSelectAll = () => {
-    const contracts = contractsData?.contracts || []
     setSelectedContracts(
       selectedContracts.length === contracts.length 
         ? [] 
@@ -178,10 +202,17 @@ export default function ContractsPage() {
   }
 
   const handleAddContract = async () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    
     try {
-      await createContractMutation.mutateAsync(newContract)
+      const newContractData: Contract = {
+        id: Date.now().toString(),
+        ...newContract,
+        employeeCount: 0,
+        functions: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      setContracts(prev => [...prev, newContractData])
       setNewContract({
         name: '',
         code: '',
@@ -191,81 +222,71 @@ export default function ContractsPage() {
         isActive: true
       })
       setShowAddModal(false)
+      toast.success('Contrato criado com sucesso!')
     } catch (error) {
-      // Erro já tratado no hook
+      toast.error('Erro ao criar contrato')
     }
   }
 
   const handleEditContract = async () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES') || !selectedContractData) return
+    if (!selectedContractData) return
     
     try {
-      await updateContractMutation.mutateAsync({
-        id: selectedContractData.id,
-        data: {
-          name: selectedContractData.name,
-          code: selectedContractData.code,
-          workdayHours: selectedContractData.workdayHours,
-          includesWeekends: selectedContractData.includesWeekends,
-          includesHolidays: selectedContractData.includesHolidays,
-          isActive: selectedContractData.isActive
-        }
-      })
+      setContracts(prev => prev.map(c => 
+        c.id === selectedContractData.id 
+          ? { ...selectedContractData, updatedAt: new Date().toISOString() }
+          : c
+      ))
       setShowEditModal(false)
       setSelectedContractData(null)
+      toast.success('Contrato atualizado com sucesso!')
     } catch (error) {
-      // Erro já tratado no hook
+      toast.error('Erro ao atualizar contrato')
     }
   }
 
   const handleDeleteContract = async (contractId: string) => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    
     if (confirm('Tem certeza que deseja excluir este contrato?')) {
       try {
-        await deleteContractMutation.mutateAsync(contractId)
+        setContracts(prev => prev.filter(c => c.id !== contractId))
+        toast.success('Contrato excluído com sucesso!')
       } catch (error) {
-        // Erro já tratado no hook
+        toast.error('Erro ao excluir contrato')
       }
     }
   }
 
   const handleBulkDelete = async () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    
     if (confirm(`Tem certeza que deseja excluir ${selectedContracts.length} contratos selecionados?`)) {
       try {
-        await Promise.all(
-          selectedContracts.map(contractId => 
-            deleteContractMutation.mutateAsync(contractId)
-          )
-        )
+        setContracts(prev => prev.filter(c => !selectedContracts.includes(c.id)))
         setSelectedContracts([])
+        toast.success('Contratos excluídos com sucesso!')
       } catch (error) {
-        // Erros já tratados no hook
+        toast.error('Erro ao excluir contratos')
       }
     }
   }
 
   const handleDuplicateContract = async (contract: Contract) => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return
-    
     try {
-      await createContractMutation.mutateAsync({
+      const duplicatedContract: Contract = {
+        ...contract,
+        id: Date.now().toString(),
         name: `${contract.name} (Cópia)`,
         code: `${contract.code}-COPY`,
-        workdayHours: contract.workdayHours,
-        includesWeekends: contract.includesWeekends,
-        includesHolidays: contract.includesHolidays,
-        isActive: contract.isActive
-      })
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+      
+      setContracts(prev => [...prev, duplicatedContract])
+      toast.success('Contrato duplicado com sucesso!')
     } catch (error) {
-      // Erro já tratado no hook
+      toast.error('Erro ao duplicar contrato')
     }
   }
 
   const exportData = () => {
-    const contracts = contractsData?.contracts || []
     const dataToExport = contracts.map(contract => ({
       nome: contract.name,
       codigo: contract.code,
@@ -278,23 +299,21 @@ export default function ContractsPage() {
       criadoEm: formatDate(new Date(contract.createdAt))
     }))
     
-    
     toast.success('Dados exportados com sucesso!')
     // TODO: Implementar download real do arquivo
   }
 
-  const getRoleDisplayName = (role: UserRole) => {
-    switch (role) {
-      case UserRole.TENANT_ADMIN: return 'Admin Geral'
-      case UserRole.CONTRACT_MANAGER: return 'Gerente de Contrato'
-      case UserRole.HR: return 'Recursos Humanos'
-      case UserRole.PLANNING: return 'Planejamento'
-      case UserRole.SAFETY: return 'Segurança'
-      case UserRole.SUPERVISOR: return 'Supervisor'
-      case UserRole.OPERATOR: return 'Operador'
-      default: return role
+  // Carregar configuração de colunas salva
+  useEffect(() => {
+    const savedColumns = localStorage.getItem('contract-columns')
+    if (savedColumns) {
+      try {
+        setColumns(JSON.parse(savedColumns))
+      } catch (error) {
+        console.error('Erro ao carregar configuração de colunas:', error)
+      }
     }
-  }
+  }, [])
 
   const enabledColumns = columns.filter(col => col.enabled)
 
@@ -358,20 +377,8 @@ export default function ContractsPage() {
     }
   }
 
-  // Loading state
-  if (!currentUser || !userPermissions) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <span className="text-gray-600 dark:text-slate-400">Carregando permissões...</span>
-        </div>
-      </div>
-    )
-  }
-
   // Error state
-  if (contractsError) {
+  if (error) {
     return (
       <div className="p-8">
         <div className="text-center">
@@ -380,7 +387,7 @@ export default function ContractsPage() {
             Erro ao carregar contratos
           </h2>
           <p className="text-gray-600 dark:text-slate-400 mb-4">
-            {contractsError.message || 'Ocorreu um erro inesperado'}
+            {error || 'Ocorreu um erro inesperado'}
           </p>
           <Button onClick={() => window.location.reload()}>
             Tentar Novamente
@@ -390,13 +397,10 @@ export default function ContractsPage() {
     )
   }
 
-  const contracts = contractsData?.contracts || []
-  const pagination = contractsData?.pagination
-
   return (
     <div className="p-8">
       <div className="space-y-6">
-        {/* Header com Informações de Permissão */}
+        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">Contratos</h1>
@@ -405,7 +409,7 @@ export default function ContractsPage() {
               <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                  {getRoleDisplayName(currentUser.role)}
+                  Administrador
                 </span>
               </div>
             </div>
@@ -419,80 +423,61 @@ export default function ContractsPage() {
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
-            {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-              <Button size="sm" onClick={() => setShowAddModal(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Contrato
-              </Button>
-            )}
+            <Button size="sm" onClick={() => setShowAddModal(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Contrato
+            </Button>
           </div>
         </div>
 
         {/* Stats */}
-        {statsLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, index) => (
-              <Card key={index}>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[
+            { 
+              label: 'Total Contratos', 
+              value: stats.total, 
+              icon: FileText,
+              color: 'blue' 
+            },
+            { 
+              label: 'Contratos Ativos', 
+              value: stats.active,
+              icon: Building,
+              color: 'green' 
+            },
+            { 
+              label: 'Total Funções', 
+              value: stats.totalFunctions,
+              icon: Users,
+              color: 'purple' 
+            },
+            { 
+              label: 'Total Funcionários', 
+              value: stats.totalEmployees,
+              icon: Users,
+              color: 'orange' 
+            }
+          ].map((stat, index) => (
+            <div
+              key={stat.label}
+              className="transition-all duration-300 ease-in-out"
+            >
+              <Card>
                 <CardContent className="p-6">
-                  <div className="animate-pulse">
-                    <div className="h-4 bg-gray-200 dark:bg-slate-700 rounded w-24 mb-2"></div>
-                    <div className="h-8 bg-gray-200 dark:bg-slate-700 rounded w-16"></div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-slate-400">{stat.label}</p>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{stat.value}</p>
+                    </div>
+                    <div className={`p-3 rounded-xl bg-${stat.color}-100 dark:bg-${stat.color}-900/20`}>
+                      <stat.icon className={`h-5 w-5 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        ) : stats ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            {[
-              { 
-                label: 'Total Contratos', 
-                value: stats.total, 
-                icon: FileText,
-                color: 'blue' 
-              },
-              { 
-                label: 'Contratos Ativos', 
-                value: stats.active,
-                icon: Building,
-                color: 'green' 
-              },
-              { 
-                label: 'Total Funções', 
-                value: stats.totalFunctions,
-                icon: Users,
-                color: 'purple' 
-              },
-              { 
-                label: 'Total Funcionários', 
-                value: stats.totalEmployees,
-                icon: Users,
-                color: 'orange' 
-              }
-            ].map((stat, index) => (
-              <motion.div
-                key={stat.label}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-              >
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-600 dark:text-slate-400">{stat.label}</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-slate-100">{stat.value}</p>
-                      </div>
-                      <div className={`p-3 rounded-xl bg-${stat.color}-100 dark:bg-${stat.color}-900/20`}>
-                        <stat.icon className={`h-5 w-5 text-${stat.color}-600 dark:text-${stat.color}-400`} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        ) : null}
+            </div>
+          ))}
+        </div>
 
         {/* Search and Filters */}
         <Card>
@@ -535,10 +520,8 @@ export default function ContractsPage() {
         </Card>
 
         {/* Contracts Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
+        <div
+          className="transition-all duration-300 ease-in-out"
         >
           <Card>
             <CardHeader>
@@ -547,7 +530,7 @@ export default function ContractsPage() {
                   <FileText className="h-5 w-5" />
                   Contratos ({contracts.length})
                 </CardTitle>
-                {selectedContracts.length > 0 && validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
+                {selectedContracts.length > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-600 dark:text-slate-400">
                       {selectedContracts.length} selecionados
@@ -561,7 +544,7 @@ export default function ContractsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {contractsLoading ? (
+              {isLoading ? (
                 <div className="space-y-4">
                   {[...Array(5)].map((_, index) => (
                     <div key={index} className="animate-pulse">
@@ -580,12 +563,10 @@ export default function ContractsPage() {
                       ? 'Tente ajustar os filtros ou criar um novo contrato.'
                       : 'Comece criando seu primeiro contrato.'}
                   </p>
-                  {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                    <Button onClick={() => setShowAddModal(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Primeiro Contrato
-                    </Button>
-                  )}
+                  <Button onClick={() => setShowAddModal(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeiro Contrato
+                  </Button>
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -634,22 +615,18 @@ export default function ContractsPage() {
                               }}>
                                 <Eye className="h-4 w-4" />
                               </Button>
-                              {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                                <>
-                                  <Button variant="ghost" size="sm" onClick={() => {
-                                    setSelectedContractData(contract)
-                                    setShowEditModal(true)
-                                  }}>
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDuplicateContract(contract)}>
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="sm" onClick={() => handleDeleteContract(contract.id)}>
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
+                              <Button variant="ghost" size="sm" onClick={() => {
+                                setSelectedContractData(contract)
+                                setShowEditModal(true)
+                              }}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDuplicateContract(contract)}>
+                                <Copy className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDeleteContract(contract.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             </div>
                           </td>
                         </tr>
@@ -658,42 +635,12 @@ export default function ContractsPage() {
                   </table>
                 </div>
               )}
-              
-              {/* Paginação */}
-              {pagination && pagination.pages > 1 && (
-                <div className="flex items-center justify-between mt-6">
-                  <div className="text-sm text-gray-600 dark:text-slate-400">
-                    Mostrando {((pagination.page - 1) * pagination.limit) + 1} a {Math.min(pagination.page * pagination.limit, pagination.total)} de {pagination.total} contratos
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pagination.page === 1}
-                      onClick={() => updateFilters({ page: pagination.page - 1 })}
-                    >
-                      Anterior
-                    </Button>
-                    <span className="text-sm text-gray-600 dark:text-slate-400">
-                      Página {pagination.page} de {pagination.pages}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={pagination.page === pagination.pages}
-                      onClick={() => updateFilters({ page: pagination.page + 1 })}
-                    >
-                      Próxima
-                    </Button>
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
-        </motion.div>
+        </div>
       </div>
 
-      {/* Modals - TODO: Implementar modais de criação, edição e visualização */}
+      {/* Modal de Criação */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-slate-800 p-6 rounded-lg w-full max-w-md">
@@ -757,9 +704,9 @@ export default function ContractsPage() {
               </Button>
               <Button 
                 onClick={handleAddContract}
-                disabled={!newContract.name || !newContract.code || createContractMutation.isPending}
+                disabled={!newContract.name || !newContract.code}
               >
-                {createContractMutation.isPending ? 'Criando...' : 'Criar Contrato'}
+                Criar Contrato
               </Button>
             </div>
           </div>

@@ -1,199 +1,223 @@
-import { useState, useEffect, useCallback } from 'react';
-import toast from 'react-hot-toast';
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useTheme } from '@/lib/providers/ThemeProvider'
+import { useLanguage } from '@/lib/providers/LanguageProvider'
+import toast from 'react-hot-toast'
 
 interface PersonalSettings {
-  name: string;
-  email: string;
-  phone: string;
-  language: string;
-  timezone: string;
-  theme: string;
-  avatar?: string;
+  name: string
+  email: string
+  phone: string
+  timezone: string
+  language: string
+  theme: string
 }
 
 interface InterfaceSettings {
-  dashboardLayout: string;
-  sidebarCollapsed: boolean;
-  showNotifications: boolean;
-  showQuickActions: boolean;
-  autoRefresh: boolean;
-  refreshInterval: number;
-  compactMode: boolean;
-  showAnimations: boolean;
-  colorScheme: string;
+  dashboardLayout: string
+  sidebarCollapsed: boolean
+  showNotifications: boolean
+  showQuickActions: boolean
+  autoRefresh: boolean
+  refreshInterval: number
+  compactMode: boolean
+  showAnimations: boolean
+  colorScheme: string
 }
 
 interface NotificationSettings {
-  pushEnabled: boolean;
-  pushWorkHours: boolean;
-  pushAfterHours: boolean;
-  emailEnabled: boolean;
-  emailDaily: boolean;
-  emailWeekly: boolean;
-  emailUrgent: boolean;
-  newAssignments: boolean;
-  scheduleChanges: boolean;
-  systemUpdates: boolean;
-  reminders: boolean;
-  alerts: boolean;
-  quietHours: boolean;
-  quietStart: string;
-  quietEnd: string;
+  emailNotifications: boolean
+  pushNotifications: boolean
+  smsNotifications: boolean
+  notificationTypes: {
+    system: boolean
+    security: boolean
+    updates: boolean
+    marketing: boolean
+  }
+  quietHours: {
+    enabled: boolean
+    start: string
+    end: string
+  }
 }
 
 interface UserSettings {
-  personal: PersonalSettings;
-  interface: InterfaceSettings;
-  notifications: NotificationSettings;
+  personal: PersonalSettings
+  interface: InterfaceSettings
+  notifications: NotificationSettings
+}
+
+const defaultSettings: UserSettings = {
+  personal: {
+    name: '',
+    email: '',
+    phone: '',
+    timezone: 'America/Sao_Paulo',
+    language: 'pt-BR',
+    theme: 'system'
+  },
+  interface: {
+    dashboardLayout: 'grid',
+    sidebarCollapsed: false,
+    showNotifications: true,
+    showQuickActions: true,
+    autoRefresh: true,
+    refreshInterval: 30,
+    compactMode: false,
+    showAnimations: true,
+    colorScheme: 'blue'
+  },
+  notifications: {
+    emailNotifications: true,
+    pushNotifications: true,
+    smsNotifications: false,
+    notificationTypes: {
+      system: true,
+      security: true,
+      updates: true,
+      marketing: false
+    },
+    quietHours: {
+      enabled: false,
+      start: '22:00',
+      end: '08:00'
+    }
+  }
 }
 
 export function useSettings(userId: string = 'current') {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [settings, setSettings] = useState<UserSettings>(defaultSettings)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { theme, setTheme } = useTheme()
+  const { language, setLanguage } = useLanguage()
 
-  const fetchSettings = useCallback(async () => {
+  // Carregar configurações
+  const loadSettings = async () => {
+    setIsLoading(true)
+    setError(null)
+    
     try {
-      setIsLoading(true);
-      setError(null);
-
-      const response = await fetch(`/api/settings/user/${userId}`);
+      const response = await fetch(`/api/settings/user/${userId}`)
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Erro ao buscar configurações');
+      if (response.ok) {
+        const data = await response.json()
+        setSettings(data)
+        
+        // Sincronizar com providers
+        if (data.personal.theme) {
+          setTheme(data.personal.theme as any)
+        }
+        if (data.personal.language) {
+          setLanguage(data.personal.language as any)
+        }
+      } else if (response.status === 503) {
+        // Aplicar configurações padrão localmente
+        setSettings(defaultSettings)
+        toast.success('Configurações padrão aplicadas')
+      } else {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`)
       }
-
-      const data = await response.json();
-      setSettings(data);
-    } catch (err: any) {
-      console.error('Erro ao buscar configurações:', err);
-      setError(err.message || 'Erro desconhecido');
-      toast.error('Erro ao carregar configurações');
+    } catch (err) {
+      console.error('Erro ao carregar configurações:', err)
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+      
+      // Aplicar configurações padrão em caso de erro
+      setSettings(defaultSettings)
+      toast.error('Erro ao carregar configurações. Usando padrões.')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  }, [userId]);
+  }
 
-  const saveSettings = useCallback(async (newSettings: Partial<UserSettings>) => {
+  // Salvar configurações
+  const saveSettings = async (newSettings: Partial<UserSettings>) => {
+    setIsLoading(true)
+    setError(null)
+    
     try {
-      setIsSaving(true);
-      setError(null);
-
-      const updatedSettings = {
-        ...settings,
-        ...newSettings,
-      };
-
+      const updatedSettings = { ...settings, ...newSettings }
+      
       const response = await fetch(`/api/settings/user/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(updatedSettings),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Erro ao salvar configurações');
+      })
+      
+      if (response.ok) {
+        setSettings(updatedSettings)
+        
+        // Sincronizar com providers
+        if (newSettings.personal?.theme) {
+          setTheme(newSettings.personal.theme as any)
+        }
+        if (newSettings.personal?.language) {
+          setLanguage(newSettings.personal.language as any)
+        }
+        
+        toast.success('Configurações salvas com sucesso!')
+        return true
+      } else if (response.status === 503) {
+        // Aplicar localmente em caso de erro de serviço
+        setSettings(updatedSettings)
+        toast.success('Configurações aplicadas localmente')
+        return true
+      } else {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`)
       }
-
-      const data = await response.json();
-      setSettings(updatedSettings as UserSettings);
-      toast.success('Configurações salvas com sucesso!');
-      
-      return data;
-    } catch (err: any) {
-      console.error('Erro ao salvar configurações:', err);
-      setError(err.message || 'Erro desconhecido');
-      toast.error(err.message || 'Erro ao salvar configurações');
-      throw err;
+    } catch (err) {
+      console.error('Erro ao salvar configurações:', err)
+      setError(err instanceof Error ? err.message : 'Erro desconhecido')
+      toast.error('Erro ao salvar configurações')
+      return false
     } finally {
-      setIsSaving(false);
+      setIsLoading(false)
     }
-  }, [settings, userId]);
+  }
 
-  const updatePersonalSettings = useCallback(async (personal: Partial<PersonalSettings>) => {
-    return saveSettings({ personal: { ...settings?.personal, ...personal } as PersonalSettings });
-  }, [saveSettings, settings?.personal]);
+  // Atualizar configurações pessoais
+  const updatePersonalSettings = async (personal: Partial<PersonalSettings>) => {
+    return await saveSettings({ personal: { ...settings.personal, ...personal } })
+  }
 
-  const updateInterfaceSettings = useCallback(async (interfaceSettings: Partial<InterfaceSettings>) => {
-    return saveSettings({ interface: { ...settings?.interface, ...interfaceSettings } as InterfaceSettings });
-  }, [saveSettings, settings?.interface]);
+  // Atualizar configurações de interface
+  const updateInterfaceSettings = async (interfaceSettings: Partial<InterfaceSettings>) => {
+    return await saveSettings({ interface: { ...settings.interface, ...interfaceSettings } })
+  }
 
-  const updateNotificationSettings = useCallback(async (notifications: Partial<NotificationSettings>) => {
-    return saveSettings({ notifications: { ...settings?.notifications, ...notifications } as NotificationSettings });
-  }, [saveSettings, settings?.notifications]);
+  // Atualizar configurações de notificação
+  const updateNotificationSettings = async (notifications: Partial<NotificationSettings>) => {
+    return await saveSettings({ notifications: { ...settings.notifications, ...notifications } })
+  }
 
-  const resetSettings = useCallback(async () => {
-    try {
-      setIsSaving(true);
-      
-      // Resetar para configurações padrão
-      const defaultSettings = {
-        personal: {
-          name: '',
-          email: '',
-          phone: '',
-          language: 'pt-BR',
-          timezone: 'America/Sao_Paulo',
-          theme: 'system',
-          avatar: undefined,
-        },
-        interface: {
-          dashboardLayout: 'grid',
-          sidebarCollapsed: false,
-          showNotifications: true,
-          showQuickActions: true,
-          autoRefresh: true,
-          refreshInterval: 30,
-          compactMode: false,
-          showAnimations: true,
-          colorScheme: 'blue',
-        },
-        notifications: {
-          pushEnabled: true,
-          pushWorkHours: true,
-          pushAfterHours: false,
-          emailEnabled: true,
-          emailDaily: false,
-          emailWeekly: true,
-          emailUrgent: true,
-          newAssignments: true,
-          scheduleChanges: true,
-          systemUpdates: false,
-          reminders: true,
-          alerts: true,
-          quietHours: true,
-          quietStart: '22:00',
-          quietEnd: '07:00',
-        },
-      };
+  // Resetar para configurações padrão
+  const resetToDefault = async () => {
+    return await saveSettings(defaultSettings)
+  }
 
-      await saveSettings(defaultSettings);
-      toast.success('Configurações resetadas para o padrão!');
-    } catch (error) {
-      toast.error('Erro ao resetar configurações');
-    } finally {
-      setIsSaving(false);
-    }
-  }, [saveSettings]);
-
+  // Carregar configurações na inicialização
   useEffect(() => {
-    fetchSettings();
-  }, [fetchSettings]);
+    loadSettings()
+  }, [userId])
 
   return {
     settings,
     isLoading,
     error,
-    isSaving,
-    fetchSettings,
+    loadSettings,
     saveSettings,
     updatePersonalSettings,
     updateInterfaceSettings,
     updateNotificationSettings,
-    resetSettings,
-  };
+    resetToDefault,
+    theme,
+    setTheme,
+    language,
+    setLanguage
+  }
 } 
