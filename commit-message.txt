@@ -6,3 +6,17 @@ fix(budgets): corrigir erro 500 na API com filtro status=all
 - Ajustar estrutura de dados na página de orçamentos
 
 Resolve: #issue-500-budgets-api 
+
+fix: corrigir atribuição de função na página de transferência
+
+- Corrigir problema onde função não estava sendo atribuída na criação de transferências
+- Modificar API de transferências para aceitar tanto currentFunctionId quanto companyFunctionId
+- Atualizar modal de transferência para usar useEmployeesWithRelationsQuery
+- Adicionar validação que aceita funcionários com qualquer tipo de função
+- Criar usuário admin (admin@demo-company.com) para resolver erro de usuário não encontrado
+- Implementar verificação de função em ambas as tabelas (ContractFunction e CompanyFunction)
+- Atualizar lógica de priorização: data.toFunctionId → employee.currentFunctionId → employee.companyFunctionId
+- Corrigir exibição do nome da função no modal de transferência
+- Garantir que transferências sejam criadas corretamente com usuário solicitante válido
+
+Resolve o problema onde o sistema não conseguia avançar com solicitações de transferência devido à falta de atribuição de função. 

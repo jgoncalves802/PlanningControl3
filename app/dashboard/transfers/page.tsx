@@ -52,7 +52,7 @@ import { useTransferRequests } from '@/lib/hooks/useTransferRequests';
 import { useTransferStats } from '@/lib/hooks/useTransferStats';
 import { TransferDetailModal } from './TransferDetailModal';
 import { useTransferMutation } from '@/lib/hooks/useTransferMutation';
-import { useEmployeesQuery } from '@/lib/useEmployeesQuery';
+import { useEmployeesQuery, useEmployeesWithRelationsQuery } from '@/lib/useEmployeesQuery';
 import { useContractsQuery } from '@/lib/useContracts';
 import { format } from 'date-fns';
 
@@ -573,7 +573,7 @@ function NewTransferModal({ open, onClose, onSuccess, currentUser }: { open: boo
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const employeesQueryParams = useMemo(() => ({ isActive: true, limit: 50 }), []);
-  const { data: employeesData, isLoading: loadingEmployees } = useEmployeesQuery(employeesQueryParams);
+  const { data: employeesData, isLoading: loadingEmployees } = useEmployeesWithRelationsQuery(employeesQueryParams);
   const contractsQueryParams = useMemo(() => ({}), []);
   const { data: contractsData, isLoading: loadingContracts } = useContractsQuery(contractsQueryParams);
   
@@ -616,8 +616,8 @@ function NewTransferModal({ open, onClose, onSuccess, currentUser }: { open: boo
         return;
       }
       
-      // Verificar se o funcionário tem função atual
-      if (!selectedEmployee.currentFunctionId) {
+      // Verificar se o funcionário tem função atual (pode ser currentFunctionId ou companyFunctionId)
+      if (!selectedEmployee.currentFunctionId && !selectedEmployee.companyFunctionId) {
         setError('Funcionário não possui função atual definida. É necessário definir uma função atual antes de criar uma transferência.');
         return;
       }
@@ -631,7 +631,7 @@ function NewTransferModal({ open, onClose, onSuccess, currentUser }: { open: boo
         body: JSON.stringify({
           employeeId: selectedEmployee.id,
           toContractId: selectedContractId,
-          toFunctionId: selectedEmployee.currentFunctionId,
+          toFunctionId: selectedEmployee.currentFunctionId || selectedEmployee.companyFunctionId,
           scheduledDate,
           requestedById: currentUser?.id,
         })

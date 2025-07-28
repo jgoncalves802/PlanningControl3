@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
       where: { id: data.employeeId },
       select: { 
         currentFunctionId: true,
+        companyFunctionId: true,
         name: true,
         cpf: true 
       },
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verificar se o funcionário tem uma função atual ou se foi fornecida uma função específica
-    let toFunctionId = data.toFunctionId || employee.currentFunctionId;
+    let toFunctionId = data.toFunctionId || employee.currentFunctionId || employee.companyFunctionId;
     
     if (!toFunctionId) {
 
@@ -121,12 +122,28 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // Verificar se a função existe
-
-    const functionExists = await prisma.contractFunction.findUnique({
+    // Verificar se a função existe (pode ser ContractFunction ou CompanyFunction)
+    let functionExists = await prisma.contractFunction.findUnique({
       where: { id: toFunctionId },
       select: { id: true, name: true, contractId: true },
     });
+    
+    // Se não encontrou como ContractFunction, tentar como CompanyFunction
+    if (!functionExists) {
+      const companyFunction = await prisma.companyFunction.findUnique({
+        where: { id: toFunctionId },
+        select: { id: true, name: true },
+      });
+      
+      if (companyFunction) {
+        // Se é uma CompanyFunction, usar o ID como toFunctionId
+        functionExists = {
+          id: companyFunction.id,
+          name: companyFunction.name,
+          contractId: null
+        };
+      }
+    }
     
     if (!functionExists) {
 
