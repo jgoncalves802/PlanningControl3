@@ -8,12 +8,15 @@ import { Settings, User, Building, Shield } from 'lucide-react';
 import PersonalSettings from './components/UserSettings/PersonalSettings';
 import InterfaceSettings from './components/UserSettings/InterfaceSettings';
 import NotificationSettings from './components/UserSettings/NotificationSettings';
+import UserManagement from './components/SuperAdminSettings/UserManagement';
+import CompanyManagement from './components/SuperAdminSettings/CompanyManagement';
+import InfrastructureSettings from './components/SuperAdminSettings/InfrastructureSettings';
 import AppProviders from '@/components/providers/AppProviders';
 
 // Mock de permissões - em produção viria do sistema de auth
 const getUserRole = () => {
-  // Por enquanto, vamos simular que é um usuário comum
-  return 'USER';
+  // Simular que é um Super Admin para demonstrar as funcionalidades
+  return 'SUPER_ADMIN';
 };
 
 const getUserPermissions = (role: string) => {
@@ -85,7 +88,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Tabs de Configurações */}
-        <Tabs defaultValue="user" className="space-y-6">
+        <Tabs defaultValue="super-admin" className="space-y-6">
           <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
             {permissions.includes('super-admin') && (
               <TabsTrigger value="super-admin" className="flex items-center gap-2">
@@ -108,11 +111,11 @@ export default function SettingsPage() {
           </TabsList>
 
           {/* Conteúdo das Tabs */}
-          {permissions.includes('user') && (
-            <TabsContent value="user" className="space-y-6">
-              <PersonalSettings />
-              <InterfaceSettings />
-              <NotificationSettings />
+          {permissions.includes('super-admin') && (
+            <TabsContent value="super-admin" className="space-y-6">
+              <UserManagement />
+              <CompanyManagement />
+              <InfrastructureSettings />
             </TabsContent>
           )}
 
@@ -137,24 +140,11 @@ export default function SettingsPage() {
             </TabsContent>
           )}
 
-          {permissions.includes('super-admin') && (
-            <TabsContent value="super-admin" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    Configurações Super Admin
-                  </CardTitle>
-                  <CardDescription>
-                    Gerencie as configurações globais do sistema
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Configurações de super admin serão implementadas em breve.
-                  </p>
-                </CardContent>
-              </Card>
+          {permissions.includes('user') && (
+            <TabsContent value="user" className="space-y-6">
+              <PersonalSettings />
+              <InterfaceSettings />
+              <NotificationSettings />
             </TabsContent>
           )}
         </Tabs>
