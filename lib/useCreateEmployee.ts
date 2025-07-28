@@ -40,17 +40,28 @@ export function useUpdateEmployee() {
     {
       mutationFn: ({ id, updates }) => updateEmployee(id, updates),
       onSuccess: async (serverResponse, variables) => {
-            // Invalidar todas as queries de funcionários
-    queryClient.invalidateQueries({ 
-      queryKey: ['employees'],
-      exact: false 
-    });
-    
-    // Forçar refetch imediato
-    await queryClient.refetchQueries({ 
-      queryKey: ['employees'],
-      exact: false 
-    });
+        // Invalidar todas as queries de funcionários
+        queryClient.invalidateQueries({ 
+          queryKey: ['employees'],
+          exact: false 
+        });
+        
+        // Invalidar também o cache de funções para atualizar contagens
+        queryClient.invalidateQueries({ 
+          queryKey: ['functions'],
+          exact: false 
+        });
+        
+        // Forçar refetch imediato
+        await queryClient.refetchQueries({ 
+          queryKey: ['employees'],
+          exact: false 
+        });
+        
+        await queryClient.refetchQueries({ 
+          queryKey: ['functions'],
+          exact: false 
+        });
       },
       onError: (error, variables) => {
         console.error('Erro ao atualizar funcionário:', error);
@@ -76,6 +87,7 @@ export function useAddAdmission() {
     mutationFn: ({ id, admission }) => addAdmission(id, admission),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
   });
 }
@@ -86,6 +98,7 @@ export function useAddDismissal() {
     mutationFn: ({ id, dismissalDate }) => addDismissal(id, dismissalDate),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
   });
 }
@@ -96,6 +109,7 @@ export function useUpdateEmployeeAvatar() {
     mutationFn: ({ id, avatar }) => updateEmployeeAvatar(id, avatar),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
   });
 }
@@ -106,6 +120,7 @@ export function useUpdateEmploymentHistory() {
     mutationFn: ({ id, employmentHistory }) => updateEmploymentHistory(id, employmentHistory),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['functions'] });
     },
   });
 } 

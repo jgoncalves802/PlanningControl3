@@ -126,36 +126,12 @@ export function useFunctionsQuery(filters?: FunctionFilters) {
 // Hook para listar funções com contagem atualizada em tempo real
 export function useFunctionsWithRealTimeCount(filters?: FunctionFilters) {
   const { data: functions = [], isLoading, ...queryResult } = useFunctionsQuery(filters)
-  const queryClient = useQueryClient()
   
-  // Buscar dados dos funcionários do cache
-  const employeesData = queryClient.getQueryData(['employees']) as any
-  const employees = employeesData?.employees || []
-  
-  // Calcular contagens em tempo real baseado nos funcionários carregados
-  const functionsWithUpdatedCount = useMemo(() => {
-    // Se ainda estiver carregando ou não tiver funções, retornar array vazio
-    if (isLoading || !functions || functions.length === 0) {
-      return []
-    }
-    
-    return functions.map(func => {
-      // Contar funcionários que têm esta função atribuída
-      const employeeCount = employees.filter((emp: any) => emp.companyFunctionId === func.id).length
-      
-      return {
-        ...func,
-        _count: {
-          employees: employeeCount
-        }
-      }
-    })
-  }, [functions, employees, isLoading])
-  
+  // Usar diretamente os dados da API que já incluem a contagem correta do banco
   return {
     ...queryResult,
     isLoading,
-    data: functionsWithUpdatedCount
+    data: functions
   }
 }
 
