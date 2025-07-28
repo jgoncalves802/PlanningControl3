@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserServer } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // GET /api/transfer-requests/history - Histórico de transferências
 export async function GET(request: NextRequest) {

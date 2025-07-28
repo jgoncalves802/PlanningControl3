@@ -20,7 +20,9 @@ import {
   MapPin,
   Smartphone,
   ArrowRightLeft,
-  UserCheck
+  UserCheck,
+  Calculator,
+  Database
 } from 'lucide-react'
 
 const menuItems = [
@@ -38,6 +40,11 @@ const menuItems = [
     title: 'Contratos',
     href: '/dashboard/contracts',
     icon: Building,
+  },
+  {
+    title: 'Orçamentos',
+    href: '/dashboard/budgets',
+    icon: Calculator,
   },
   {
     title: 'Segurança',
@@ -78,6 +85,11 @@ const menuItems = [
     title: 'Configurações',
     href: '/dashboard/settings',
     icon: Settings,
+  },
+  {
+    title: 'Backup',
+    href: '/dashboard/backup',
+    icon: Database,
   },
 ]
 

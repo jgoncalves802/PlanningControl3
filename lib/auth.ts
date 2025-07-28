@@ -90,20 +90,23 @@ export const getAccessibleContracts = (user: User, allContracts: any[]): any[] =
 
 export const getCurrentUser = (): User => {
   // Em produção, isso viria do token JWT ou sessão autenticada
-  const userData = localStorage.getItem('user_data')
-  if (userData) {
-    try {
-      const user = JSON.parse(userData)
-      
-      // Mapear dados do usuário para incluir contratos atribuídos baseado na função
-      const userWithContracts: User = {
-        ...user,
-        assignedContracts: getUserAssignedContracts(user)
+  if (typeof window !== 'undefined') {
+    // Cliente-side
+    const userData = localStorage.getItem('user_data')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        
+        // Mapear dados do usuário para incluir contratos atribuídos baseado na função
+        const userWithContracts: User = {
+          ...user,
+          assignedContracts: getUserAssignedContracts(user)
+        }
+        
+        return userWithContracts
+      } catch (error) {
+        console.error('Erro ao parsear dados do usuário:', error)
       }
-      
-      return userWithContracts
-    } catch (error) {
-      console.error('Erro ao parsear dados do usuário:', error)
     }
   }
   
@@ -115,6 +118,19 @@ export const getCurrentUser = (): User => {
     role: UserRole.TENANT_ADMIN,
     isActive: true,
     companyLogo: '/logo-demo-company.png' // Exemplo: caminho relativo ou base64
+  }
+}
+
+// Versão para uso no servidor (APIs)
+export const getCurrentUserServer = (): User => {
+  // Usuário padrão para demonstração (remover em produção)
+  return {
+    id: '1',
+    name: 'Admin Geral',
+    email: 'admin@demo-company.com',
+    role: UserRole.TENANT_ADMIN,
+    isActive: true,
+    companyLogo: '/logo-demo-company.png'
   }
 }
 

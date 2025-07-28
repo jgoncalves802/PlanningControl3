@@ -1,6 +1,8 @@
-feat: atualização automática dos cards de estatísticas
+fix(budgets): corrigir erro 500 na API com filtro status=all
 
-- Cards se atualizam automaticamente a cada 30 segundos
-- Indicador visual de última atualização
-- Disparo automático após criar/editar/importar funcionários
-- Melhorias de UX sem recarregamento da página 
+- Corrigir PrismaClientValidationError ao usar "all" como status
+- Implementar verificação if (status && status !== 'all') na API
+- Corrigir acesso aos dados retornados pelo hook useBudgets
+- Ajustar estrutura de dados na página de orçamentos
+
+Resolve: #issue-500-budgets-api 

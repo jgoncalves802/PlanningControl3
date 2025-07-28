@@ -1,4 +1,9 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserServer } from '@/lib/auth';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 let clients = new Set<any>();
 

@@ -1,3 +1,10 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserServer } from '@/lib/auth';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const encoder = new TextEncoder();
 let clients: { controller: ReadableStreamDefaultController }[] = [];
 

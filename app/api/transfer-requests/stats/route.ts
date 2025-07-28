@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserServer } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { TransferStatus } from '@prisma/client';
+
+// Forçar renderização dinâmica
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 // GET /api/transfer-requests/stats - Estatísticas de transferências
 export async function GET(request: NextRequest) {

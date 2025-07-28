@@ -477,3 +477,207 @@ model NotificationSettings {
 
   @@map("notification_settings")
 }
+
+// ========================================
+// SISTEMA DE ORÇAMENTOS
+// ========================================
+
+model Budget {
+  id                String           @id @default(cuid())
+  name              String
+  code              String           @unique
+  description       String?
+  status            BudgetStatus     @default(DRAFT)
+  version           Int              @default(1)
+  totalValue        Float            @default(0)
+  currency          String           @default("BRL")
+  startDate         DateTime?
+  endDate           DateTime?
+  clientName        String?
+  projectType       String?
+  createdBy         String
+  approvedBy        String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  
+  // Relacionamentos
+  sections          BudgetSection[]
+  formulas          BudgetFormula[]
+  attachments       BudgetAttachment[]
+  versions          BudgetVersion[]
+  approvals         BudgetApproval[]
+  
+  @@map("budgets")
+}
+
+model BudgetSection {
+  id          String        @id @default(cuid())
+  budgetId    String
+  name        String
+  type        SectionType
+  order       Int
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relacionamentos
+  budget      Budget        @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  items       BudgetItem[]
+  
+  @@map("budget_sections")
+}
+
+model BudgetItem {
+  id              String      @id @default(cuid())
+  sectionId       String
+  code            String?
+  description     String
+  unit            String?
+  quantity        Float       @default(0)
+  unitPrice       Float       @default(0)
+  totalPrice      Float       @default(0)
+  formula         String?
+  parameters      Json?
+  order           Int
+  isActive        Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  // Relacionamentos
+  section         BudgetSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  
+  @@map("budget_items")
+}
+
+model BudgetFormula {
+  id          String      @id @default(cuid())
+  budgetId    String
+  name        String
+  formula     String
+  parameters  Json?
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relacionamentos
+  budget      Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  
+  @@map("budget_formulas")
+}
+
+model BudgetAttachment {
+  id          String      @id @default(cuid())
+  budgetId    String
+  name        String
+  fileName    String
+  fileUrl     String
+  fileType    String
+  fileSize    Int
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relacionamentos
+  budget      Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  
+  @@map("budget_attachments")
+}
+
+model BudgetVersion {
+  id          String      @id @default(cuid())
+  budgetId    String
+  version     Int
+  name        String
+  description String?
+  data        Json
+  createdBy   String
+  createdAt   DateTime    @default(now())
+  
+  // Relacionamentos
+  budget      Budget      @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  
+  @@unique([budgetId, version])
+  @@map("budget_versions")
+}
+
+model BudgetApproval {
+  id          String          @id @default(cuid())
+  budgetId    String
+  level       Int
+  status      ApprovalStatus  @default(PENDING)
+  comments    String?
+  approvedBy  String?
+  approvedAt  DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  // Relacionamentos
+  budget      Budget          @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  
+  @@map("budget_approvals")
+}
+
+// ========================================
+// COMPOSIÇÕES E REFERÊNCIAS
+// ========================================
+
+model Composition {
+  id          String      @id @default(cuid())
+  name        String
+  code        String      @unique
+  description String?
+  unit        String
+  category    String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  
+  // Relacionamentos
+  items       CompositionItem[]
+  
+  @@map("compositions")
+}
+
+model CompositionItem {
+  id            String      @id @default(cuid())
+  compositionId String
+  description   String
+  unit          String
+  quantity      Float
+  unitPrice     Float
+  totalPrice    Float
+  order         Int
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relacionamentos
+  composition   Composition @relation(fields: [compositionId], references: [id], onDelete: Cascade)
+  
+  @@map("composition_items")
+}
+
+// ========================================
+// ENUMS DO SISTEMA DE ORÇAMENTOS
+// ========================================
+
+enum BudgetStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  ARCHIVED
+}
+
+enum SectionType {
+  QQP
+  CPU
+  BDI
+  ENCARGOS
+  FORMULAS
+  PROPOSTA_TECNICA
+  PROPOSTA_COMERCIAL
+  ORDEM_SERVICO
+}
