@@ -28,7 +28,8 @@ import {
   Building2,
   UserCheck,
   AlertTriangle,
-  Copy
+  Copy,
+  Loader2
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -160,17 +161,53 @@ export default function ContractsPage() {
   })
 
   // Estados para dados
-  const [contracts, setContracts] = useState<Contract[]>(mockContracts)
-  const [isLoading, setIsLoading] = useState(false)
+  const [contracts, setContracts] = useState<Contract[]>([])
+  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Mock de estatísticas
+  // Estatísticas calculadas
   const stats = {
     total: contracts.length,
     active: contracts.filter(c => c.isActive).length,
     totalFunctions: contracts.reduce((acc, c) => acc + (c.functions?.length || 0), 0),
     totalEmployees: contracts.reduce((acc, c) => acc + (c.employeeCount || 0), 0)
   }
+
+  // Carregar contratos da API
+  const fetchContracts = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      
+      const params = new URLSearchParams()
+      if (filters.search) params.append('search', filters.search)
+      if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString())
+      if (filters.page) params.append('page', filters.page.toString())
+      if (filters.limit) params.append('limit', filters.limit.toString())
+      if (filters.sortBy) params.append('sortBy', filters.sortBy)
+      if (filters.sortOrder) params.append('sortOrder', filters.sortOrder)
+
+      const response = await fetch(`/api/contracts?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Erro ao carregar contratos')
+      }
+      
+      const data = await response.json()
+      setContracts(data.contracts || [])
+    } catch (error) {
+      console.error('Erro ao carregar contratos:', error)
+      setError('Erro ao carregar contratos')
+      toast.error('Erro ao carregar contratos')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Carregar contratos quando a página carrega ou filtros mudam
+  useEffect(() => {
+    fetchContracts()
+  }, [filters])
 
   // Atualizar filtros
   const updateFilters = (newFilters: Partial<ContractFilters>) => {
@@ -203,16 +240,27 @@ export default function ContractsPage() {
 
   const handleAddContract = async () => {
     try {
-      const newContractData: Contract = {
-        id: Date.now().toString(),
-        ...newContract,
-        employeeCount: 0,
-        functions: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
+      setIsLoading(true)
       
-      setContracts(prev => [...prev, newContractData])
+      const response = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newContract),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao criar contrato')
+      }
+
+      const createdContract = await response.json()
+      
+      // Recarregar a lista de contratos
+      await fetchContracts()
+      
+      // Limpar formulário
       setNewContract({
         name: '',
         code: '',
@@ -224,7 +272,10 @@ export default function ContractsPage() {
       setShowAddModal(false)
       toast.success('Contrato criado com sucesso!')
     } catch (error) {
-      toast.error('Erro ao criar contrato')
+      console.error('Erro ao criar contrato:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao criar contrato')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -232,26 +283,60 @@ export default function ContractsPage() {
     if (!selectedContractData) return
     
     try {
-      setContracts(prev => prev.map(c => 
-        c.id === selectedContractData.id 
-          ? { ...selectedContractData, updatedAt: new Date().toISOString() }
-          : c
-      ))
+      setIsLoading(true)
+      
+      const response = await fetch(`/api/contracts/${selectedContractData.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newContract),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao atualizar contrato')
+      }
+
+      const updatedContract = await response.json()
+      
+      // Recarregar a lista de contratos
+      await fetchContracts()
+      
       setShowEditModal(false)
       setSelectedContractData(null)
       toast.success('Contrato atualizado com sucesso!')
     } catch (error) {
-      toast.error('Erro ao atualizar contrato')
+      console.error('Erro ao atualizar contrato:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao atualizar contrato')
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleDeleteContract = async (contractId: string) => {
     if (confirm('Tem certeza que deseja excluir este contrato?')) {
       try {
-        setContracts(prev => prev.filter(c => c.id !== contractId))
+        setIsLoading(true)
+        
+        const response = await fetch(`/api/contracts/${contractId}`, {
+          method: 'DELETE',
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || 'Erro ao excluir contrato')
+        }
+
+        // Recarregar a lista de contratos
+        await fetchContracts()
+        
         toast.success('Contrato excluído com sucesso!')
       } catch (error) {
-        toast.error('Erro ao excluir contrato')
+        console.error('Erro ao excluir contrato:', error)
+        toast.error(error instanceof Error ? error.message : 'Erro ao excluir contrato')
+      } finally {
+        setIsLoading(false)
       }
     }
   }
@@ -259,30 +344,71 @@ export default function ContractsPage() {
   const handleBulkDelete = async () => {
     if (confirm(`Tem certeza que deseja excluir ${selectedContracts.length} contratos selecionados?`)) {
       try {
-        setContracts(prev => prev.filter(c => !selectedContracts.includes(c.id)))
+        setIsLoading(true)
+        
+        // Excluir contratos em paralelo
+        const deletePromises = selectedContracts.map(contractId =>
+          fetch(`/api/contracts/${contractId}`, { method: 'DELETE' })
+        )
+        
+        const responses = await Promise.all(deletePromises)
+        
+        // Verificar se todas as exclusões foram bem-sucedidas
+        const failedDeletions = responses.filter(response => !response.ok)
+        
+        if (failedDeletions.length > 0) {
+          throw new Error(`${failedDeletions.length} contratos não puderam ser excluídos`)
+        }
+
+        // Recarregar a lista de contratos
+        await fetchContracts()
+        
         setSelectedContracts([])
         toast.success('Contratos excluídos com sucesso!')
       } catch (error) {
-        toast.error('Erro ao excluir contratos')
+        console.error('Erro ao excluir contratos:', error)
+        toast.error(error instanceof Error ? error.message : 'Erro ao excluir contratos')
+      } finally {
+        setIsLoading(false)
       }
     }
   }
 
   const handleDuplicateContract = async (contract: Contract) => {
     try {
-      const duplicatedContract: Contract = {
-        ...contract,
-        id: Date.now().toString(),
+      setIsLoading(true)
+      
+      const duplicatedData = {
         name: `${contract.name} (Cópia)`,
         code: `${contract.code}-COPY`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        workdayHours: contract.workdayHours,
+        includesWeekends: contract.includesWeekends,
+        includesHolidays: contract.includesHolidays,
+        isActive: contract.isActive
       }
       
-      setContracts(prev => [...prev, duplicatedContract])
+      const response = await fetch('/api/contracts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(duplicatedData),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao duplicar contrato')
+      }
+
+      // Recarregar a lista de contratos
+      await fetchContracts()
+      
       toast.success('Contrato duplicado com sucesso!')
     } catch (error) {
-      toast.error('Erro ao duplicar contrato')
+      console.error('Erro ao duplicar contrato:', error)
+      toast.error(error instanceof Error ? error.message : 'Erro ao duplicar contrato')
+    } finally {
+      setIsLoading(false)
     }
   }
 

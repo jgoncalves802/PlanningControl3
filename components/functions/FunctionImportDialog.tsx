@@ -20,9 +20,11 @@ import { useQueryClient } from '@tanstack/react-query'
 import { 
   robustNormalizeText, 
   validateFileEncoding, 
-  parseCSVWithEncoding,
+  processCSVWithAutoCorrection,
   autoCorrectFunctionData,
-  ValidationResult 
+  ValidationResult,
+  convertFileToUTF8,
+  detectFileEncoding
 } from '@/lib/csvEncodingUtils'
 
 interface ImportResult {
@@ -58,6 +60,7 @@ export default function FunctionImportDialog({
   const [encodingValidation, setEncodingValidation] = useState<ValidationResult | null>(null)
   const [autoCorrections, setAutoCorrections] = useState<string[]>([])
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null)
+  const [csvData, setCsvData] = useState<any[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
@@ -88,59 +91,55 @@ export default function FunctionImportDialog({
     }
   }
 
-  const parseCSV = (csvText: string) => {
-    // Usar o parser robusto com validação de encoding
-    const data = parseCSVWithEncoding(csvText)
-    
-    // Aplicar correção automática em cada função
-    const correctedFunctions = [];
-    const allCorrections: string[] = [];
-    
-    data.forEach((row, index) => {
-      const func: any = {}
-      
-      if (row.name) {
-        func.name = robustNormalizeText(row.name)
-      }
-      
-      if (row.laborType || row.tipo || row.tipoMaoObra) {
-        const laborType = row.laborType || row.tipo || row.tipoMaoObra
-        const normalized = laborType.toUpperCase().trim()
-        if (normalized === 'DIRETO' || normalized === 'DIRETA' || normalized === 'DIRECT') {
-          func.laborType = 'DIRETO'
-        } else if (normalized === 'INDIRETO' || normalized === 'INDIRETA' || normalized === 'INDIRECT') {
-          func.laborType = 'INDIRETO'
-        } else {
-          func.laborType = normalized
-        }
-      }
-      
-      // Aplicar correção automática
-      const { correctedData, corrections } = autoCorrectFunctionData(func)
-      correctedFunctions.push(correctedData)
-      
-      if (corrections.length > 0) {
-        corrections.forEach(correction => {
-          allCorrections.push(`Linha ${index + 1}: ${correction}`)
-        })
-      }
-    })
+  // Função para converter CSV para JSON com validação de encoding (copiada da importação de funcionários)
+  const parseCSV = (csvText: string): any[] => {
+    // Usar processamento com correção automática (mesmo da importação de funcionários)
+    const { data, corrections, encodingIssues } = processCSVWithAutoCorrection(csvText)
     
     // Armazenar correções para exibição
-    setAutoCorrections(allCorrections)
+    setAutoCorrections(corrections)
     
     // Mostrar avisos sobre correções aplicadas
-    if (allCorrections.length > 0) {
-      toast.success(`${allCorrections.length} correções automáticas aplicadas`)
+    if (corrections.length > 0) {
+      toast.success(`${corrections.length} correções automáticas aplicadas`)
     }
     
-    return correctedFunctions.filter(func => func.name && func.name.trim() !== '')
+    // Mostrar avisos sobre problemas de encoding
+    if (encodingIssues.length > 0) {
+      toast.error(`${encodingIssues.length} problemas de encoding detectados`)
+    }
+    
+    // Processar dados para funções
+    const processedFunctions = data.map((row: any) => {
+      const func: any = {}
+      
+      // Mapear campos normalizados para os nomes esperados
+      Object.keys(row).forEach(key => {
+        if (key === 'nomedafuncao' || key === 'nomedafuno' || key === 'name') {
+          func.name = robustNormalizeText(row[key])
+        } else if (key === 'tipodemaodeobra' || key === 'tipodemodeobra' || key === 'labortype' || key === 'laborType') {
+          const laborType = row[key]
+          const normalized = laborType.toUpperCase().trim()
+          if (normalized === 'DIRETO' || normalized === 'DIRETA' || normalized === 'DIRECT') {
+            func.laborType = 'DIRETO'
+          } else if (normalized === 'INDIRETO' || normalized === 'INDIRETA' || normalized === 'INDIRECT') {
+            func.laborType = 'INDIRETO'
+          } else {
+            func.laborType = normalized
+          }
+        }
+      })
+      
+      return func
+    }).filter(func => func.name && func.name.trim() !== '')
+    
+    return processedFunctions
   }
 
+  // Função para processar arquivo CSV com validação de encoding (copiada da importação de funcionários)
   const handleFileUpload = async (file: File) => {
     if (!file) return
 
-    // Validar tipo de arquivo
     if (!file.name.endsWith('.csv')) {
       toast.error('Por favor, selecione um arquivo CSV')
       return
@@ -150,6 +149,7 @@ export default function FunctionImportDialog({
     setImportResult(null)
     setEncodingValidation(null)
     setAutoCorrections([])
+    setCsvData([])
 
     try {
       // Estágio 1: Validação
@@ -160,24 +160,19 @@ export default function FunctionImportDialog({
         status: 'preparing',
         stage: 'validation',
         message: 'Validando encoding do arquivo...'
-      });
+      })
 
       // Validar encoding do arquivo
       const validation = await validateFileEncoding(file)
       setEncodingValidation(validation)
-
-      if (!validation.isValid) {
-        toast.error('Problema de encoding detectado. Use UTF-8.')
-        if (validation.errors.length > 0) {
-          console.error('Erros de encoding:', validation.errors)
-        }
+      
+      if (validation.isValid) {
+        toast.success('Arquivo CSV carregado com sucesso!')
+      } else {
+        toast.error('Problemas de encoding detectados no arquivo')
         setIsProcessing(false)
         setImportProgress(null)
         return
-      }
-
-      if (validation.warnings.length > 0) {
-        toast.error(`Avisos de encoding: ${validation.warnings.join(', ')}`)
       }
 
       // Estágio 2: Processamento
@@ -185,10 +180,15 @@ export default function FunctionImportDialog({
         ...prev,
         stage: 'correction',
         message: 'Processando arquivo CSV...'
-      } : null);
+      } : null)
 
-      const text = await file.text()
+      // Converter arquivo para UTF-8 se necessário
+      const encoding = await detectFileEncoding(file)
+      console.log(`🔍 Encoding detectado: ${encoding}`)
+      
+      const text = await convertFileToUTF8(file)
       const functions = parseCSV(text)
+      setCsvData(functions)
       
       if (functions.length === 0) {
         toast.error('Nenhuma função encontrada no arquivo. Verifique se o arquivo está no formato correto.')
@@ -204,7 +204,7 @@ export default function FunctionImportDialog({
         current: 0,
         total: functions.length,
         message: 'Iniciando importação no banco de dados...'
-      } : null);
+      } : null)
 
       // Enviar para API
       const response = await fetch('/api/functions/import', {
@@ -228,7 +228,7 @@ export default function FunctionImportDialog({
         stage: 'finalizing',
         current: functions.length,
         message: 'Finalizando importação...'
-      } : null);
+      } : null)
 
       setImportResult(result.results)
       onImportComplete(result.results)
@@ -245,9 +245,9 @@ export default function FunctionImportDialog({
         ...prev,
         status: 'completed',
         message: 'Importação concluída com sucesso!'
-      } : null);
+      } : null)
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro na importação:', error)
       toast.error(`Erro na importação: ${error.message}`)
       
@@ -255,7 +255,7 @@ export default function FunctionImportDialog({
         ...prev,
         status: 'error',
         message: `Erro: ${error.message}`
-      } : null);
+      } : null)
     } finally {
       setIsProcessing(false)
     }
@@ -292,6 +292,7 @@ export default function FunctionImportDialog({
     setEncodingValidation(null)
     setAutoCorrections([])
     setImportProgress(null)
+    setCsvData([])
     onClose()
   }
 

@@ -351,9 +351,11 @@ export function ImportEmployeesDialog({ onImportComplete }: ImportEmployeesDialo
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogTrigger className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
-        <Upload className="h-4 w-4" />
-        Importar em Massa
+      <DialogTrigger asChild>
+        <Button className="inline-flex items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+          <Upload className="h-4 w-4" />
+          Importar em Massa
+        </Button>
       </DialogTrigger>
       
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">

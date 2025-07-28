@@ -73,7 +73,7 @@ export default function BudgetCreateModal({ onBudgetCreated }: BudgetCreateModal
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger>
+      <DialogTrigger asChild>
         <Button className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200">
           <Plus className="w-4 h-4 mr-2" />
           Novo Orçamento

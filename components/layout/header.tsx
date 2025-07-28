@@ -113,20 +113,19 @@ export function Header({ user }: HeaderProps) {
 
           {/* Language Selector */}
           <div className="relative">
-            <select
-              value={locale}
-              onChange={handleLocaleChange}
-              className="appearance-none bg-transparent border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-slate-100"
-            >
-              <option value="pt-BR">
-                <FlagBR />
-                PT-BR
-              </option>
-              <option value="en-US">
-                <FlagUS />
-                EN-US
-              </option>
-            </select>
+            <div className="relative">
+              <select
+                value={locale}
+                onChange={handleLocaleChange}
+                className="appearance-none bg-transparent border border-gray-300 dark:border-slate-600 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-800 dark:text-slate-100"
+              >
+                <option value="pt-BR">PT-BR</option>
+                <option value="en-US">EN-US</option>
+              </select>
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                {locale === 'pt-BR' ? <FlagBR /> : <FlagUS />}
+              </div>
+            </div>
           </div>
 
           {/* Theme Toggle */}

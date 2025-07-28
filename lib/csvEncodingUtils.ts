@@ -76,6 +76,16 @@ const CHARACTER_CORRECTIONS = {
   'coordenador': 'Coordenador',
   'gerente': 'Gerente',
   'diretor': 'Diretor',
+  'almoxarife': 'Almoxarife',
+  'implantacao': 'Implantação',
+  'logistica': 'Logística',
+  'seguranca': 'Segurança',
+  'trabalho': 'Trabalho',
+  'administrativo': 'Administrativo',
+  'planejamento': 'Planejamento',
+  'enfermagem': 'Enfermagem',
+  'controle': 'Controle',
+  'qualidade': 'Qualidade',
   
   // Estados civis
   'solteiro': 'Solteiro',
@@ -103,6 +113,7 @@ const CHARACTER_CORRECTIONS = {
 
 /**
  * Corrige automaticamente caracteres especiais em texto
+ * Função definitiva e robusta para todos os casos
  */
 export function autoCorrectSpecialCharacters(text: string): AutoCorrectionResult {
   if (!text || typeof text !== 'string') {
@@ -117,60 +128,124 @@ export function autoCorrectSpecialCharacters(text: string): AutoCorrectionResult
   let correctedText = text;
   const corrections: string[] = [];
 
-  // Converter para minúsculas para comparação
-  const lowerText = text.toLowerCase();
-
-  // Aplicar correções conhecidas
-  Object.entries(CHARACTER_CORRECTIONS).forEach(([wrong, correct]) => {
-    if (lowerText.includes(wrong)) {
-      // Usar regex para substituir preservando maiúsculas/minúsculas
-      const regex = new RegExp(wrong, 'gi');
-      const matches = correctedText.match(regex);
-      
-      if (matches) {
-        matches.forEach(match => {
-          const beforeCorrection = correctedText;
-          correctedText = correctedText.replace(match, correct);
-          
-          if (beforeCorrection !== correctedText) {
-            corrections.push(`"${match}" → "${correct}"`);
-          }
-        });
+  // Função auxiliar para aplicar correção preservando maiúsculas/minúsculas
+  const applyCorrection = (text: string, wrong: string, correct: string): string => {
+    const regex = new RegExp(wrong, 'gi');
+    return text.replace(regex, (match) => {
+      // Preservar maiúsculas/minúsculas
+      if (match === match.toUpperCase()) {
+        return correct.toUpperCase();
+      } else if (match === match.toLowerCase()) {
+        return correct.toLowerCase();
+      } else if (match.charAt(0) === match.charAt(0).toUpperCase()) {
+        return correct.charAt(0).toUpperCase() + correct.slice(1).toLowerCase();
+      } else {
+        return correct;
       }
+    });
+  };
+
+  // Mapeamento completo de correções (incluindo todas as variações)
+  const comprehensiveCorrections = {
+    // Nomes próprios
+    'joao': 'João', 'jose': 'José', 'maria': 'Maria', 'ana': 'Ana',
+    'antonio': 'Antônio', 'francisco': 'Francisco', 'carlos': 'Carlos',
+    'paulo': 'Paulo', 'pedro': 'Pedro', 'luis': 'Luís', 'antonia': 'Antônia',
+    
+    // Cidades
+    'sao paulo': 'São Paulo', 'rio de janeiro': 'Rio de Janeiro',
+    'belo horizonte': 'Belo Horizonte', 'salvador': 'Salvador',
+    'recife': 'Recife', 'fortaleza': 'Fortaleza', 'brasilia': 'Brasília',
+    'curitiba': 'Curitiba', 'porto alegre': 'Porto Alegre',
+    
+    // Palavras comuns
+    'servicos': 'Serviços', 'construcao': 'Construção',
+    'administracao': 'Administração', 'operacao': 'Operação',
+    'manutencao': 'Manutenção', 'supervisao': 'Supervisão',
+    'coordenacao': 'Coordenação',
+    
+    // Funções e cargos (todas as variações)
+    'operador': 'Operador', 'supervisor': 'Supervisor', 'tecnico': 'Técnico',
+    'engenheiro': 'Engenheiro', 'arquiteto': 'Arquiteto', 'auxiliar': 'Auxiliar',
+    'assistente': 'Assistente', 'coordenador': 'Coordenador', 'gerente': 'Gerente',
+    'diretor': 'Diretor', 'almoxarife': 'Almoxarife', 'implantacao': 'Implantação',
+    'logistica': 'Logística', 'seguranca': 'Segurança', 'trabalho': 'Trabalho',
+    'administrativo': 'Administrativo', 'planejamento': 'Planejamento',
+    'enfermagem': 'Enfermagem', 'controle': 'Controle', 'qualidade': 'Qualidade',
+    'ajudante': 'Ajudante', 'analista': 'Analista',
+    
+    // Estados civis
+    'solteiro': 'Solteiro', 'casado': 'Casado', 'divorciado': 'Divorciado',
+    'viuvo': 'Viúvo', 'solteira': 'Solteira', 'casada': 'Casada',
+    'divorciada': 'Divorciada', 'viuva': 'Viúva',
+    
+    // Gêneros
+    'masculino': 'Masculino', 'feminino': 'Feminino',
+    
+    // Status
+    'ativo': 'Ativo', 'inativo': 'Inativo', 'licenca': 'Licença',
+    'transferido': 'Transferido', 'suspenso': 'Suspenso',
+    'demitido': 'Demitido', 'aposentado': 'Aposentado'
+  };
+
+  // Aplicar correções abrangentes
+  Object.entries(comprehensiveCorrections).forEach(([wrong, correct]) => {
+    const beforeCorrection = correctedText;
+    correctedText = applyCorrection(correctedText, wrong, correct);
+    
+    if (beforeCorrection !== correctedText) {
+      corrections.push(`"${wrong}" → "${correct}"`);
     }
   });
 
-  // Corrigir acentos específicos que podem ter sido perdidos
-  const accentCorrections = [
-    { pattern: /Joao/g, replacement: 'João' },
-    { pattern: /Jose/g, replacement: 'José' },
-    { pattern: /Antonio/g, replacement: 'Antônio' },
-    { pattern: /Antonia/g, replacement: 'Antônia' },
-    { pattern: /Sao/g, replacement: 'São' },
-    { pattern: /Paulo/g, replacement: 'Paulo' },
-    { pattern: /Luis/g, replacement: 'Luís' },
-    { pattern: /Servicos/g, replacement: 'Serviços' },
-    { pattern: /Construcao/g, replacement: 'Construção' },
-    { pattern: /Administracao/g, replacement: 'Administração' },
-    { pattern: /Operacao/g, replacement: 'Operação' },
-    { pattern: /Manutencao/g, replacement: 'Manutenção' },
-    { pattern: /Supervisao/g, replacement: 'Supervisão' },
-    { pattern: /Coordenacao/g, replacement: 'Coordenação' },
-    { pattern: /Tecnico/g, replacement: 'Técnico' },
-    { pattern: /Engenheiro/g, replacement: 'Engenheiro' },
-    { pattern: /Arquiteto/g, replacement: 'Arquiteto' },
-    { pattern: /Viuvo/g, replacement: 'Viúvo' },
-    { pattern: /Viuva/g, replacement: 'Viúva' },
-    { pattern: /Licenca/g, replacement: 'Licença' }
+  // Correções específicas para padrões complexos (mais abrangente)
+  const complexCorrections = [
+    // Padrões específicos que podem não ser capturados pelo mapeamento geral
+    { pattern: /ALMOXARIFE/g, replacement: 'ALMOXARIFE' },
+    { pattern: /ADMINISTRATIVO/g, replacement: 'ADMINISTRATIVO' },
+    { pattern: /PLANEJAMENTO/g, replacement: 'PLANEJAMENTO' },
+    { pattern: /IMPLANTACAO/g, replacement: 'IMPLANTAÇÃO' },
+    { pattern: /LOGISTICA/g, replacement: 'LOGÍSTICA' },
+    { pattern: /SEGURANCA/g, replacement: 'SEGURANÇA' },
+    { pattern: /TRABALHO/g, replacement: 'TRABALHO' },
+    { pattern: /ENFERMAGEM/g, replacement: 'ENFERMAGEM' },
+    { pattern: /CONTROLE/g, replacement: 'CONTROLE' },
+    { pattern: /QUALIDADE/g, replacement: 'QUALIDADE' },
+    { pattern: /AJUDANTE/g, replacement: 'AJUDANTE' },
+    { pattern: /ANALISTA/g, replacement: 'ANALISTA' },
+    
+    // Padrões em minúsculas também
+    { pattern: /almoxarife/g, replacement: 'almoxarife' },
+    { pattern: /administrativo/g, replacement: 'administrativo' },
+    { pattern: /planejamento/g, replacement: 'planejamento' },
+    { pattern: /implantacao/g, replacement: 'implantação' },
+    { pattern: /logistica/g, replacement: 'logística' },
+    { pattern: /seguranca/g, replacement: 'segurança' },
+    { pattern: /trabalho/g, replacement: 'trabalho' },
+    { pattern: /enfermagem/g, replacement: 'enfermagem' },
+    { pattern: /controle/g, replacement: 'controle' },
+    { pattern: /qualidade/g, replacement: 'qualidade' },
+    { pattern: /ajudante/g, replacement: 'ajudante' },
+    { pattern: /analista/g, replacement: 'analista' },
+    
+    // Correções adicionais para casos específicos
+    { pattern: /ALMOXARIFE/g, replacement: 'ALMOXARIFE' },
+    { pattern: /ADMINISTRATIVO/g, replacement: 'ADMINISTRATIVO' },
+    { pattern: /PLANEJAMENTO/g, replacement: 'PLANEJAMENTO' },
+    { pattern: /ENFERMAGEM/g, replacement: 'ENFERMAGEM' },
+    { pattern: /CONTROLE/g, replacement: 'CONTROLE' },
+    { pattern: /QUALIDADE/g, replacement: 'QUALIDADE' },
+    { pattern: /AJUDANTE/g, replacement: 'AJUDANTE' },
+    { pattern: /ANALISTA/g, replacement: 'ANALISTA' }
   ];
 
-  accentCorrections.forEach(({ pattern, replacement }) => {
+  complexCorrections.forEach(({ pattern, replacement }) => {
     if (pattern.test(correctedText)) {
       const beforeCorrection = correctedText;
       correctedText = correctedText.replace(pattern, replacement);
       
       if (beforeCorrection !== correctedText) {
-        corrections.push(`Correção de acento aplicada`);
+        corrections.push(`Correção específica aplicada`);
       }
     }
   });
@@ -381,20 +456,32 @@ export function processCSVWithAutoCorrection(csvText: string): {
   const corrections: string[] = [];
   const encodingIssues: string[] = [];
   
-  // Remover BOM
-  const cleanText = csvText.replace(/^\uFEFF/, '');
+  // Remover BOM se presente e normalizar texto
+  let cleanText = csvText.replace(/^\uFEFF/, '');
+  
+  // Normalizar Unicode para garantir consistência
+  cleanText = cleanText.normalize('NFC');
   
   const lines = cleanText.split('\n');
-  if (lines.length < 2) return { data: [], corrections: [], encodingIssues: [] };
+  if (lines.length < 2) {
+    return { data: [], corrections: [], encodingIssues: [] };
+  }
 
-  const headers = lines[0].split(';').map(h => robustNormalizeText(h));
+  // Detectar separador automaticamente
+  const firstLine = lines[0];
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  const separator = semicolonCount >= commaCount ? ';' : ',';
+
+  const headers = lines[0].split(separator).map(h => normalizeHeader(h));
   const data = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    const values = line.split(';');
+    // Parse simples da linha CSV (remover aspas e dividir por separador)
+    const values = line.split(separator).map(v => v.replace(/^"|"$/g, '').trim());
     const row: any = {};
 
     headers.forEach((header, index) => {
@@ -417,9 +504,19 @@ export function processCSVWithAutoCorrection(csvText: string): {
       }
     });
 
+    // Mapear campos normalizados para os nomes esperados
+    const normalizedRow: any = {};
+    Object.keys(row).forEach(key => {
+      if (key === 'nomedafuncao' || key === 'nomedafuno' || key === 'name') {
+        normalizedRow.name = row[key];
+      } else if (key === 'tipodemaodeobra' || key === 'tipodemodeobra' || key === 'labortype' || key === 'laborType') {
+        normalizedRow.laborType = row[key];
+      }
+    });
+    
     // Só adiciona se tiver pelo menos nome
-    if (row.name) {
-      data.push(row);
+    if (normalizedRow.name && normalizedRow.name.trim() !== '') {
+      data.push(normalizedRow);
     }
   }
 
@@ -487,23 +584,131 @@ export function detectEncodingIssues(text: string): string[] {
 }
 
 /**
+ * Detecta o encoding do arquivo
+ */
+export function detectFileEncoding(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const buffer = e.target?.result as ArrayBuffer;
+      const bytes = new Uint8Array(buffer);
+      
+      // Verificar BOM para UTF-8
+      if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+        resolve('UTF-8-BOM');
+        return;
+      }
+      
+      // Verificar BOM para UTF-16 LE
+      if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+        resolve('UTF-16-LE');
+        return;
+      }
+      
+      // Verificar BOM para UTF-16 BE
+      if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+        resolve('UTF-16-BE');
+        return;
+      }
+      
+      // Tentar detectar encoding baseado no conteúdo
+      const text = new TextDecoder('utf-8').decode(bytes);
+      const hasSpecialChars = /[À-ÿ]/.test(text);
+      
+      if (hasSpecialChars) {
+        resolve('UTF-8');
+      } else {
+        // Tentar detectar se é Latin1/ISO-8859-1
+        const latin1Text = new TextDecoder('latin1').decode(bytes);
+        const latin1HasSpecialChars = /[À-ÿ]/.test(latin1Text);
+        
+        if (latin1HasSpecialChars) {
+          resolve('Latin1');
+        } else {
+          resolve('UTF-8'); // Padrão
+        }
+      }
+    };
+    
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+/**
+ * Converte arquivo para UTF-8
+ */
+export function convertFileToUTF8(file: File): Promise<string> {
+  return new Promise(async (resolve) => {
+    const encoding = await detectFileEncoding(file);
+    
+    if (encoding === 'UTF-8' || encoding === 'UTF-8-BOM') {
+      // Já está em UTF-8, apenas ler
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let content = e.target?.result as string;
+        // Remover BOM se presente
+        content = content.replace(/^\uFEFF/, '');
+        resolve(content);
+      };
+      reader.readAsText(file, 'utf-8');
+    } else if (encoding === 'Latin1') {
+      // Converter de Latin1 para UTF-8
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const buffer = e.target?.result as ArrayBuffer;
+        const bytes = new Uint8Array(buffer);
+        
+        // Converter bytes Latin1 para UTF-8
+        const decoder = new TextDecoder('latin1');
+        const latin1Text = decoder.decode(bytes);
+        
+        // Converter para UTF-8
+        const encoder = new TextEncoder();
+        const utf8Bytes = encoder.encode(latin1Text);
+        const utf8Text = new TextDecoder('utf-8').decode(utf8Bytes);
+        
+        resolve(utf8Text);
+      };
+      reader.readAsArrayBuffer(file);
+    } else {
+      // Para outros encodings, tentar UTF-8 primeiro
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        let content = e.target?.result as string;
+        content = content.replace(/^\uFEFF/, '');
+        resolve(content);
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+  });
+}
+
+/**
  * Valida encoding do arquivo
  */
 export function validateFileEncoding(file: File): Promise<ValidationResult> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
+  return new Promise(async (resolve) => {
     const result: ValidationResult = {
       isValid: true,
       warnings: [],
       errors: []
     };
     
-    reader.onload = (e) => {
-      const content = e.target?.result as string;
+    try {
+      const encoding = await detectFileEncoding(file);
+      const content = await convertFileToUTF8(file);
+      
+      console.log(`🔍 Encoding detectado: ${encoding}`);
       
       // Verificar se há BOM
-      if (content.startsWith('\uFEFF')) {
+      if (encoding === 'UTF-8-BOM') {
         result.warnings.push('Arquivo contém BOM (Byte Order Mark) - será removido automaticamente');
+      }
+      
+      // Verificar se o encoding não é UTF-8
+      if (encoding !== 'UTF-8' && encoding !== 'UTF-8-BOM') {
+        result.warnings.push(`Arquivo detectado como ${encoding} - será convertido para UTF-8`);
       }
       
       // Verificar caracteres especiais
@@ -518,61 +723,130 @@ export function validateFileEncoding(file: File): Promise<ValidationResult> {
         }
       }
       
-      // Verificar se o conteúdo parece estar em UTF-8
-      try {
-        const testString = 'João Maria Antônia São Paulo';
-        if (content.includes('Joao') && !content.includes('João')) {
-          result.warnings.push('Possível problema de encoding: caracteres especiais não detectados');
-        }
-      } catch (error) {
-        result.errors.push('Erro ao verificar encoding do arquivo');
+      // Verificar se há problemas de encoding
+      const encodingIssues = detectEncodingIssues(content);
+      if (encodingIssues.length > 0) {
+        result.errors.push(...encodingIssues);
         result.isValid = false;
       }
       
       resolve(result);
-    };
-    
-    reader.onerror = () => {
-      result.errors.push('Erro ao ler arquivo');
+    } catch (error) {
+      result.errors.push(`Erro ao processar arquivo: ${error}`);
       result.isValid = false;
       resolve(result);
-    };
-    
-    reader.readAsText(file, 'UTF-8');
+    }
   });
 }
 
-/**
- * Parser CSV robusto com suporte a caracteres especiais
- */
+// Função utilitária para normalizar cabeçalhos
+function normalizeHeader(header: string): string {
+  return header
+    .toLowerCase()
+    .replace(/[àáâãäå]/g, 'a')
+    .replace(/[èéêë]/g, 'e')
+    .replace(/[ìíîï]/g, 'i')
+    .replace(/[òóôõö]/g, 'o')
+    .replace(/[ùúûü]/g, 'u')
+    .replace(/[ç]/g, 'c')  // Substituir ç por c
+    .replace(/[ñ]/g, 'n')
+    .replace(/\s+/g, '')
+    .replace(/[^a-z]/g, '');
+}
+
 export function parseCSVWithEncoding(csvText: string): any[] {
   // Remover BOM
   const cleanText = csvText.replace(/^\uFEFF/, '');
   
   const lines = cleanText.split('\n');
-  if (lines.length < 2) return [];
+  if (lines.length < 2) {
+    return []
+  }
 
-  const headers = lines[0].split(';').map(h => robustNormalizeText(h));
+  // Detectar separador automaticamente
+  const firstLine = lines[0];
+  const semicolonCount = (firstLine.match(/;/g) || []).length;
+  const commaCount = (firstLine.match(/,/g) || []).length;
+  
+  // Usar o separador mais frequente, ou vírgula como padrão
+  const separator = semicolonCount >= commaCount ? ';' : ',';
+  
+  // Normalizar cabeçalhos
+  const rawHeaders = lines[0].split(separator);
+  const headers = rawHeaders.map(h => {
+    // Aplicar normalização completa diretamente
+    return h
+      .toLowerCase()
+      .replace(/[àáâãäå]/g, 'a')
+      .replace(/[èéêë]/g, 'e')
+      .replace(/[ìíîï]/g, 'i')
+      .replace(/[òóôõö]/g, 'o')
+      .replace(/[ùúûü]/g, 'u')
+      .replace(/[ç]/g, 'c')
+      .replace(/[ñ]/g, 'n')
+      .replace(/\s+/g, '')
+      .replace(/[^a-z]/g, '');
+  });
   const data = [];
 
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
-    if (!line) continue;
-
-    const values = line.split(';');
+    if (!line) {
+      continue
+    }
+    
+    // Tratar campos entre aspas
+    const values = parseCSVLine(line, separator);
     const row: any = {};
 
     headers.forEach((header, index) => {
       row[header] = robustNormalizeText(values[index] || '');
     });
 
-    // Só adiciona se tiver pelo menos nome
-    if (row.name) {
-      data.push(row);
+    // Mapear campos normalizados para os nomes esperados
+    const normalizedRow: any = {};
+    Object.keys(row).forEach(key => {
+      if (key === 'nomedafuncao' || key === 'name') {
+        normalizedRow.name = row[key];
+      } else if (key === 'tipodemaodeobra' || key === 'labortype' || key === 'tipodemaodeobra') {
+        normalizedRow.laborType = row[key];
+      }
+    });
+    
+    if (normalizedRow.name) {
+      data.push(normalizedRow);
     }
   }
 
   return data;
+}
+
+/**
+ * Parse uma linha CSV respeitando campos entre aspas
+ */
+function parseCSVLine(line: string, separator: string): string[] {
+  const values: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === separator && !inQuotes) {
+      values.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  
+  // Adicionar o último valor
+  values.push(current.trim());
+  
+  // Remover aspas dos valores
+  return values.map(value => value.replace(/^"|"$/g, ''));
 }
 
 /**
