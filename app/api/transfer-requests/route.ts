@@ -39,23 +39,34 @@ export async function GET(request: NextRequest) {
       ];
     }
 
-    const [total, transferRequests] = await Promise.all([
-      prisma.transferRequest.count({ where }),
+    const [transferRequests, total] = await Promise.all([
       prisma.transferRequest.findMany({
         where,
         skip,
         take: limit,
         orderBy: { scheduledDate: 'desc' },
         include: {
-          employee: { select: { id: true, name: true, registration: true, cpf: true } },
+          employee: { select: { id: true, name: true, registration: true, cpf: true, currentFunction: { select: { name: true } } } },
           requestedBy: { select: { id: true, name: true, email: true } },
           approvedBy: { select: { id: true, name: true, email: true } },
+          responsibleBy: { select: { id: true, name: true, email: true } },
+          finalizedBy: { select: { id: true, name: true, email: true } },
+          fromContract: { select: { id: true, name: true, code: true } },
+          toContract: { select: { id: true, name: true, code: true } },
         },
       }),
+      prisma.transferRequest.count({ where }),
     ]);
 
+    // Adicionar dados dos contratos às transferências (já incluídos no include)
+    const transferRequestsWithDetails = transferRequests.map(transfer => ({
+      ...transfer,
+      fromContract: transfer.fromContract,
+      toContract: transfer.toContract
+    }));
+
     return NextResponse.json({
-      transferRequests,
+      transferRequests: transferRequestsWithDetails,
       pagination: {
         page,
         limit,
@@ -76,166 +87,89 @@ export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
 
-    
-    // Remover toFunctionId dos campos obrigatórios
-    const requiredFields = ['employeeId', 'toContractId', 'requestedById', 'scheduledDate'];
+    // Campos obrigatórios
+    const requiredFields = ['employeeId', 'toContractId', 'scheduledDate'];
     const errors: Record<string, string> = {};
     requiredFields.forEach(field => {
       if (!data[field]) errors[field] = 'Campo obrigatório';
     });
     if (Object.keys(errors).length > 0) {
-
       return NextResponse.json({ errors }, { status: 400 });
     }
+
     // Validação de data
     if (isNaN(Date.parse(data.scheduledDate))) {
       errors.scheduledDate = 'Data inválida';
-
       return NextResponse.json({ errors }, { status: 400 });
     }
-    // Buscar função atual do funcionário
 
+    // Buscar funcionário
     const employee = await prisma.employee.findUnique({
       where: { id: data.employeeId },
       select: { 
-        currentFunctionId: true,
-        companyFunctionId: true,
+        currentContractId: true,
         name: true,
         cpf: true 
       },
     });
 
-    
     if (!employee) {
-
       return NextResponse.json({ error: 'Funcionário não encontrado' }, { status: 404 });
     }
-    
-    // Verificar se o funcionário tem uma função atual ou se foi fornecida uma função específica
-    let toFunctionId = data.toFunctionId || employee.currentFunctionId || employee.companyFunctionId;
-    
-    if (!toFunctionId) {
 
-      return NextResponse.json({ 
-        error: 'Funcionário não possui função atual definida',
-        details: `Funcionário ${employee.name} (${employee.cpf}) não possui função atual definida. É necessário selecionar uma função para a transferência.`
-      }, { status: 400 });
-    }
-    
-    // Verificar se a função existe (pode ser ContractFunction ou CompanyFunction)
-    let functionExists = await prisma.contractFunction.findUnique({
-      where: { id: toFunctionId },
-      select: { id: true, name: true, contractId: true },
-    });
-    
-    // Se não encontrou como ContractFunction, tentar como CompanyFunction
-    if (!functionExists) {
-      const companyFunction = await prisma.companyFunction.findUnique({
-        where: { id: toFunctionId },
-        select: { id: true, name: true },
-      });
-      
-      if (companyFunction) {
-        // Se é uma CompanyFunction, usar o ID como toFunctionId
-        functionExists = {
-          id: companyFunction.id,
-          name: companyFunction.name,
-          contractId: null
-        };
-      }
-    }
-    
-    if (!functionExists) {
-
-      return NextResponse.json({ 
-        error: 'Função não encontrada',
-        details: `Função com ID ${toFunctionId} não foi encontrada no sistema.`
-      }, { status: 404 });
-    }
-    
     // Verificar se o usuário que está fazendo a requisição existe
-
-    
-    // Se não houver requestedById, usar um usuário padrão para demonstração
     let requestingUser;
-    if (!data.requestedById) {
+    let requestedById = data.requestedById;
 
+    if (!requestedById) {
+      // Se não houver requestedById, usar o primeiro usuário disponível
       requestingUser = await prisma.user.findFirst({
         select: { id: true, name: true, email: true },
+        orderBy: { createdAt: 'asc' }
       });
       
       if (!requestingUser) {
-
         return NextResponse.json({ 
           error: 'Nenhum usuário encontrado no sistema',
           details: 'É necessário ter pelo menos um usuário cadastrado no sistema.'
         }, { status: 404 });
       }
       
-      data.requestedById = requestingUser.id;
+      requestedById = requestingUser.id;
     } else {
+      // Verificar se o usuário especificado existe
       requestingUser = await prisma.user.findUnique({
-        where: { id: data.requestedById },
-        select: { id: true, name: true, email: true },
+        where: { id: requestedById },
+        select: { id: true, name: true, email: true }
       });
       
       if (!requestingUser) {
-
         return NextResponse.json({ 
-          error: 'Usuário que fez a requisição não encontrado',
-          details: `Usuário com ID ${data.requestedById} não foi encontrado no sistema.`
+          error: 'Usuário solicitante não encontrado',
+          details: `Usuário com ID ${requestedById} não foi encontrado no sistema.`
         }, { status: 404 });
       }
     }
-    
-    // Verificar se o contrato de destino existe
 
-    const destinationContract = await prisma.contract.findUnique({
-      where: { id: data.toContractId },
-      select: { id: true, name: true, code: true, isActive: true },
-    });
-    
-    if (!destinationContract) {
-
-      return NextResponse.json({ 
-        error: 'Contrato de destino não encontrado',
-        details: `Contrato com ID ${data.toContractId} não foi encontrado no sistema.`
-      }, { status: 404 });
-    }
-    
-    if (!destinationContract.isActive) {
-
-      return NextResponse.json({ 
-        error: 'Contrato de destino inativo',
-        details: `Contrato ${destinationContract.name} (${destinationContract.code}) está inativo e não pode receber transferências.`
-      }, { status: 400 });
-    }
-    
-    // Criar transferência
+    // Criar a transferência
     const transferRequest = await prisma.transferRequest.create({
       data: {
         employeeId: data.employeeId,
+        fromContractId: employee.currentContractId || data.toContractId, // Usar contrato atual ou destino como fallback
         toContractId: data.toContractId,
-        toFunctionId: toFunctionId,
-        requestedById: data.requestedById,
+        requestedById: requestedById,
         scheduledDate: new Date(data.scheduledDate),
         status: 'PENDING',
+        requestedAt: new Date(),
       },
       include: {
         employee: { select: { id: true, name: true, registration: true, cpf: true } },
         requestedBy: { select: { id: true, name: true, email: true } },
-      },
+        fromContract: { select: { id: true, name: true, code: true } },
+        toContract: { select: { id: true, name: true, code: true } },
+      }
     });
-    
 
-    
-    try {
-      emitTransferRequestEvent('created', transferRequest);
-    } catch (error) {
-      console.error('Erro ao emitir evento de transferência:', error);
-      // Não falhar a criação da transferência por causa do evento
-    }
-    
     return NextResponse.json(transferRequest, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar transferência:', error);

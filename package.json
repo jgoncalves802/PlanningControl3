@@ -17,7 +17,10 @@
     "nfc:ngrok": "npx ngrok http 3000",
     "nfc:dev": "npm run dev",
     "nfc:ip": "ipconfig | findstr IPv4",
-    "nfc:test": "echo 'Use npm run nfc:localtunnel (sem conta) ou npm run nfc:tunnel (com conta ngrok)'"
+    "nfc:test": "echo 'Use npm run nfc:localtunnel (sem conta) ou npm run nfc:tunnel (com conta ngrok)'",
+    "supabase:setup": "node scripts/setup-supabase-auth.js",
+    "supabase:db": "node scripts/setup-supabase-database.js",
+    "supabase:config": "echo 'Configure as variáveis no .env.local e execute: npm run supabase:db && npm run supabase:setup'"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",

@@ -47,10 +47,10 @@ export async function GET(request: NextRequest) {
       _count: { toContractId: true },
     });
 
-    // Por função
-    const byFunction = await prisma.transferRequest.groupBy({
-      by: ['toFunctionId'],
-      _count: { toFunctionId: true },
+    // Por contrato de origem
+    const byFromContract = await prisma.transferRequest.groupBy({
+      by: ['fromContractId'],
+      _count: { fromContractId: true },
     });
 
     const stats = {
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       recent30Days: recentCount,
       monthly,
       byContract,
-      byFunction,
+      byFromContract,
     };
 
     return NextResponse.json(stats, {

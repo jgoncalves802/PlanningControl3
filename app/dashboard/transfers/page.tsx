@@ -27,7 +27,10 @@ import {
   TrendingUp,
   Activity,
   DollarSign,
-  Target
+  Target,
+  ArrowUpRight,
+  ArrowDownRight,
+  UserCheck
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -59,15 +62,34 @@ import { format } from 'date-fns';
 interface TransferRequest {
   id: string;
   employee: any;
+  fromContractId: string;
   toContractId: string;
-  toFunctionId: string;
   scheduledDate: string;
   status: string;
   requestedBy?: any;
   approvedBy?: any;
+  responsibleBy?: any;
+  finalizedBy?: any;
   createdAt?: string;
-  approvedAt?: string;
   completedAt?: string;
+  
+  // Timestamps para métricas
+  requestedAt: string;
+  approvedAt?: string;
+  transferredAt?: string;
+  finalizedAt?: string;
+  
+  // Dados dos contratos
+  fromContract?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  toContract?: {
+    id: string;
+    name: string;
+    code: string;
+  };
 }
 interface TransferStats {
   total?: number;
@@ -87,6 +109,16 @@ export default function TransfersPage() {
   const transferRequestsParams = useMemo(() => ({ page, limit, status, search }), [page, limit, status, search]);
   const { data, isLoading, isError } = useTransferRequests(transferRequestsParams) as { data?: { transferRequests: TransferRequest[], pagination: any }, isLoading: boolean, isError: boolean };
   const { data: stats, isLoading: loadingStats } = useTransferStats(true) as { data?: TransferStats, isLoading: boolean };
+
+  // Debug: Log dos dados
+  console.log('🔍 Debug Transferências:')
+  console.log('   isLoading:', isLoading)
+  console.log('   isError:', isError)
+  console.log('   data:', data)
+  console.log('   transferRequests:', data?.transferRequests)
+  console.log('   transferRequests.length:', data?.transferRequests?.length)
+  console.log('   params:', transferRequestsParams)
+  console.log('')
 
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
@@ -178,6 +210,37 @@ export default function TransfersPage() {
       default:
         return status
     }
+  }
+
+  // Funções para calcular tempos de cada etapa
+  const calculateTimeDiff = (startDate: string, endDate?: string) => {
+    if (!endDate) return null;
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (diffHours > 0) {
+      return `${diffHours}h ${diffMinutes}min`;
+    }
+    return `${diffMinutes}min`;
+  }
+
+  const getProcessTime = (transfer: TransferRequest) => {
+    const times = {
+      approval: calculateTimeDiff(transfer.requestedAt, transfer.approvedAt),
+      transfer: calculateTimeDiff(transfer.approvedAt || transfer.requestedAt, transfer.transferredAt),
+      finalization: calculateTimeDiff(transfer.transferredAt || transfer.approvedAt || transfer.requestedAt, transfer.finalizedAt),
+      total: calculateTimeDiff(transfer.requestedAt, transfer.finalizedAt)
+    };
+    
+    return times;
+  }
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return '-';
+    return format(new Date(dateString), 'dd/MM/yyyy HH:mm');
   }
 
   const handleNFCRead = (nfcData: string) => {
@@ -396,14 +459,15 @@ export default function TransfersPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-                <tr>
+                <tr className="bg-gray-50 dark:bg-slate-800">
                   <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Funcionário</th>
-                  <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Contrato Destino</th>
-                  <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Função Destino</th>
+                  <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Transferência</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Data Agendada</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Status</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Solicitante</th>
                   <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Aprovador</th>
+                  <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Responsável por Transferir</th>
+                  <th className="text-left p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Finalizado por</th>
                   <th className="text-right p-4 text-sm font-medium text-gray-700 dark:text-slate-300">Ações</th>
                 </tr>
               </thead>
@@ -433,6 +497,12 @@ export default function TransfersPage() {
                         <ArrowLeftRight className="h-12 w-12 text-gray-400 dark:text-slate-500" />
                         <span className="text-gray-500 dark:text-slate-400">Nenhuma transferência encontrada</span>
                         <p className="text-sm text-gray-400 dark:text-slate-500">Crie uma nova transferência para começar</p>
+                        {/* Debug info */}
+                        <div className="text-xs text-red-500 mt-2">
+                          Debug: data={JSON.stringify(!!data)}, 
+                          transferRequests={JSON.stringify(!!data?.transferRequests)}, 
+                          length={JSON.stringify(data?.transferRequests?.length)}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -446,19 +516,24 @@ export default function TransfersPage() {
                             <div className="font-medium text-gray-900 dark:text-slate-100">{transfer.employee?.name}</div>
                             <div className="text-sm text-gray-500 dark:text-slate-400">CPF: {transfer.employee?.cpf}</div>
                             <div className="text-sm text-gray-500 dark:text-slate-400">Matrícula: {transfer.employee?.registration}</div>
+                            <div className="text-sm text-gray-500 dark:text-slate-400">Função: {transfer.employee?.currentFunction?.name || 'N/A'}</div>
                           </div>
                         </div>
                       </td>
                       <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                          <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.toContractId}</span>
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                          <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.toFunctionId}</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <ArrowUpRight className="h-4 w-4 text-red-500" />
+                            <span className="text-sm text-gray-900 dark:text-slate-100">
+                              <strong>DE:</strong> {transfer.fromContract?.name || 'N/A'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <ArrowDownRight className="h-4 w-4 text-green-500" />
+                            <span className="text-sm text-gray-900 dark:text-slate-100">
+                              <strong>PARA:</strong> {transfer.toContract?.name || 'N/A'}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td className="p-4">
@@ -478,13 +553,60 @@ export default function TransfersPage() {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <UserIcon className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                          <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.requestedBy?.name || '-'}</span>
+                          <div>
+                            <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.requestedBy?.name || '-'}</span>
+                            <div className="text-xs text-gray-500 dark:text-slate-400">
+                              {formatDateTime(transfer.requestedAt)}
+                            </div>
+                          </div>
                         </div>
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <Shield className="h-4 w-4 text-gray-400 dark:text-slate-500" />
-                          <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.approvedBy?.name || '-'}</span>
+                          <div>
+                            <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.approvedBy?.name || '-'}</span>
+                            {transfer.approvedAt && (
+                              <div className="text-xs text-gray-500 dark:text-slate-400">
+                                {formatDateTime(transfer.approvedAt)}
+                                {getProcessTime(transfer).approval && (
+                                  <span className="ml-1 text-green-600">({getProcessTime(transfer).approval})</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <UserCheck className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                          <div>
+                            <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.responsibleBy?.name || '-'}</span>
+                            {transfer.transferredAt && (
+                              <div className="text-xs text-gray-500 dark:text-slate-400">
+                                {formatDateTime(transfer.transferredAt)}
+                                {getProcessTime(transfer).transfer && (
+                                  <span className="ml-1 text-blue-600">({getProcessTime(transfer).transfer})</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-gray-400 dark:text-slate-500" />
+                          <div>
+                            <span className="text-sm text-gray-900 dark:text-slate-100">{transfer.finalizedBy?.name || '-'}</span>
+                            {transfer.finalizedAt && (
+                              <div className="text-xs text-gray-500 dark:text-slate-400">
+                                {formatDateTime(transfer.finalizedAt)}
+                                {getProcessTime(transfer).finalization && (
+                                  <span className="ml-1 text-purple-600">({getProcessTime(transfer).finalization})</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="p-4 text-right">

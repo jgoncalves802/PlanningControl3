@@ -36,6 +36,8 @@ model User {
   overtimeApprovalsGiven   OvertimeApproval[]    @relation("ApprovedBy")
   transferRequestsApproved TransferRequest[]     @relation("ApprovedBy")
   transferRequestsMade     TransferRequest[]     @relation("RequestedBy")
+  responsibleBy            TransferRequest[]     @relation("ResponsibleBy")
+  finalizedBy              TransferRequest[]     @relation("FinalizedBy")
 
   @@map("users")
 }
@@ -55,6 +57,8 @@ model Contract {
   employees        Employee[]
   hourPlannings    HourPlanning[]
   nfcCollections   NFCCollection[]
+  transferRequests TransferRequest[] @relation("TransferRequestToContract")
+  fromTransferRequests TransferRequest[] @relation("TransferRequestFromContract")
 }
 
 model ContractResponsible {
@@ -166,18 +170,31 @@ model Employee {
 }
 
 model TransferRequest {
-  id            String         @id @default(cuid())
-  employeeId    String
-  toContractId  String
-  toFunctionId  String
-  requestedById String
-  approvedById  String?
-  status        TransferStatus @default(PENDING)
-  scheduledDate DateTime
-  completedAt   DateTime?
-  approvedBy    User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
-  employee      Employee       @relation("EmployeeTransferRequests", fields: [employeeId], references: [id])
-  requestedBy   User           @relation("RequestedBy", fields: [requestedById], references: [id])
+  id                    String         @id @default(cuid())
+  employeeId            String
+  fromContractId        String         // Contrato de origem
+  toContractId          String         // Contrato de destino
+  requestedById         String
+  approvedById          String?
+  responsibleById       String?        // Responsável pela transferência
+  finalizedById         String?        // Responsável pela finalização
+  status                TransferStatus @default(PENDING)
+  scheduledDate         DateTime
+  completedAt           DateTime?
+  
+  // Timestamps para métricas
+  requestedAt           DateTime       @default(now())  // Quando foi solicitado
+  approvedAt            DateTime?      // Quando foi aprovado
+  transferredAt         DateTime?      // Quando foi transferido
+  finalizedAt           DateTime?      // Quando foi finalizado
+  
+  approvedBy            User?          @relation("ApprovedBy", fields: [approvedById], references: [id])
+  employee              Employee       @relation("EmployeeTransferRequests", fields: [employeeId], references: [id])
+  requestedBy           User           @relation("RequestedBy", fields: [requestedById], references: [id])
+  responsibleBy         User?          @relation("ResponsibleBy", fields: [responsibleById], references: [id])
+  finalizedBy           User?          @relation("FinalizedBy", fields: [finalizedById], references: [id])
+  fromContract          Contract       @relation("TransferRequestFromContract", fields: [fromContractId], references: [id])
+  toContract            Contract       @relation("TransferRequestToContract", fields: [toContractId], references: [id])
 }
 
 model TransferHistory {

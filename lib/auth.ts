@@ -88,6 +88,55 @@ export const getAccessibleContracts = (user: User, allContracts: any[]): any[] =
   )
 }
 
+// Função para buscar usuário do banco de dados
+export const getCurrentUserFromDatabase = async (): Promise<User | null> => {
+  try {
+    // Em produção, isso viria do token JWT ou sessão autenticada
+    // Por enquanto, vamos buscar o primeiro usuário disponível ou um específico
+    
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    // Tentar buscar um usuário específico primeiro (admin)
+    let user = await prisma.user.findFirst({
+      where: {
+        email: 'admin@demo-company.com'
+      }
+    });
+    
+    // Se não encontrar, buscar o primeiro usuário disponível
+    if (!user) {
+      user = await prisma.user.findFirst({
+        orderBy: { createdAt: 'asc' }
+      });
+    }
+    
+    await prisma.$disconnect();
+    
+    if (!user) {
+      console.warn('Nenhum usuário encontrado no banco de dados');
+      return null;
+    }
+    
+    // Mapear dados do usuário para incluir contratos atribuídos baseado na função
+    const userWithContracts: User = {
+      id: user.id,
+      name: user.name || 'Usuário',
+      email: user.email,
+      role: UserRole.TENANT_ADMIN, // Por enquanto, todos são admin
+      assignedContracts: getUserAssignedContracts(user),
+      isActive: true,
+      createdAt: user.createdAt,
+      companyLogo: '/logo-demo-company.png'
+    }
+    
+    return userWithContracts;
+  } catch (error) {
+    console.error('Erro ao buscar usuário do banco:', error);
+    return null;
+  }
+}
+
 export const getCurrentUser = (): User => {
   // Em produção, isso viria do token JWT ou sessão autenticada
   if (typeof window !== 'undefined') {
@@ -111,9 +160,10 @@ export const getCurrentUser = (): User => {
   }
   
   // Usuário padrão para demonstração (remover em produção)
+  // Agora usando um ID que pode existir no banco
   return {
-    id: '1',
-    name: 'Admin Geral',
+    id: 'cmdnjjo9h0000i840ik9znmjj', // ID do usuário admin que existe no banco
+    name: 'Administrador Demo',
     email: 'admin@demo-company.com',
     role: UserRole.TENANT_ADMIN,
     isActive: true,
@@ -124,9 +174,10 @@ export const getCurrentUser = (): User => {
 // Versão para uso no servidor (APIs)
 export const getCurrentUserServer = (): User => {
   // Usuário padrão para demonstração (remover em produção)
+  // Agora usando um ID que pode existir no banco
   return {
-    id: '1',
-    name: 'Admin Geral',
+    id: 'cmdnjjo9h0000i840ik9znmjj', // ID do usuário admin que existe no banco
+    name: 'Administrador Demo',
     email: 'admin@demo-company.com',
     role: UserRole.TENANT_ADMIN,
     isActive: true,

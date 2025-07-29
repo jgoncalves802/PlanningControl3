@@ -149,10 +149,32 @@ export async function PUT(
 
 export async function DELETE(req: NextRequest, { params }) {
   try {
-  const { id } = params;
-  const deletedEmployee = await prisma.employee.delete({ where: { id } });
+    const { id } = params;
+    
+    // Verificar se o funcionário tem transferências associadas
+    const transferRequests = await prisma.transferRequest.findMany({
+      where: { employeeId: id }
+    });
+    
+    if (transferRequests.length > 0) {
+      return NextResponse.json({ 
+        error: 'Não é possível deletar funcionário com transferências associadas',
+        details: `Este funcionário possui ${transferRequests.length} transferência(s) associada(s). Para deletar o funcionário, primeiro remova ou transfira as solicitações de transferência.`,
+        transferRequestsCount: transferRequests.length
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
+    
+    // Se não há transferências, pode deletar o funcionário
+    const deletedEmployee = await prisma.employee.delete({ where: { id } });
+    
     // Emitir evento SSE
     // emitEmployeeEvent('deleted', deletedEmployee);
+    
     return NextResponse.json({ success: true }, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
@@ -160,6 +182,21 @@ export async function DELETE(req: NextRequest, { params }) {
     });
   } catch (error) {
     console.error('Erro ao deletar funcionário:', error);
+    
+    // Verificar se é erro de constraint de chave estrangeira
+    if (error.code === 'P2003') {
+      return NextResponse.json({ 
+        error: 'Não é possível deletar funcionário com registros associados',
+        details: 'Este funcionário possui registros associados no sistema (transferências, registros de ponto, etc.). Para deletar o funcionário, primeiro remova os registros associados.',
+        constraint: error.meta?.constraint || 'unknown'
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8'
+        }
+      });
+    }
+    
     return NextResponse.json({ 
       error: 'Erro interno do servidor', 
       details: error.message 

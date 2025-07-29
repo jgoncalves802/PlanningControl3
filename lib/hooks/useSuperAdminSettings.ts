@@ -68,6 +68,17 @@ interface CreateUserData {
   password: string;
 }
 
+interface UpdateUserData {
+  id: string;
+  data: Partial<{
+    name: string;
+    email: string;
+    role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER';
+    companyId?: string;
+    isActive: boolean;
+  }>;
+}
+
 interface CreateCompanyData {
   name: string;
   cnpj: string;
@@ -98,17 +109,22 @@ export function useUsers(filters?: {
       if (filters?.companyId) params.append('companyId', filters.companyId);
 
       const response = await fetch(`/api/settings/super-admin/users?${params}`);
+      
       if (!response.ok) {
-        throw new Error('Erro ao buscar usuários');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao buscar usuários');
       }
+      
       return response.json();
     },
+    staleTime: 30000, // 30 segundos
+    gcTime: 300000, // 5 minutos
   });
 }
 
 export function useCreateUser() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
     mutationFn: async (userData: CreateUserData) => {
       const response = await fetch('/api/settings/super-admin/users', {
@@ -118,12 +134,12 @@ export function useCreateUser() {
         },
         body: JSON.stringify(userData),
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao criar usuário');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao criar usuário');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -131,16 +147,16 @@ export function useCreateUser() {
       toast.success('Usuário criado com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao criar usuário');
     },
   });
 }
 
 export function useUpdateUser() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<User> }) => {
+    mutationFn: async ({ id, data }: UpdateUserData) => {
       const response = await fetch(`/api/settings/super-admin/users/${id}`, {
         method: 'PUT',
         headers: {
@@ -148,12 +164,12 @@ export function useUpdateUser() {
         },
         body: JSON.stringify(data),
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao atualizar usuário');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao atualizar usuário');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -161,25 +177,25 @@ export function useUpdateUser() {
       toast.success('Usuário atualizado com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao atualizar usuário');
     },
   });
 }
 
 export function useDeleteUser() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
     mutationFn: async (userId: string) => {
       const response = await fetch(`/api/settings/super-admin/users/${userId}`, {
         method: 'DELETE',
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao excluir usuário');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao excluir usuário');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -187,7 +203,7 @@ export function useDeleteUser() {
       toast.success('Usuário excluído com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao excluir usuário');
     },
   });
 }
@@ -211,17 +227,22 @@ export function useCompanies(filters?: {
       if (filters?.plan) params.append('plan', filters.plan);
 
       const response = await fetch(`/api/settings/super-admin/companies?${params}`);
+      
       if (!response.ok) {
-        throw new Error('Erro ao buscar empresas');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao buscar empresas');
       }
+      
       return response.json();
     },
+    staleTime: 30000,
+    gcTime: 300000,
   });
 }
 
 export function useCreateCompany() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
     mutationFn: async (companyData: CreateCompanyData) => {
       const response = await fetch('/api/settings/super-admin/companies', {
@@ -231,12 +252,12 @@ export function useCreateCompany() {
         },
         body: JSON.stringify(companyData),
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao criar empresa');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao criar empresa');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -244,16 +265,16 @@ export function useCreateCompany() {
       toast.success('Empresa criada com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao criar empresa');
     },
   });
 }
 
 export function useUpdateCompany() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: Partial<Company> }) => {
+    mutationFn: async ({ id, data }: { id: string; data: Partial<CreateCompanyData> }) => {
       const response = await fetch(`/api/settings/super-admin/companies/${id}`, {
         method: 'PUT',
         headers: {
@@ -261,12 +282,12 @@ export function useUpdateCompany() {
         },
         body: JSON.stringify(data),
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao atualizar empresa');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao atualizar empresa');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -274,25 +295,25 @@ export function useUpdateCompany() {
       toast.success('Empresa atualizada com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao atualizar empresa');
     },
   });
 }
 
 export function useDeleteCompany() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
     mutationFn: async (companyId: string) => {
       const response = await fetch(`/api/settings/super-admin/companies/${companyId}`, {
         method: 'DELETE',
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao excluir empresa');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao excluir empresa');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -300,7 +321,7 @@ export function useDeleteCompany() {
       toast.success('Empresa excluída com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao excluir empresa');
     },
   });
 }
@@ -309,20 +330,24 @@ export function useDeleteCompany() {
 export function useInfrastructureData() {
   return useQuery({
     queryKey: ['super-admin', 'infrastructure'],
-    queryFn: async (): Promise<InfrastructureData> => {
+    queryFn: async () => {
       const response = await fetch('/api/settings/super-admin/infrastructure');
+      
       if (!response.ok) {
-        throw new Error('Erro ao buscar dados de infraestrutura');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao buscar dados de infraestrutura');
       }
+      
       return response.json();
     },
-    refetchInterval: 30000, // Atualizar a cada 30 segundos
+    staleTime: 10000, // 10 segundos para dados de infraestrutura
+    gcTime: 60000, // 1 minuto
   });
 }
 
 export function useUpdateInfrastructureConfig() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
     mutationFn: async (config: Partial<InfrastructureData['config']>) => {
       const response = await fetch('/api/settings/super-admin/infrastructure', {
@@ -332,12 +357,12 @@ export function useUpdateInfrastructureConfig() {
         },
         body: JSON.stringify(config),
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao atualizar configurações');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao atualizar configurações');
       }
-
+      
       return response.json();
     },
     onSuccess: () => {
@@ -345,29 +370,29 @@ export function useUpdateInfrastructureConfig() {
       toast.success('Configurações atualizadas com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao atualizar configurações');
     },
   });
 }
 
 export function useInfrastructureAction() {
   const queryClient = useQueryClient();
-
+  
   return useMutation({
-    mutationFn: async (action: 'backup' | 'restart-services') => {
-      const response = await fetch('/api/settings/super-admin/infrastructure', {
+    mutationFn: async ({ action, params }: { action: string; params?: any }) => {
+      const response = await fetch('/api/settings/super-admin/infrastructure/action', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, params }),
       });
-
+      
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao executar ação');
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao executar ação');
       }
-
+      
       return response.json();
     },
     onSuccess: (data) => {
@@ -375,7 +400,7 @@ export function useInfrastructureAction() {
       toast.success(data.message || 'Ação executada com sucesso!');
     },
     onError: (error: Error) => {
-      toast.error(error.message);
+      toast.error(error.message || 'Erro ao executar ação');
     },
   });
 } 

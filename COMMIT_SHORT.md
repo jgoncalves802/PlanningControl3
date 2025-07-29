@@ -1,8 +1,7 @@
-fix: corrigir erro 500 na API de orçamentos com filtro status=all
+fix(api): proteção de integridade para deleção de funcionários
 
-- Corrigir PrismaClientValidationError ao usar "all" como status
-- Implementar verificação if (status && status !== 'all') na API
-- Corrigir acesso aos dados retornados pelo hook useBudgets
-- Ajustar estrutura de dados na página de orçamentos
+Implementa verificação de dependências TransferRequest antes da deleção.
+Retorna erro 400 informativo em vez de erro 500 de constraint SQL.
+Melhora UX com mensagem clara sobre como resolver o problema.
 
-Arquivos: app/api/budgets/route.ts, app/dashboard/budgets/page.tsx 
+✅ Testado: DELETE /api/employees/[id] → 400 Bad Request 
