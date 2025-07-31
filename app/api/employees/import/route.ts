@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { autoCorrectEmployeeData, formatCPF, convertExcelNumberToDate, isExcelNumber, convertNameToUpperCase } from '@/lib/csvEncodingUtils';
+import { getCurrentUserServer } from '@/lib/auth';
 
 // Função para normalizar texto (caracteres especiais)
 function normalizeText(text: string): string {
@@ -63,36 +64,25 @@ function validateCPF(cpf: string): boolean {
 
 // Função para validar telefone (opcional)
 function validatePhone(phone: string): boolean {
-  if (!phone || phone.trim() === '') return true; // Telefone vazio é válido (opcional)
-  const cleanPhone = phone.replace(/\D/g, '');
+  if (!phone || String(phone).trim() === '') return true; // Telefone vazio é válido (opcional)
+  const cleanPhone = String(phone).replace(/\D/g, '');
   return cleanPhone.length >= 10 && cleanPhone.length <= 11;
 }
 
-// Função para converter data do formato DD/MM/YYYY ou número do Excel
+// Função para converter string de data para Date
 function parseDate(dateString: string | number): Date | null {
   if (!dateString) return null;
   
-  // Converter para string se for número
-  const dateStr = String(dateString).trim();
-  if (!dateStr) return null;
-  
   try {
-    // Primeiro, verificar se é um número do Excel
-    if (isExcelNumber(dateStr)) {
-      const excelDate = convertExcelNumberToDate(dateStr);
-      if (excelDate) {
-        return excelDate;
-      }
-    }
+    const dateStr = dateString.toString().trim();
     
     // Tenta formato DD/MM/YYYY
-    const dateParts = dateStr.split('/');
-    if (dateParts.length === 3) {
-      const day = parseInt(dateParts[0], 10);
-      const month = parseInt(dateParts[1], 10) - 1; // JavaScript months are 0-indexed
-      const year = parseInt(dateParts[2], 10);
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+      const [d, m, y] = dateStr.split('/');
+      const day = parseInt(d, 10);
+      const month = parseInt(m, 10) - 1; // Mês começa em 0
+      const year = parseInt(y, 10);
       
-      // Validar se os valores são válidos
       if (day < 1 || day > 31 || month < 0 || month > 11 || year < 1900 || year > 2100) {
         return null;
       }
@@ -116,6 +106,19 @@ function parseDate(dateString: string | number): Date | null {
   }
 }
 
+// Função para obter a empresa padrão baseada no usuário atual
+function getDefaultCompany(): string {
+  const currentUser = getCurrentUserServer();
+  
+  // Mapear usuário para empresa baseado no email ou nome
+  if (currentUser.email.includes('demo-company')) {
+    return 'SARTORI SERVIÇOS';
+  }
+  
+  // Empresa padrão se não conseguir identificar
+  return 'SARTORI SERVIÇOS';
+}
+
 // Função de validação para dados do CSV
 async function validateEmployeeFromCSV(data: any, index: number) {
   const errors: Record<string, string> = {};
@@ -125,23 +128,25 @@ async function validateEmployeeFromCSV(data: any, index: number) {
     errors.name = 'Nome é obrigatório';
   }
   
-  if (!data.registration || data.registration.trim() === '') {
+  if (!data.registration || String(data.registration).trim() === '') {
     errors.registration = 'Matrícula é obrigatória';
   }
   
+  // Se company estiver vazio, usar empresa padrão
   if (!data.company || data.company.trim() === '') {
-    errors.company = 'Empresa é obrigatória';
+    data.company = getDefaultCompany();
+    console.log(`Funcionário ${index + 1}: Empresa definida automaticamente como "${data.company}"`);
   }
   
   // Validação de CPF
-  if (!data.cpf || data.cpf.trim() === '') {
+  if (!data.cpf || String(data.cpf).trim() === '') {
     errors.cpf = 'CPF é obrigatório';
   } else if (!validateCPF(data.cpf)) {
     errors.cpf = 'CPF inválido';
   } else {
     // Verifica se CPF já existe
     const existingCpf = await prisma.employee.findUnique({ 
-      where: { cpf: data.cpf.replace(/\D/g, '') } 
+      where: { cpf: String(data.cpf).replace(/\D/g, '') } 
     });
     if (existingCpf) {
       errors.cpf = 'CPF já cadastrado';
@@ -149,7 +154,7 @@ async function validateEmployeeFromCSV(data: any, index: number) {
   }
   
   // Validação de telefone (opcional)
-  if (data.phone && data.phone.trim() !== '') {
+  if (data.phone && String(data.phone).trim() !== '') {
     if (!validatePhone(data.phone)) {
       // Em vez de erro, remover o telefone e informar
       data.phone = null;
@@ -215,15 +220,20 @@ async function validateEmployeeFromCSV(data: any, index: number) {
 
 // Função de conversão de dados CSV para formato do banco
 function convertCSVToEmployeeData(csvData: any): any {
+  // Garantir que a empresa está definida
+  const company = csvData.company && csvData.company.trim() ? 
+    normalizeText(csvData.company) : 
+    getDefaultCompany();
+
   const employeeData = {
     name: convertNameToUpperCase(normalizeText(csvData.name)),
     registration: csvData.registration?.toString(),
-    company: normalizeText(csvData.company),
+    company: company,
     cpf: formatCPF(csvData.cpf), // Aplicar formatação de CPF
     motherName: csvData.motherName ? normalizeText(csvData.motherName) : null,
     phone: (() => {
-      if (csvData.phone && csvData.phone.trim()) {
-        const cleanPhone = csvData.phone.replace(/\D/g, '');
+      if (csvData.phone && String(csvData.phone).trim()) {
+        const cleanPhone = String(csvData.phone).replace(/\D/g, '');
         // Validar se tem 10 ou 11 dígitos
         if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
           return cleanPhone;
@@ -234,12 +244,12 @@ function convertCSVToEmployeeData(csvData: any): any {
       }
       return null;
     })(),
-    gender: csvData.gender && csvData.gender.trim() ? normalizeText(csvData.gender) : null,
-    maritalStatus: csvData.maritalStatus && csvData.maritalStatus.trim() ? normalizeText(csvData.maritalStatus) : null,
-    pis: csvData.pis && csvData.pis.trim() ? csvData.pis.replace(/\D/g, '') : null,
-    ctps: csvData.ctps && csvData.ctps.trim() ? csvData.ctps.replace(/\D/g, '') : null,
-    ctpsSeries: csvData.ctpsSeries && csvData.ctpsSeries.trim() ? csvData.ctpsSeries : null,
-    ctpsUf: csvData.ctpsUf && csvData.ctpsUf.trim() ? csvData.ctpsUf.toUpperCase() : null,
+    gender: csvData.gender && String(csvData.gender).trim() ? normalizeText(csvData.gender) : null,
+    maritalStatus: csvData.maritalStatus && String(csvData.maritalStatus).trim() ? normalizeText(csvData.maritalStatus) : null,
+    pis: csvData.pis && String(csvData.pis).trim() ? csvData.pis.replace(/\D/g, '') : null,
+    ctps: csvData.ctps && String(csvData.ctps).trim() ? csvData.ctps.replace(/\D/g, '') : null,
+    ctpsSeries: csvData.ctpsSeries && String(csvData.ctpsSeries).trim() ? csvData.ctpsSeries : null,
+    ctpsUf: csvData.ctpsUf && String(csvData.ctpsUf).trim() ? csvData.ctpsUf.toUpperCase() : null,
     // Sempre definir status como ACTIVE para funcionários importados
     status: 'ACTIVE',
     isActive: true,
@@ -248,7 +258,7 @@ function convertCSVToEmployeeData(csvData: any): any {
     birthDate: parseDate(csvData.birthDate),
     admissionDate: parseDate(csvData.admissionDate),
     
-    // Campos adicionais
+    // Campos básicos
     rg: csvData.rg || null,
     workplace: csvData.workplace || null,
     shift: csvData.shift || null,
@@ -257,12 +267,12 @@ function convertCSVToEmployeeData(csvData: any): any {
     educationLevel: csvData.educationLevel || null,
     
     // Campos específicos do projeto
-    centroCusto: csvData.centroCusto && csvData.centroCusto.trim() ? normalizeText(csvData.centroCusto) : null,
-    obra: csvData.obra && csvData.obra.trim() ? normalizeText(csvData.obra) : null,
-    mo: csvData.mo && csvData.mo.trim() ? normalizeText(csvData.mo) : null,
-    localAlojado: csvData.localAlojado && csvData.localAlojado.trim() ? normalizeText(csvData.localAlojado) : null,
-    pontoReferencia: csvData.pontoReferencia && csvData.pontoReferencia.trim() ? normalizeText(csvData.pontoReferencia) : null,
-    statusBancodoc: csvData.statusBancodoc && csvData.statusBancodoc.trim() ? normalizeText(csvData.statusBancodoc) : null,
+    centroCusto: csvData.centroCusto && String(csvData.centroCusto).trim() ? normalizeText(csvData.centroCusto) : null,
+    obra: csvData.obra && String(csvData.obra).trim() ? normalizeText(csvData.obra) : null,
+    mo: csvData.mo && String(csvData.mo).trim() ? normalizeText(csvData.mo) : null,
+    localAlojado: csvData.localAlojado && String(csvData.localAlojado).trim() ? normalizeText(csvData.localAlojado) : null,
+    pontoReferencia: csvData.pontoReferencia && String(csvData.pontoReferencia).trim() ? normalizeText(csvData.pontoReferencia) : null,
+    statusBancodoc: csvData.statusBancodoc && String(csvData.statusBancodoc).trim() ? normalizeText(csvData.statusBancodoc) : null,
     efetivoRDO: csvData.efetivoRDO === 'true' || csvData.efetivoRDO === true,
     
     // Campos numéricos
@@ -308,38 +318,71 @@ export async function POST(req: NextRequest) {
     
     for (const [index, csvData] of employees.entries()) {
       try {
-        // Aplicar correção automática de caracteres especiais
+        // Debug: Log dos dados recebidos
+        console.log(`\n🔍 Processando funcionário ${index + 1}:`);
+        console.log('Dados originais do CSV:', JSON.stringify(csvData, null, 2));
+        
+        // 1. Primeiro validar os dados originais do CSV
+        const originalErrors = await validateEmployeeFromCSV(csvData, index);
+        
+        console.log('Erros na validação original:', originalErrors);
+        
+        if (Object.keys(originalErrors).length > 0) {
+          console.log(`❌ Funcionário ${index + 1} falhou na validação original`);
+          results.push({ 
+            index: index + 1, 
+            name: csvData.name || 'Nome não informado',
+            registration: csvData.registration || 'Matrícula não informada',
+            status: 'error', 
+            errors: originalErrors 
+          });
+          failedEmployees.push({ index: index + 1, name: csvData.name, errors: originalErrors });
+          continue;
+        }
+        
+        // 2. Se passou na validação, aplicar correção automática
         const { correctedData, corrections } = autoCorrectEmployeeData(csvData);
+        
+        console.log('Dados após correção automática:', JSON.stringify(correctedData, null, 2));
+        console.log('Correções aplicadas:', corrections);
         
         // Log das correções aplicadas (para debug)
         if (corrections.length > 0) {
           console.log(`Correções aplicadas para funcionário ${index + 1}:`, corrections);
         }
         
-        // Validar dados do CSV (usando dados corrigidos)
-        const errors = await validateEmployeeFromCSV(correctedData, index);
+        // 3. Validar novamente os dados corrigidos (para garantir)
+        const correctedErrors = await validateEmployeeFromCSV(correctedData, index);
         
-        if (Object.keys(errors).length > 0) {
+        console.log('Erros na validação após correção:', correctedErrors);
+        
+        if (Object.keys(correctedErrors).length > 0) {
+          console.log(`❌ Funcionário ${index + 1} falhou na validação após correção`);
           results.push({ 
             index: index + 1, 
             name: correctedData.name || 'Nome não informado',
             registration: correctedData.registration || 'Matrícula não informada',
             status: 'error', 
-            errors 
+            errors: correctedErrors,
+            note: 'Erro após correção automática'
           });
-          failedEmployees.push({ index: index + 1, name: correctedData.name, errors });
+          failedEmployees.push({ index: index + 1, name: correctedData.name, errors: correctedErrors });
           continue;
         }
         
-        // Converter dados para formato do banco (usando dados corrigidos)
+        // 4. Converter dados para formato do banco (usando dados corrigidos)
         const employeeData = convertCSVToEmployeeData(correctedData);
         
-        // Criar funcionário no banco
+        console.log('Dados para inserção no banco:', JSON.stringify(employeeData, null, 2));
+        
+        // 5. Criar funcionário no banco
         const employee = await prisma.employee.create({ 
           data: employeeData 
         });
         
-      createdEmployees.push(employee);
+        console.log(`✅ Funcionário ${index + 1} criado com sucesso:`, employee.id);
+        
+        createdEmployees.push(employee);
         results.push({ 
           index: index + 1, 
           name: employee.name,
@@ -349,7 +392,7 @@ export async function POST(req: NextRequest) {
         });
         
       } catch (error: any) {
-        console.error(`Erro ao processar funcionário ${index + 1}:`, error);
+        console.error(`❌ Erro ao processar funcionário ${index + 1}:`, error);
         results.push({ 
           index: index + 1, 
           name: csvData.name || 'Nome não informado',

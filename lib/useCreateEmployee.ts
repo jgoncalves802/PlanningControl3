@@ -72,11 +72,33 @@ export function useUpdateEmployee() {
 
 export function useDeleteEmployee() {
   const queryClient = useQueryClient();
-  return useMutation<string, any, string>({
-    mutationFn: (id: string) => deleteEmployee(id),
-    onSuccess: () => {
+  return useMutation<any, any, string>({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/employees/${id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao deletar funcionário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data, employeeId) => {
       queryClient.invalidateQueries({ queryKey: ['employees'] });
       queryClient.invalidateQueries({ queryKey: ['functions'] });
+    },
+    onError: (error: any, employeeId) => {
+      console.error('Erro ao deletar funcionário:', error);
+      
+      // Se o erro for relacionado a transferências, mostrar mensagem específica
+      if (error.message && error.message.includes('transferências')) {
+        throw new Error(error.message);
+      }
+      
+      // Para outros tipos de erro
+      throw new Error(error.message || 'Erro ao deletar funcionário');
     },
   });
 }

@@ -160,11 +160,11 @@ export const getCurrentUser = (): User => {
   }
   
   // Usuário padrão para demonstração (remover em produção)
-  // Agora usando um ID que pode existir no banco
+  // Usando um ID que existe no banco de dados
   return {
-    id: 'cmdnjjo9h0000i840ik9znmjj', // ID do usuário admin que existe no banco
-    name: 'Administrador Demo',
-    email: 'admin@demo-company.com',
+    id: 'cmdnz5wl60000i840ohdkkoax', // ID do usuário que existe no banco
+    name: 'Gerente Teste',
+    email: 'gerente@teste.com',
     role: UserRole.TENANT_ADMIN,
     isActive: true,
     companyLogo: '/logo-demo-company.png' // Exemplo: caminho relativo ou base64
@@ -174,11 +174,11 @@ export const getCurrentUser = (): User => {
 // Versão para uso no servidor (APIs)
 export const getCurrentUserServer = (): User => {
   // Usuário padrão para demonstração (remover em produção)
-  // Agora usando um ID que pode existir no banco
+  // Usando um ID que existe no banco de dados
   return {
-    id: 'cmdnjjo9h0000i840ik9znmjj', // ID do usuário admin que existe no banco
-    name: 'Administrador Demo',
-    email: 'admin@demo-company.com',
+    id: 'cmdnz5wl60000i840ohdkkoax', // ID do usuário que existe no banco
+    name: 'Gerente Teste',
+    email: 'gerente@teste.com',
     role: UserRole.TENANT_ADMIN,
     isActive: true,
     companyLogo: '/logo-demo-company.png'

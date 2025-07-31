@@ -153,14 +153,32 @@ export async function DELETE(req: NextRequest, { params }) {
     
     // Verificar se o funcionário tem transferências associadas
     const transferRequests = await prisma.transferRequest.findMany({
-      where: { employeeId: id }
+      where: { employeeId: id },
+      include: {
+        fromContract: true,
+        toContract: true,
+        requestedBy: true,
+        approvedBy: true
+      }
     });
     
     if (transferRequests.length > 0) {
+      // Preparar detalhes das transferências para o usuário
+      const transferDetails = transferRequests.map(transfer => ({
+        id: transfer.id,
+        status: transfer.status,
+        requestedAt: transfer.requestedAt,
+        fromContract: transfer.fromContract?.name || 'N/A',
+        toContract: transfer.toContract?.name || 'N/A',
+        requestedBy: transfer.requestedBy?.name || 'N/A'
+      }));
+      
       return NextResponse.json({ 
         error: 'Não é possível deletar funcionário com transferências associadas',
         details: `Este funcionário possui ${transferRequests.length} transferência(s) associada(s). Para deletar o funcionário, primeiro remova ou transfira as solicitações de transferência.`,
-        transferRequestsCount: transferRequests.length
+        transferRequestsCount: transferRequests.length,
+        transferDetails: transferDetails,
+        actionRequired: 'REMOVE_TRANSFERS_FIRST'
       }, { 
         status: 400,
         headers: {
@@ -175,7 +193,14 @@ export async function DELETE(req: NextRequest, { params }) {
     // Emitir evento SSE
     // emitEmployeeEvent('deleted', deletedEmployee);
     
-    return NextResponse.json({ success: true }, {
+    return NextResponse.json({ 
+      success: true,
+      message: 'Funcionário deletado com sucesso',
+      deletedEmployee: {
+        id: deletedEmployee.id,
+        name: deletedEmployee.name
+      }
+    }, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       }
@@ -188,7 +213,8 @@ export async function DELETE(req: NextRequest, { params }) {
       return NextResponse.json({ 
         error: 'Não é possível deletar funcionário com registros associados',
         details: 'Este funcionário possui registros associados no sistema (transferências, registros de ponto, etc.). Para deletar o funcionário, primeiro remova os registros associados.',
-        constraint: error.meta?.constraint || 'unknown'
+        constraint: error.meta?.constraint || 'unknown',
+        actionRequired: 'REMOVE_ASSOCIATED_RECORDS'
       }, { 
         status: 400,
         headers: {

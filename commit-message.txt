@@ -1,50 +1,15 @@
-feat: implementar Supabase Auth mantendo interface existente
+fix: corrigir exibição de função nas transferências
 
-🔐 Implementação completa do Supabase Auth sem alterar a interface atual
+- Adicionar companyFunction na consulta da API de transferências
+- Implementar fallback no frontend para exibir companyFunction quando currentFunction não existe
+- Criar scripts de teste para verificar função do funcionário e API
+- Corrigir problema onde função aparecia como "N/A" mesmo com função atribuída
 
-## ✨ Novas Funcionalidades
-- Autenticação real com Supabase Auth
-- Sistema de login/registro integrado
-- Proteção de rotas com middleware
-- Contexto de autenticação global
-- Transformação automática de dados
+Arquivos modificados:
+- app/api/transfer-requests/route.ts: incluir companyFunction na consulta
+- app/dashboard/transfers/page.tsx: adicionar fallback para companyFunction
+- scripts/check-employee-function.js: novo script para verificar função
+- scripts/test-transfer-api.js: novo script para testar API
+- CORRECAO_FUNCAO_TRANSFERENCIAS.md: documentação da correção
 
-## 🏗️ Arquitetura
-- lib/supabase.ts - Cliente Supabase configurado
-- lib/hooks/useSupabaseAuth.ts - Hook de autenticação
-- lib/contexts/AuthContext.tsx - Contexto React global
-- components/auth/ProtectedRoute.tsx - Proteção de componentes
-- app/login/page.tsx - Interface de login atualizada
-- middleware.ts - Middleware de proteção de rotas
-
-## 🔧 Configuração
-- Script de setup automático (npm run supabase:setup)
-- Variáveis de ambiente configuradas
-- Documentação completa (SUPABASE_AUTH_SETUP.md)
-- Credenciais padrão: admin@demo-company.com / 123456
-
-## 🔄 Migração Suave
-- Mantém toda interface existente
-- Sistema de roles preservado
-- Permissões funcionando
-- Dados mock substituídos por auth real
-
-## 📋 Arquivos Modificados
-- package.json - Adicionado script de setup
-- app/dashboard/layout.tsx - Integrado AuthContext
-- components/providers/AppProviders.tsx - Adicionado AuthProvider
-
-## 🎯 Benefícios
-- Autenticação segura e escalável
-- Interface familiar mantida
-- Fácil migração de dados
-- Suporte a múltiplos provedores OAuth
-- Sistema de permissões robusto
-
-## 🚀 Próximos Passos
-- Configurar variáveis de ambiente
-- Executar migrações do Prisma
-- Rodar script de setup
-- Testar autenticação completa
-
-Closes: #auth-implementation 
+Resolve problema onde função "ADMINISTRATIVO DE OBRAS" não aparecia na tabela de transferências. 

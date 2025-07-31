@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-import { emitTransferRequestEvent } from './events/route';
-
 // Fallback para o enum caso não esteja disponível
 const TRANSFER_STATUS = {
   PENDING: 'PENDING',
@@ -46,7 +44,16 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { scheduledDate: 'desc' },
         include: {
-          employee: { select: { id: true, name: true, registration: true, cpf: true, currentFunction: { select: { name: true } } } },
+          employee: { 
+            select: { 
+              id: true, 
+              name: true, 
+              registration: true, 
+              cpf: true, 
+              currentFunction: { select: { name: true } },
+              companyFunction: { select: { name: true } }
+            } 
+          },
           requestedBy: { select: { id: true, name: true, email: true } },
           approvedBy: { select: { id: true, name: true, email: true } },
           responsibleBy: { select: { id: true, name: true, email: true } },
@@ -58,15 +65,8 @@ export async function GET(request: NextRequest) {
       prisma.transferRequest.count({ where }),
     ]);
 
-    // Adicionar dados dos contratos às transferências (já incluídos no include)
-    const transferRequestsWithDetails = transferRequests.map(transfer => ({
-      ...transfer,
-      fromContract: transfer.fromContract,
-      toContract: transfer.toContract
-    }));
-
     return NextResponse.json({
-      transferRequests: transferRequestsWithDetails,
+      transferRequests,
       pagination: {
         page,
         limit,
@@ -136,6 +136,7 @@ export async function POST(request: NextRequest) {
       }
       
       requestedById = requestingUser.id;
+      console.log(`🔍 Usando usuário padrão: ${requestingUser.name} (${requestingUser.id})`);
     } else {
       // Verificar se o usuário especificado existe
       requestingUser = await prisma.user.findUnique({
@@ -144,11 +145,25 @@ export async function POST(request: NextRequest) {
       });
       
       if (!requestingUser) {
+        console.error(`❌ Usuário não encontrado: ${requestedById}`);
+        
+        // Listar usuários disponíveis para debug
+        const availableUsers = await prisma.user.findMany({
+          select: { id: true, name: true, email: true },
+          take: 5
+        });
+        
         return NextResponse.json({ 
           error: 'Usuário solicitante não encontrado',
-          details: `Usuário com ID ${requestedById} não foi encontrado no sistema.`
+          details: `Usuário com ID "${requestedById}" não foi encontrado no sistema.`,
+          debug: {
+            requestedId: requestedById,
+            availableUsers: availableUsers.map(u => ({ id: u.id, name: u.name, email: u.email }))
+          }
         }, { status: 404 });
       }
+      
+      console.log(`✅ Usuário encontrado: ${requestingUser.name} (${requestingUser.id})`);
     }
 
     // Criar a transferência

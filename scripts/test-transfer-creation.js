@@ -1,208 +1,137 @@
-const fs = require('fs')
-const path = require('path')
-
-// Carregar variáveis de ambiente do .env.local
-const envPath = path.join(__dirname, '..', '.env.local')
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf8')
-  const envLines = envContent.split('\n')
-  
-  envLines.forEach(line => {
-    const [key, ...valueParts] = line.split('=')
-    if (key && valueParts.length > 0) {
-      const value = valueParts.join('=').trim()
-      if (value && !key.startsWith('#')) {
-        process.env[key.trim()] = value.replace(/^["']|["']$/g, '')
-      }
-    }
-  })
-}
-
-const { PrismaClient } = require('@prisma/client')
-
-const prisma = new PrismaClient()
+// Script para testar a criação de transferências
+const { PrismaClient } = require('@prisma/client');
 
 async function testTransferCreation() {
+  const prisma = new PrismaClient();
+  
   try {
-    console.log('🧪 Testando Criação de Transferências com Usuário Correto')
-    console.log('========================================================')
-    console.log('')
-
+    console.log('🔍 Testando criação de transferência...');
+    
     // 1. Verificar usuários disponíveis
-    console.log('👥 Verificando usuários disponíveis...')
     const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        name: true,
-        email: true
-      }
-    })
-
-    if (users.length === 0) {
-      console.error('❌ Nenhum usuário encontrado no banco de dados')
-      return
-    }
-
-    console.log(`✅ ${users.length} usuário(s) encontrado(s):`)
+      select: { id: true, name: true, email: true },
+      take: 3
+    });
+    
+    console.log('📊 Usuários disponíveis:');
     users.forEach((user, index) => {
-      console.log(`   ${index + 1}. ${user.name} (${user.email}) - ID: ${user.id}`)
-    })
-    console.log('')
-
+      console.log(`${index + 1}. ID: ${user.id}, Nome: ${user.name}, Email: ${user.email}`);
+    });
+    
     // 2. Verificar funcionários disponíveis
-    console.log('👷 Verificando funcionários disponíveis...')
     const employees = await prisma.employee.findMany({
+      select: { id: true, name: true, cpf: true, currentContractId: true },
       where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        cpf: true,
-        currentFunctionId: true,
-        companyFunctionId: true
-      },
-      take: 5
-    })
-
-    if (employees.length === 0) {
-      console.error('❌ Nenhum funcionário ativo encontrado')
-      return
-    }
-
-    console.log(`✅ ${employees.length} funcionário(s) encontrado(s):`)
-    employees.forEach((employee, index) => {
-      console.log(`   ${index + 1}. ${employee.name} (${employee.cpf})`)
-      console.log(`      Função atual: ${employee.currentFunctionId || 'N/A'}`)
-      console.log(`      Função empresa: ${employee.companyFunctionId || 'N/A'}`)
-    })
-    console.log('')
-
+      take: 3
+    });
+    
+    console.log('\n👥 Funcionários disponíveis:');
+    employees.forEach((emp, index) => {
+      console.log(`${index + 1}. ID: ${emp.id}, Nome: ${emp.name}, CPF: ${emp.cpf}, Contrato: ${emp.currentContractId}`);
+    });
+    
     // 3. Verificar contratos disponíveis
-    console.log('📋 Verificando contratos disponíveis...')
     const contracts = await prisma.contract.findMany({
+      select: { id: true, name: true, code: true },
       where: { isActive: true },
-      select: {
-        id: true,
-        name: true,
-        code: true
-      },
-      take: 5
-    })
-
-    if (contracts.length === 0) {
-      console.error('❌ Nenhum contrato ativo encontrado')
-      return
-    }
-
-    console.log(`✅ ${contracts.length} contrato(s) encontrado(s):`)
+      take: 3
+    });
+    
+    console.log('\n📋 Contratos disponíveis:');
     contracts.forEach((contract, index) => {
-      console.log(`   ${index + 1}. ${contract.name} (${contract.code}) - ID: ${contract.id}`)
-    })
-    console.log('')
-
-    // 4. Testar criação de transferência
-    console.log('🔄 Testando criação de transferência...')
+      console.log(`${index + 1}. ID: ${contract.id}, Nome: ${contract.name}, Código: ${contract.code}`);
+    });
     
-    const testUser = users[0] // Usar o primeiro usuário
-    const testEmployee = employees[0] // Usar o primeiro funcionário
-    const testContract = contracts[0] // Usar o primeiro contrato
-    
-    // Verificar se o funcionário tem função
-    if (!testEmployee.currentFunctionId && !testEmployee.companyFunctionId) {
-      console.log('⚠️  Funcionário não tem função definida, pulando teste')
-      return
+    if (users.length === 0) {
+      console.log('❌ Nenhum usuário encontrado. Criando usuário padrão...');
+      const newUser = await prisma.user.create({
+        data: {
+          clerkId: 'test-user',
+          email: 'test@example.com',
+          name: 'Usuário Teste',
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      users.push(newUser);
     }
-
-    const transferData = {
-      employeeId: testEmployee.id,
-      toContractId: testContract.id,
-      toFunctionId: testEmployee.currentFunctionId || testEmployee.companyFunctionId,
+    
+    if (employees.length === 0) {
+      console.log('❌ Nenhum funcionário encontrado. Criando funcionário padrão...');
+      const newEmployee = await prisma.employee.create({
+        data: {
+          name: 'Funcionário Teste',
+          cpf: '12345678901',
+          registration: 'TEST001',
+          company: 'SARTORI SERVIÇOS',
+          status: 'ACTIVE',
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      employees.push(newEmployee);
+    }
+    
+    if (contracts.length === 0) {
+      console.log('❌ Nenhum contrato encontrado. Criando contrato padrão...');
+      const newContract = await prisma.contract.create({
+        data: {
+          name: 'Contrato Teste',
+          code: 'TEST',
+          workdayHours: 8,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+      contracts.push(newContract);
+    }
+    
+    // 4. Testar criação de transferência via API
+    console.log('\n🧪 Testando criação de transferência via API...');
+    
+    const testData = {
+      employeeId: employees[0].id,
+      toContractId: contracts[0].id,
       scheduledDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 dias no futuro
-      requestedById: testUser.id
-    }
-
-    console.log('📤 Dados da transferência:')
-    console.log(`   Funcionário: ${testEmployee.name}`)
-    console.log(`   Contrato destino: ${testContract.name}`)
-    console.log(`   Função: ${transferData.toFunctionId}`)
-    console.log(`   Data agendada: ${transferData.scheduledDate}`)
-    console.log(`   Solicitado por: ${testUser.name}`)
-    console.log('')
-
-    // Simular chamada da API
-    const transferRequest = await prisma.transferRequest.create({
-      data: {
-        employeeId: transferData.employeeId,
-        toContractId: transferData.toContractId,
-        toFunctionId: transferData.toFunctionId,
-        requestedById: transferData.requestedById,
-        scheduledDate: new Date(transferData.scheduledDate),
-        status: 'PENDING',
+      requestedById: users[0].id
+    };
+    
+    console.log('📤 Dados de teste:', testData);
+    
+    const response = await fetch('http://localhost:3000/api/transfer-requests', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
       },
-      include: {
-        employee: { select: { id: true, name: true, registration: true, cpf: true } },
-        requestedBy: { select: { id: true, name: true, email: true } },
-      },
-    })
-
-    console.log('✅ Transferência criada com sucesso!')
-    console.log(`   ID: ${transferRequest.id}`)
-    console.log(`   Status: ${transferRequest.status}`)
-    console.log(`   Solicitado por: ${transferRequest.requestedBy.name} (${transferRequest.requestedBy.email})`)
-    console.log('')
-
-    // 5. Verificar transferência criada
-    console.log('🔍 Verificando transferência criada...')
-    const createdTransfer = await prisma.transferRequest.findUnique({
-      where: { id: transferRequest.id },
-      include: {
-        employee: { select: { id: true, name: true, registration: true, cpf: true } },
-        requestedBy: { select: { id: true, name: true, email: true } },
-      },
-    })
-
-    if (createdTransfer) {
-      console.log('✅ Transferência encontrada no banco:')
-      console.log(`   ID: ${createdTransfer.id}`)
-      console.log(`   Funcionário: ${createdTransfer.employee.name}`)
-      console.log(`   Contrato: ${createdTransfer.toContractId}`)
-      console.log(`   Função: ${createdTransfer.toFunctionId}`)
-      console.log(`   Status: ${createdTransfer.status}`)
-      console.log(`   Solicitado por: ${createdTransfer.requestedBy.name}`)
-      console.log(`   Data agendada: ${createdTransfer.scheduledDate.toISOString()}`)
+      body: JSON.stringify(testData)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      console.log('✅ Transferência criada com sucesso!');
+      console.log('📋 Resultado:', result);
     } else {
-      console.error('❌ Transferência não encontrada no banco')
+      console.log('❌ Erro ao criar transferência:');
+      console.log('Status:', response.status);
+      console.log('Erro:', result);
     }
-
-    // 6. Limpar dados de teste
-    console.log('')
-    console.log('🧹 Limpando dados de teste...')
-    await prisma.transferRequest.delete({
-      where: { id: transferRequest.id }
-    })
-    console.log('✅ Dados de teste removidos')
-
-    console.log('')
-    console.log('🎉 Teste de criação de transferência concluído com sucesso!')
-    console.log('')
-    console.log('📋 Resumo:')
-    console.log('   ✅ Usuários verificados')
-    console.log('   ✅ Funcionários verificados')
-    console.log('   ✅ Contratos verificados')
-    console.log('   ✅ Transferência criada')
-    console.log('   ✅ Dados validados')
-    console.log('   ✅ Limpeza realizada')
-
+    
   } catch (error) {
-    console.error('❌ Erro durante o teste:', error)
-    console.log('')
-    console.log('💡 Verifique:')
-    console.log('   1. Se o banco de dados está acessível')
-    console.log('   2. Se existem usuários, funcionários e contratos')
-    console.log('   3. Se as permissões estão corretas')
+    console.error('❌ Erro durante o teste:', error);
   } finally {
-    await prisma.$disconnect()
+    await prisma.$disconnect();
   }
 }
 
-// Executar teste
-testTransferCreation() 
+// Executar o teste
+testTransferCreation()
+  .then(() => {
+    console.log('\n🎯 Teste concluído!');
+  })
+  .catch(error => {
+    console.error('❌ Falha no teste:', error);
+    process.exit(1);
+  }); 

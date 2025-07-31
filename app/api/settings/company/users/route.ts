@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
       department: data.department,
       position: data.position,
       isActive: true,
+      lastLogin: new Date().toISOString(),
       createdAt: new Date().toISOString(),
       avatar: ''
     };

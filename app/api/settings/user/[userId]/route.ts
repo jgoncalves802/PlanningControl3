@@ -122,7 +122,7 @@ export async function GET(
         autoRefresh: true,
         refreshInterval: 30,
         compactMode: false,
-        showAnimations: true,
+        showAnimations: false,
         colorScheme: 'blue',
       },
       notifications: userSettings.notificationSettings || {

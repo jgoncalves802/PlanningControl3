@@ -390,12 +390,12 @@ export function autoCorrectEmployeeData(data: any): { correctedData: any; correc
   }
 
   // Validar e corrigir telefone
-  if (correctedData.phone && correctedData.phone.trim() !== '') {
+  if (correctedData.phone && String(correctedData.phone).trim() !== '') {
     const originalPhone = correctedData.phone;
-    const cleanPhone = correctedData.phone.replace(/\D/g, '');
+    const cleanPhone = String(correctedData.phone).replace(/\D/g, '');
     
     if (cleanPhone.length >= 10 && cleanPhone.length <= 11) {
-      if (cleanPhone !== originalPhone) {
+      if (cleanPhone !== String(originalPhone)) {
         corrections.push(`Telefone: "${originalPhone}" → "${cleanPhone}" (formatado)`);
         correctedData.phone = cleanPhone;
       }
@@ -507,10 +507,81 @@ export function processCSVWithAutoCorrection(csvText: string): {
     // Mapear campos normalizados para os nomes esperados
     const normalizedRow: any = {};
     Object.keys(row).forEach(key => {
-      if (key === 'nomedafuncao' || key === 'nomedafuno' || key === 'name') {
+      // Mapeamento completo de todos os campos necessários
+      if (key === 'nomedafuncao' || key === 'nomedafuno' || key === 'name' || key === 'nome') {
         normalizedRow.name = row[key];
       } else if (key === 'tipodemaodeobra' || key === 'tipodemodeobra' || key === 'labortype' || key === 'laborType') {
         normalizedRow.laborType = row[key];
+      } else if (key === 'cpf') {
+        normalizedRow.cpf = row[key];
+      } else if (key === 'matricula' || key === 'registration') {
+        normalizedRow.registration = row[key];
+      } else if (key === 'empresa' || key === 'company') {
+        normalizedRow.company = row[key];
+      } else if (key === 'telefone' || key === 'phone') {
+        normalizedRow.phone = row[key];
+      } else if (key === 'datanasc' || key === 'birthdate' || key === 'birthDate') {
+        normalizedRow.birthDate = row[key];
+      } else if (key === 'genero' || key === 'gender') {
+        normalizedRow.gender = row[key];
+      } else if (key === 'estadocivil' || key === 'maritalstatus' || key === 'maritalStatus') {
+        normalizedRow.maritalStatus = row[key];
+      } else if (key === 'pis') {
+        normalizedRow.pis = row[key];
+      } else if (key === 'ctps') {
+        normalizedRow.ctps = row[key];
+      } else if (key === 'ctpsseries' || key === 'ctpsSeries') {
+        normalizedRow.ctpsSeries = row[key];
+      } else if (key === 'ctpsuf' || key === 'ctpsUf') {
+        normalizedRow.ctpsUf = row[key];
+      } else if (key === 'nomedamae' || key === 'mothername' || key === 'motherName') {
+        normalizedRow.motherName = row[key];
+      } else if (key === 'dataadmissao' || key === 'admissiondate' || key === 'admissionDate') {
+        normalizedRow.admissionDate = row[key];
+      } else if (key === 'status') {
+        normalizedRow.status = row[key];
+      } else if (key === 'rg') {
+        normalizedRow.rg = row[key];
+      } else if (key === 'endereco' || key === 'address') {
+        normalizedRow.address = row[key];
+      } else if (key === 'cidade' || key === 'city') {
+        normalizedRow.city = row[key];
+      } else if (key === 'estado' || key === 'state') {
+        normalizedRow.state = row[key];
+      } else if (key === 'cep') {
+        normalizedRow.cep = row[key];
+      } else if (key === 'email') {
+        normalizedRow.email = row[key];
+      } else if (key === 'cargo' || key === 'role') {
+        normalizedRow.role = row[key];
+      } else if (key === 'categoria' || key === 'category') {
+        normalizedRow.category = row[key];
+      } else if (key === 'centrocusto' || key === 'centroCusto') {
+        normalizedRow.centroCusto = row[key];
+      } else if (key === 'obra') {
+        normalizedRow.obra = row[key];
+      } else if (key === 'mo') {
+        normalizedRow.mo = row[key];
+      } else if (key === 'localalojado' || key === 'localAlojado') {
+        normalizedRow.localAlojado = row[key];
+      } else if (key === 'pontoreferencia' || key === 'pontoReferencia') {
+        normalizedRow.pontoReferencia = row[key];
+      } else if (key === 'statusbancodoc' || key === 'statusBancodoc') {
+        normalizedRow.statusBancodoc = row[key];
+      } else if (key === 'efetivordo' || key === 'efetivoRDO') {
+        normalizedRow.efetivoRDO = row[key];
+      } else if (key === 'horasnormaistrabalhadas' || key === 'horasNormaisTrabalhadas') {
+        normalizedRow.horasNormaisTrabalhadas = row[key];
+      } else if (key === 'horasextrastrabalhadas' || key === 'horasExtrasTrabalhadas') {
+        normalizedRow.horasExtrasTrabalhadas = row[key];
+      } else if (key === 'horasnoturnastrabalhadas' || key === 'horasNoturnasTrabalhadas') {
+        normalizedRow.horasNoturnasTrabalhadas = row[key];
+      } else if (key === 'primeiraexperiencia' || key === 'primeiraExperiencia') {
+        normalizedRow.primeiraExperiencia = row[key];
+      } else if (key === 'segundaexperiencia' || key === 'segundaExperiencia') {
+        normalizedRow.segundaExperiencia = row[key];
+      } else if (key === 'previsaoobra' || key === 'previsaoObra') {
+        normalizedRow.previsaoObra = row[key];
       }
     });
     
@@ -806,14 +877,86 @@ export function parseCSVWithEncoding(csvText: string): any[] {
     // Mapear campos normalizados para os nomes esperados
     const normalizedRow: any = {};
     Object.keys(row).forEach(key => {
-      if (key === 'nomedafuncao' || key === 'name') {
+      // Mapeamento completo de todos os campos necessários
+      if (key === 'nomedafuncao' || key === 'name' || key === 'nome') {
         normalizedRow.name = row[key];
-      } else if (key === 'tipodemaodeobra' || key === 'labortype' || key === 'tipodemaodeobra') {
+      } else if (key === 'tipodemaodeobra' || key === 'labortype' || key === 'laborType') {
         normalizedRow.laborType = row[key];
+      } else if (key === 'cpf') {
+        normalizedRow.cpf = row[key];
+      } else if (key === 'matricula' || key === 'registration') {
+        normalizedRow.registration = row[key];
+      } else if (key === 'empresa' || key === 'company') {
+        normalizedRow.company = row[key];
+      } else if (key === 'telefone' || key === 'phone') {
+        normalizedRow.phone = row[key];
+      } else if (key === 'datanasc' || key === 'birthdate' || key === 'birthDate') {
+        normalizedRow.birthDate = row[key];
+      } else if (key === 'genero' || key === 'gender') {
+        normalizedRow.gender = row[key];
+      } else if (key === 'estadocivil' || key === 'maritalstatus' || key === 'maritalStatus') {
+        normalizedRow.maritalStatus = row[key];
+      } else if (key === 'pis') {
+        normalizedRow.pis = row[key];
+      } else if (key === 'ctps') {
+        normalizedRow.ctps = row[key];
+      } else if (key === 'ctpsseries' || key === 'ctpsSeries') {
+        normalizedRow.ctpsSeries = row[key];
+      } else if (key === 'ctpsuf' || key === 'ctpsUf') {
+        normalizedRow.ctpsUf = row[key];
+      } else if (key === 'nomedamae' || key === 'mothername' || key === 'motherName') {
+        normalizedRow.motherName = row[key];
+      } else if (key === 'dataadmissao' || key === 'admissiondate' || key === 'admissionDate') {
+        normalizedRow.admissionDate = row[key];
+      } else if (key === 'status') {
+        normalizedRow.status = row[key];
+      } else if (key === 'rg') {
+        normalizedRow.rg = row[key];
+      } else if (key === 'endereco' || key === 'address') {
+        normalizedRow.address = row[key];
+      } else if (key === 'cidade' || key === 'city') {
+        normalizedRow.city = row[key];
+      } else if (key === 'estado' || key === 'state') {
+        normalizedRow.state = row[key];
+      } else if (key === 'cep') {
+        normalizedRow.cep = row[key];
+      } else if (key === 'email') {
+        normalizedRow.email = row[key];
+      } else if (key === 'cargo' || key === 'role') {
+        normalizedRow.role = row[key];
+      } else if (key === 'categoria' || key === 'category') {
+        normalizedRow.category = row[key];
+      } else if (key === 'centrocusto' || key === 'centroCusto') {
+        normalizedRow.centroCusto = row[key];
+      } else if (key === 'obra') {
+        normalizedRow.obra = row[key];
+      } else if (key === 'mo') {
+        normalizedRow.mo = row[key];
+      } else if (key === 'localalojado' || key === 'localAlojado') {
+        normalizedRow.localAlojado = row[key];
+      } else if (key === 'pontoreferencia' || key === 'pontoReferencia') {
+        normalizedRow.pontoReferencia = row[key];
+      } else if (key === 'statusbancodoc' || key === 'statusBancodoc') {
+        normalizedRow.statusBancodoc = row[key];
+      } else if (key === 'efetivordo' || key === 'efetivoRDO') {
+        normalizedRow.efetivoRDO = row[key];
+      } else if (key === 'horasnormaistrabalhadas' || key === 'horasNormaisTrabalhadas') {
+        normalizedRow.horasNormaisTrabalhadas = row[key];
+      } else if (key === 'horasextrastrabalhadas' || key === 'horasExtrasTrabalhadas') {
+        normalizedRow.horasExtrasTrabalhadas = row[key];
+      } else if (key === 'horasnoturnastrabalhadas' || key === 'horasNoturnasTrabalhadas') {
+        normalizedRow.horasNoturnasTrabalhadas = row[key];
+      } else if (key === 'primeiraexperiencia' || key === 'primeiraExperiencia') {
+        normalizedRow.primeiraExperiencia = row[key];
+      } else if (key === 'segundaexperiencia' || key === 'segundaExperiencia') {
+        normalizedRow.segundaExperiencia = row[key];
+      } else if (key === 'previsaoobra' || key === 'previsaoObra') {
+        normalizedRow.previsaoObra = row[key];
       }
     });
     
-    if (normalizedRow.name) {
+    // Adicionar todos os registros que tenham pelo menos nome ou CPF
+    if (normalizedRow.name || normalizedRow.cpf) {
       data.push(normalizedRow);
     }
   }

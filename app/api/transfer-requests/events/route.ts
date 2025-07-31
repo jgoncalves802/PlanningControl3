@@ -42,6 +42,9 @@ export async function GET(req: NextRequest) {
 }
 
 // Função utilitária para ser chamada no backend ao criar/atualizar/excluir transferência
-export function emitTransferRequestEvent(type: 'created' | 'updated' | 'deleted', transferRequest: any) {
+function emitTransferRequestEvent(type: 'created' | 'updated' | 'deleted', transferRequest: any) {
   sendEvent({ type, transferRequest }, 'transfer-request-update');
-} 
+}
+
+// Exportar apenas para uso interno
+export { emitTransferRequestEvent }; 

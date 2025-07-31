@@ -365,11 +365,27 @@ export default function EmployeesPage() {
       deleteEmployeeMutation.mutate(
         employeeId,
         {
-          onSuccess: () => {
+          onSuccess: (data) => {
             toast.success('Funcionário excluído com sucesso!');
+            refetch(); // Forçar atualização da lista
           },
-          onError: () => {
-            toast.error('Erro ao excluir funcionário.');
+          onError: (error: any) => {
+            console.error('Erro ao excluir funcionário:', error);
+            
+            // Verificar se é erro de transferências associadas
+            if (error.message && error.message.includes('transferências')) {
+              toast.error(
+                'Não é possível excluir funcionário com transferências associadas. Remova as transferências primeiro.',
+                { duration: 5000 }
+              );
+            } else if (error.message && error.message.includes('registros associados')) {
+              toast.error(
+                'Não é possível excluir funcionário com registros associados. Remova os registros primeiro.',
+                { duration: 5000 }
+              );
+            } else {
+              toast.error(error.message || 'Erro ao excluir funcionário.');
+            }
           },
         }
       );

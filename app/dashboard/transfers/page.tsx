@@ -516,7 +516,7 @@ export default function TransfersPage() {
                             <div className="font-medium text-gray-900 dark:text-slate-100">{transfer.employee?.name}</div>
                             <div className="text-sm text-gray-500 dark:text-slate-400">CPF: {transfer.employee?.cpf}</div>
                             <div className="text-sm text-gray-500 dark:text-slate-400">Matrícula: {transfer.employee?.registration}</div>
-                            <div className="text-sm text-gray-500 dark:text-slate-400">Função: {transfer.employee?.currentFunction?.name || 'N/A'}</div>
+                            <div className="text-sm text-gray-500 dark:text-slate-400">Função: {transfer.employee?.currentFunction?.name || transfer.employee?.companyFunction?.name || 'N/A'}</div>
                           </div>
                         </div>
                       </td>
