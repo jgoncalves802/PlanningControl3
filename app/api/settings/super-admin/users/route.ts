@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { supabaseAdmin } from '@/lib/supabase';
+import { PrismaClient } from '@prisma/client';
 
-// Função para validar UUID
-function isValidUUID(uuid: string): boolean {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(uuid);
-}
+const prisma = new PrismaClient();
 
-// GET /api/settings/super-admin/users - Listar todos os usuários
+// GET - Listar todos os usuários
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const search = searchParams.get('search') || '';
-    const role = searchParams.get('role');
-    const status = searchParams.get('status');
-    const companyId = searchParams.get('companyId');
+    const role = searchParams.get('role') || '';
+    const status = searchParams.get('status') || '';
+
     const skip = (page - 1) * limit;
 
     // Construir filtros
@@ -26,238 +21,131 @@ export async function GET(request: NextRequest) {
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } }
       ];
     }
 
-    if (role && role !== 'all') {
-      // Por enquanto, todos são USER, mas podemos expandir isso
-      // where.role = role;
-    }
-
-    if (status && status !== 'all') {
-      // Por enquanto, todos são ativos, mas podemos expandir isso
-      // where.isActive = status === 'active';
-    }
-
-    if (companyId && companyId !== 'all') {
-      // where.companyId = companyId;
-    }
-
     // Buscar usuários
-    const [total, users] = await Promise.all([
-      prisma.user.count({ where }),
-      prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          clerkId: true,
-          createdAt: true,
-          updatedAt: true,
-          auditLogs: {
-            select: {
-              id: true,
-              action: true,
-              createdAt: true
-            },
-            orderBy: { createdAt: 'desc' },
-            take: 1
+    const users = await prisma.user.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        clerkId: true,
+        createdAt: true,
+        updatedAt: true,
+        contractResponsibilities: {
+          select: {
+            contract: {
+              select: {
+                id: true,
+                name: true,
+                code: true
+              }
+            }
+          }
+        },
+        _count: {
+          select: {
+            auditLogs: true,
+            transferRequestsMade: true,
+            transferRequestsApproved: true
           }
         }
-      })
-    ]);
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip,
+      take: limit
+    });
 
-    // Formatar dados para resposta
-    const formattedUsers = users.map(user => ({
-      id: user.id,
-      name: user.name || 'Nome não informado',
-      email: user.email,
-      role: 'USER' as const, // Por enquanto, todos são USER
-      companyId: null,
-      companyName: null,
-      isActive: true, // Por enquanto, todos ativos
-      createdAt: user.createdAt.toISOString(),
-      lastLogin: user.auditLogs[0]?.createdAt.toISOString() || null,
-      authId: user.clerkId && isValidUUID(user.clerkId) ? user.clerkId : null
-    }));
+    // Contar total
+    const total = await prisma.user.count({ where });
+
+    // Estatísticas
+    const stats = await prisma.user.aggregate({
+      _count: {
+        id: true
+      }
+    });
 
     return NextResponse.json({
-      users: formattedUsers,
+      users,
       pagination: {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / limit)
       },
+      stats: {
+        total: stats._count.id
+      }
     });
-  } catch (error: any) {
-    console.error('Erro ao buscar usuários:', error);
+
+  } catch (error) {
+    console.error('❌ Erro ao listar usuários:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor', details: error.message },
+      { error: 'Erro interno do servidor' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/settings/super-admin/users - Criar novo usuário
+// POST - Criar novo usuário
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json();
+    const body = await request.json();
+    const { name, email, clerkId } = body;
 
-    // Validação dos campos obrigatórios
-    const requiredFields = ['name', 'email', 'password'];
-    const errors: Record<string, string> = {};
-    
-    requiredFields.forEach(field => {
-      if (!data[field]) {
-        errors[field] = 'Campo obrigatório';
-      }
-    });
-
-    // Validação de email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (data.email && !emailRegex.test(data.email)) {
-      errors.email = 'Email inválido';
+    // Validações
+    if (!name || !email) {
+      return NextResponse.json(
+        { error: 'Nome e email são obrigatórios' },
+        { status: 400 }
+      );
     }
 
-    // Validação de senha
-    if (data.password && data.password.length < 6) {
-      errors.password = 'A senha deve ter pelo menos 6 caracteres';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return NextResponse.json({ errors }, { status: 400 });
-    }
-
-    // Verificar se o email já existe no banco
+    // Verificar se email já existe
     const existingUser = await prisma.user.findUnique({
-      where: { email: data.email }
+      where: { email }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Email já está em uso' },
+        { error: 'Email já cadastrado no sistema' },
         { status: 409 }
       );
     }
 
-    // Verificar se o email já existe no Supabase Auth
-    let existingAuthUser: any = null;
-    try {
-      const { data: authUsers, error: authError } = await supabaseAdmin.auth.admin.listUsers();
-      
-      if (authError) {
-        console.error('Erro ao verificar usuários no Supabase Auth:', authError);
-        // Continuar mesmo com erro, apenas logar
-      } else {
-        existingAuthUser = authUsers.users.find((user: any) => user.email === data.email);
+    // Verificar se Clerk ID já existe (se fornecido)
+    if (clerkId) {
+      const existingClerkId = await prisma.user.findUnique({
+        where: { clerkId }
+      });
+
+      if (existingClerkId) {
+        return NextResponse.json(
+          { error: 'Clerk ID já cadastrado no sistema' },
+          { status: 409 }
+        );
       }
-    } catch (error) {
-      console.error('Erro ao listar usuários do Supabase Auth:', error);
-      // Continuar mesmo com erro
     }
 
-    if (existingAuthUser && existingAuthUser.email) {
-      return NextResponse.json(
-        { error: 'Email já está em uso no sistema de autenticação' },
-        { status: 409 }
-      );
+    // Criar usuário
+    const createData: any = {
+      name,
+      email
+    };
+    
+    // Só adicionar clerkId se ele existir e não for vazio
+    if (clerkId && clerkId.trim() !== '') {
+      createData.clerkId = clerkId;
     }
 
-    // 1. Criar usuário no Supabase Auth
-    let authData = null;
-    let authError = null;
-
-    try {
-      const { data: authResult, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
-        email: data.email,
-        password: data.password,
-        email_confirm: true, // Confirmar email automaticamente
-        user_metadata: {
-          name: data.name,
-          role: data.role || 'USER',
-          companyId: data.companyId || null
-        }
-      });
-
-      if (createAuthError) {
-        console.error('Erro ao criar usuário no Supabase Auth:', createAuthError);
-        authError = createAuthError;
-      } else if (authResult.user) {
-        authData = authResult;
-      }
-    } catch (error) {
-      console.error('Erro ao tentar criar usuário no Supabase Auth:', error);
-      authError = error;
-    }
-
-    // Se falhou no Supabase Auth, criar apenas no banco com ID temporário
-    if (authError || !authData) {
-      console.log('Criando usuário apenas no banco de dados (falha no Supabase Auth)');
-      
-      const tempClerkId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const newUser = await prisma.user.create({
-        data: {
-          name: data.name,
-          email: data.email,
-          clerkId: tempClerkId,
-        },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          clerkId: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      });
-
-      // Criar log de auditoria
-      await prisma.auditLog.create({
-        data: {
-          userId: newUser.id,
-          action: 'USER_CREATED_DB_ONLY',
-          entityId: newUser.id,
-          details: {
-            createdBy: 'super_admin',
-            userEmail: data.email,
-            userRole: data.role || 'USER',
-            authError: authError?.message || 'Erro desconhecido'
-          }
-        }
-      });
-
-      // Formatar resposta
-      const formattedUser = {
-        id: newUser.id,
-        name: newUser.name || 'Nome não informado',
-        email: newUser.email,
-        role: data.role || 'USER',
-        companyId: data.companyId || null,
-        companyName: null,
-        isActive: true,
-        createdAt: newUser.createdAt.toISOString(),
-        lastLogin: null,
-        authId: null,
-        warning: 'Usuário criado apenas no banco de dados. Falha na criação no Supabase Auth.'
-      };
-
-      return NextResponse.json(formattedUser, { status: 201 });
-    }
-
-    // 2. Criar usuário no banco de dados com ID do Supabase Auth
     const newUser = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        clerkId: authData.user.id, // Usar o ID do Supabase Auth
-      },
+      data: createData,
       select: {
         id: true,
         name: true,
@@ -268,40 +156,177 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // 3. Criar log de auditoria
-    await prisma.auditLog.create({
-      data: {
-        userId: newUser.id,
-        action: 'USER_CREATED',
-        entityId: newUser.id,
-        details: {
-          createdBy: 'super_admin',
-          userEmail: data.email,
-          userRole: data.role || 'USER',
-          authId: authData.user.id
-        }
+    return NextResponse.json({
+      message: 'Usuário criado com sucesso',
+      user: newUser
+    }, { status: 201 });
+
+  } catch (error) {
+    console.error('❌ Erro ao criar usuário:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT - Atualizar usuário
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, name, email, clerkId } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID do usuário é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar se usuário existe
+    const existingUser = await prisma.user.findUnique({
+      where: { id }
+    });
+
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar se email já existe (se foi alterado)
+    if (email && email !== existingUser.email) {
+      const emailExists = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (emailExists) {
+        return NextResponse.json(
+          { error: 'Email já cadastrado no sistema' },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Verificar se Clerk ID já existe (se foi alterado e fornecido)
+    if (clerkId && clerkId !== existingUser.clerkId) {
+      const clerkIdExists = await prisma.user.findUnique({
+        where: { clerkId }
+      });
+
+      if (clerkIdExists) {
+        return NextResponse.json(
+          { error: 'Clerk ID já cadastrado no sistema' },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Atualizar usuário
+    const updateData: any = {};
+    
+    // Só adicionar campos que foram fornecidos
+    if (name) updateData.name = name;
+    if (email) updateData.email = email;
+    if (clerkId !== undefined) {
+      if (clerkId && clerkId.trim() !== '') {
+        updateData.clerkId = clerkId;
+      } else {
+        updateData.clerkId = null;
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        clerkId: true,
+        createdAt: true,
+        updatedAt: true
       }
     });
 
-    // Formatar resposta
-    const formattedUser = {
-      id: newUser.id,
-      name: newUser.name || 'Nome não informado',
-      email: newUser.email,
-      role: data.role || 'USER',
-      companyId: data.companyId || null,
-      companyName: null,
-      isActive: true,
-      createdAt: newUser.createdAt.toISOString(),
-      lastLogin: null,
-      authId: authData.user.id
-    };
+    return NextResponse.json({
+      message: 'Usuário atualizado com sucesso',
+      user: updatedUser
+    });
 
-    return NextResponse.json(formattedUser, { status: 201 });
-  } catch (error: any) {
-    console.error('Erro ao criar usuário:', error);
+  } catch (error) {
+    console.error('❌ Erro ao atualizar usuário:', error);
     return NextResponse.json(
-      { error: 'Erro interno do servidor', details: error.message },
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Deletar usuário
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID do usuário é obrigatório' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar se usuário existe
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        contractResponsibilities: true,
+        transferRequestsMade: true,
+        transferRequestsApproved: true
+      }
+    });
+
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      );
+    }
+
+    // Verificar se usuário tem dependências
+    const hasDependencies = 
+      existingUser.contractResponsibilities.length > 0 ||
+      existingUser.transferRequestsMade.length > 0 ||
+      existingUser.transferRequestsApproved.length > 0;
+
+    if (hasDependencies) {
+      return NextResponse.json(
+        { 
+          error: 'Não é possível deletar usuário com dependências',
+          details: {
+            contractResponsibilities: existingUser.contractResponsibilities.length,
+            transferRequestsMade: existingUser.transferRequestsMade.length,
+            transferRequestsApproved: existingUser.transferRequestsApproved.length
+          }
+        },
+        { status: 409 }
+      );
+    }
+
+    // Deletar usuário
+    await prisma.user.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({
+      message: 'Usuário deletado com sucesso'
+    });
+
+  } catch (error) {
+    console.error('❌ Erro ao deletar usuário:', error);
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' },
       { status: 500 }
     );
   }
