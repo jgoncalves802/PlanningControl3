@@ -5,6 +5,7 @@ export interface User {
   name: string | null;
   email: string;
   clerkId: string | null;
+  isActive: boolean;
   createdAt: string;
   updatedAt: string;
   contractResponsibilities: {

@@ -39,7 +39,33 @@ const useAuthFallback = () => {
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     // Verificar credenciais mock
-    if (email === 'admin@demo-company.com' && password === '123456') {
+    if (email === 'superadmin@planningcontrol.com' && password === '123456') {
+      const mockUser = {
+        id: 'cmdrema7a0000i84808xbgm2r',
+        name: 'Super Administrador',
+        email: email,
+        role: 'SUPER_ADMIN',
+        isActive: true,
+        createdAt: new Date()
+      }
+      setUser(mockUser)
+      localStorage.setItem('user_data', JSON.stringify(mockUser))
+      localStorage.setItem('auth_token', 'mock_token')
+      return { user: mockUser }
+    } else if (email === 'admin@planningcontrol.com' && password === '123456') {
+      const mockUser = {
+        id: 'cmdrema9n0001i848l1zltamw',
+        name: 'Administrador Regular',
+        email: email,
+        role: 'TENANT_ADMIN',
+        isActive: true,
+        createdAt: new Date()
+      }
+      setUser(mockUser)
+      localStorage.setItem('user_data', JSON.stringify(mockUser))
+      localStorage.setItem('auth_token', 'mock_token')
+      return { user: mockUser }
+    } else if (email === 'admin@demo-company.com' && password === '123456') {
       const mockUser = {
         id: '1',
         name: 'Admin Geral',
@@ -53,7 +79,7 @@ const useAuthFallback = () => {
       localStorage.setItem('auth_token', 'mock_token')
       return { user: mockUser }
     } else {
-      throw new Error('Credenciais inválidas. Use: admin@demo-company.com / 123456')
+      throw new Error('Credenciais inválidas. Use: superadmin@planningcontrol.com / 123456 ou admin@planningcontrol.com / 123456')
     }
   }
 
@@ -574,9 +600,17 @@ export default function LoginPage() {
                           <Star className="h-4 w-4 text-blue-600" />
                           <span className="text-sm font-semibold text-blue-900">Credenciais de Teste</span>
                         </div>
-                        <div className="text-sm text-blue-800 space-y-1">
-                          <div><strong>Email:</strong> admin@demo-company.com</div>
-                          <div><strong>Senha:</strong> 123456</div>
+                        <div className="text-sm text-blue-800 space-y-2">
+                          <div>
+                            <strong>Super Admin:</strong>
+                            <div className="ml-2">Email: superadmin@planningcontrol.com</div>
+                            <div className="ml-2">Senha: 123456</div>
+                          </div>
+                          <div>
+                            <strong>Admin Regular:</strong>
+                            <div className="ml-2">Email: admin@planningcontrol.com</div>
+                            <div className="ml-2">Senha: 123456</div>
+                          </div>
                         </div>
                       </motion.div>
                     )}

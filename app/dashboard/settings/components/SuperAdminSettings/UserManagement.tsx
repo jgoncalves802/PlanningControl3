@@ -33,7 +33,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/lib/hooks/useSuperAdminSettings';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useToggleUserStatus } from '@/lib/hooks/useSuperAdminSettings';
 
 interface User {
   id: string;
@@ -104,6 +104,7 @@ export default function UserManagement() {
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
+  const toggleUserStatusMutation = useToggleUserStatus();
 
   const users = usersData?.users || [];
   const pagination = usersData?.pagination;
@@ -223,13 +224,12 @@ export default function UserManagement() {
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      await updateUserMutation.mutateAsync({
-        id: userId,
-        data: { isActive: !currentStatus }
+      await toggleUserStatusMutation.mutateAsync({
+        userId,
+        isActive: !currentStatus
       });
-      toast.success(`Usuário ${!currentStatus ? 'ativado' : 'desativado'} com sucesso!`);
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao alterar status do usuário');
+      // O erro já é tratado pelo hook
     }
   };
 
@@ -269,15 +269,14 @@ export default function UserManagement() {
 
     try {
       await Promise.all(selectedUsers.map(id => 
-        updateUserMutation.mutateAsync({
-          id,
-          data: { isActive: activate }
+        toggleUserStatusMutation.mutateAsync({
+          userId: id,
+          isActive: activate
         })
       ));
       setSelectedUsers([]);
-      toast.success(`${selectedUsers.length} usuário(s) ${activate ? 'ativado(s)' : 'desativado(s)'} com sucesso!`);
     } catch (error: any) {
-      toast.error('Erro ao alterar status dos usuários');
+      // O erro já é tratado pelo hook
     }
   };
 
@@ -724,9 +723,16 @@ export default function UserManagement() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleToggleUserStatus(user.id, user.isActive)}
-                    disabled={updateUserMutation.isPending}
+                    disabled={toggleUserStatusMutation.isPending}
                   >
-                    {user.isActive ? 'Desativar' : 'Ativar'}
+                    {toggleUserStatusMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        {user.isActive ? 'Desativando...' : 'Ativando...'}
+                      </>
+                    ) : (
+                      user.isActive ? 'Desativar' : 'Ativar'
+                    )}
                   </Button>
                   
                   <Button

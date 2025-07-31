@@ -97,14 +97,23 @@ export const getCurrentUserFromDatabase = async (): Promise<User | null> => {
     const { PrismaClient } = await import('@prisma/client');
     const prisma = new PrismaClient();
     
-    // Tentar buscar um usuário específico primeiro (admin)
+    // Tentar buscar um super admin primeiro
     let user = await prisma.user.findFirst({
       where: {
-        email: 'admin@demo-company.com'
+        email: 'superadmin@planningcontrol.com'
       }
     });
     
-    // Se não encontrar, buscar o primeiro usuário disponível
+    // Se não encontrar super admin, buscar admin regular
+    if (!user) {
+      user = await prisma.user.findFirst({
+        where: {
+          email: 'admin@planningcontrol.com'
+        }
+      });
+    }
+    
+    // Se não encontrar admin, buscar o primeiro usuário disponível
     if (!user) {
       user = await prisma.user.findFirst({
         orderBy: { createdAt: 'asc' }
@@ -118,12 +127,27 @@ export const getCurrentUserFromDatabase = async (): Promise<User | null> => {
       return null;
     }
     
+    // Determinar role baseado no email
+    let userRole = UserRole.TENANT_ADMIN; // Default
+    
+    if (user.email === 'superadmin@planningcontrol.com') {
+      userRole = UserRole.SUPER_ADMIN;
+    } else if (user.email === 'admin@planningcontrol.com') {
+      userRole = UserRole.TENANT_ADMIN;
+    } else if (user.email.includes('gerente') || user.email.includes('manager')) {
+      userRole = UserRole.CONTRACT_MANAGER;
+    } else if (user.email.includes('supervisor')) {
+      userRole = UserRole.SUPERVISOR;
+    } else if (user.email.includes('operator')) {
+      userRole = UserRole.OPERATOR;
+    }
+    
     // Mapear dados do usuário para incluir contratos atribuídos baseado na função
     const userWithContracts: User = {
       id: user.id,
       name: user.name || 'Usuário',
       email: user.email,
-      role: UserRole.TENANT_ADMIN, // Por enquanto, todos são admin
+      role: userRole,
       assignedContracts: getUserAssignedContracts(user),
       isActive: true,
       createdAt: user.createdAt,
@@ -160,12 +184,12 @@ export const getCurrentUser = (): User => {
   }
   
   // Usuário padrão para demonstração (remover em produção)
-  // Usando um ID que existe no banco de dados
+  // Usando o ID do super admin que existe no banco de dados
   return {
-    id: 'cmdnz5wl60000i840ohdkkoax', // ID do usuário que existe no banco
-    name: 'Gerente Teste',
-    email: 'gerente@teste.com',
-    role: UserRole.TENANT_ADMIN,
+    id: 'cmdrema7a0000i84808xbgm2r', // ID do Super Admin
+    name: 'Super Administrador',
+    email: 'superadmin@planningcontrol.com',
+    role: UserRole.SUPER_ADMIN,
     isActive: true,
     companyLogo: '/logo-demo-company.png' // Exemplo: caminho relativo ou base64
   }
@@ -174,12 +198,12 @@ export const getCurrentUser = (): User => {
 // Versão para uso no servidor (APIs)
 export const getCurrentUserServer = (): User => {
   // Usuário padrão para demonstração (remover em produção)
-  // Usando um ID que existe no banco de dados
+  // Usando o ID do super admin que existe no banco de dados
   return {
-    id: 'cmdnz5wl60000i840ohdkkoax', // ID do usuário que existe no banco
-    name: 'Gerente Teste',
-    email: 'gerente@teste.com',
-    role: UserRole.TENANT_ADMIN,
+    id: 'cmdrema7a0000i84808xbgm2r', // ID do Super Admin
+    name: 'Super Administrador',
+    email: 'superadmin@planningcontrol.com',
+    role: UserRole.SUPER_ADMIN,
     isActive: true,
     companyLogo: '/logo-demo-company.png'
   }

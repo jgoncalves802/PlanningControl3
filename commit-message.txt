@@ -13,3 +13,21 @@ Arquivos modificados:
 - CORRECAO_FUNCAO_TRANSFERENCIAS.md: documentação da correção
 
 Resolve problema onde função "ADMINISTRATIVO DE OBRAS" não aparecia na tabela de transferências. 
+
+feat: implementa toggle automático de status de usuários
+
+- Adiciona hook useToggleUserStatus para gerenciar status ativo/inativo
+- Implementa API /api/settings/super-admin/users/[id]/toggle-status
+- Atualiza componente UserManagement com loading states e feedback visual
+- Adiciona invalidação automática de queries após toggle
+- Corrige problema de interface não atualizar automaticamente após ações
+- Implementa loading states nos botões de toggle
+- Adiciona toast notifications para feedback de sucesso/erro
+- Cria script de teste test-frontend-toggle.js para validar funcionalidade
+
+Arquivos modificados:
+- lib/hooks/useSuperAdminSettings.ts: adiciona useToggleUserStatus
+- app/dashboard/settings/components/SuperAdminSettings/UserManagement.tsx: atualiza com toggle automático
+- scripts/test-frontend-toggle.js: script de teste para validação
+
+Resolve: problema de toggle status não atualizar automaticamente na interface 

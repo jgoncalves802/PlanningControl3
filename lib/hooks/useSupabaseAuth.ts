@@ -14,12 +14,12 @@ export function useSupabaseAuth() {
                                 process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co'
 
     if (!isSupabaseConfigured) {
-      // Usar usuário mock se Supabase não estiver configurado
+      // Usar super admin como usuário padrão se Supabase não estiver configurado
       setUser({
-        id: '1',
-        name: 'Admin Geral',
-        email: 'admin@demo-company.com',
-        role: UserRole.TENANT_ADMIN,
+        id: 'cmdrema7a0000i84808xbgm2r',
+        name: 'Super Administrador',
+        email: 'superadmin@planningcontrol.com',
+        role: UserRole.SUPER_ADMIN,
         isActive: true,
         createdAt: new Date()
       })
@@ -82,27 +82,64 @@ export function useSupabaseAuth() {
                                 process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://placeholder.supabase.co'
 
     if (!isSupabaseConfigured) {
-      // Simular login bem-sucedido
-      const mockUser: User = {
-        id: '1',
-        name: 'Admin Geral',
-        email: email,
-        role: UserRole.TENANT_ADMIN,
-        isActive: true,
-        createdAt: new Date()
+      // Verificar credenciais mock dos super admins
+      if (email === 'superadmin@planningcontrol.com' && password === '123456') {
+        const mockUser: User = {
+          id: 'cmdrema7a0000i84808xbgm2r',
+          name: 'Super Administrador',
+          email: email,
+          role: UserRole.SUPER_ADMIN,
+          isActive: true,
+          createdAt: new Date()
+        }
+        setUser(mockUser)
+        return { user: mockUser }
+      } else if (email === 'admin@planningcontrol.com' && password === '123456') {
+        const mockUser: User = {
+          id: 'cmdrema9n0001i848l1zltamw',
+          name: 'Administrador Regular',
+          email: email,
+          role: UserRole.TENANT_ADMIN,
+          isActive: true,
+          createdAt: new Date()
+        }
+        setUser(mockUser)
+        return { user: mockUser }
+      } else if (email === 'admin@demo-company.com' && password === '123456') {
+        const mockUser: User = {
+          id: '1',
+          name: 'Admin Geral',
+          email: email,
+          role: UserRole.TENANT_ADMIN,
+          isActive: true,
+          createdAt: new Date()
+        }
+        setUser(mockUser)
+        return { user: mockUser }
+      } else {
+        throw new Error('Credenciais inválidas. Use: superadmin@planningcontrol.com / 123456 ou admin@planningcontrol.com / 123456')
       }
-      setUser(mockUser)
-      return { user: mockUser }
     }
 
+    // Usar autenticação real do Supabase
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
       
-      if (error) throw error
-      return data
+      if (error) {
+        console.error('Erro no login Supabase:', error)
+        throw error
+      }
+      
+      if (data.user) {
+        const userData = await transformSupabaseUser(data.user)
+        setUser(userData)
+        return { user: userData }
+      }
+      
+      throw new Error('Falha na autenticação')
     } catch (error) {
       console.error('Erro no login:', error)
       throw error

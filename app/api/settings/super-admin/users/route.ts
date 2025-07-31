@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         clerkId: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
         contractResponsibilities: {
@@ -151,6 +152,7 @@ export async function POST(request: NextRequest) {
         name: true,
         email: true,
         clerkId: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true
       }
@@ -245,6 +247,7 @@ export async function PUT(request: NextRequest) {
         name: true,
         email: true,
         clerkId: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true
       }

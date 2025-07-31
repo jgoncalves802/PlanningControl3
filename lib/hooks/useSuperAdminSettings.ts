@@ -208,6 +208,36 @@ export function useDeleteUser() {
   });
 }
 
+export function useToggleUserStatus() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ userId, isActive }: { userId: string; isActive: boolean }) => {
+      const response = await fetch(`/api/settings/super-admin/users/${userId}/toggle-status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ isActive }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erro ao alterar status do usuário');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['super-admin', 'users'] });
+      toast.success('Status do usuário alterado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Erro ao alterar status do usuário');
+    },
+  });
+}
+
 // Hooks para Empresas
 export function useCompanies(filters?: {
   page?: number;
