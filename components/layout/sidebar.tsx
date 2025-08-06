@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { useAppSettings } from '@/lib/contexts/AppSettingsContext'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
+import { validatePageAccess } from '@/lib/auth-client'
 import {
   ChevronLeft,
   ChevronRight,
@@ -96,7 +98,14 @@ const menuItems = [
 export default function Sidebar() {
   const pathname = usePathname()
   const { settings } = useAppSettings()
+  const { user } = useCurrentUser()
   const [isCollapsed, setIsCollapsed] = useState(settings.sidebarCollapsed)
+
+  // Filtrar itens do menu baseado nas permissões do usuário
+  const filteredMenuItems = menuItems.filter(item => {
+    if (!user) return false
+    return validatePageAccess(user, item.href)
+  })
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed)
@@ -125,7 +134,7 @@ export default function Sidebar() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
 

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Search, Edit, Trash2, Eye, Shield, User, Users, Building, Loader2, Filter } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, Shield, User, Users, Building, Loader2, Filter, Key } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface CompanyUser {
@@ -40,7 +40,11 @@ interface Role {
   userCount: number;
 }
 
-export default function UserManagementSettings() {
+interface UserManagementSettingsProps {
+  onUserSelected?: (userId: string) => void;
+}
+
+export default function UserManagementSettings({ onUserSelected }: UserManagementSettingsProps) {
   const [users, setUsers] = useState<CompanyUser[]>([
     {
       id: '1',
@@ -98,33 +102,48 @@ export default function UserManagementSettings() {
     {
       id: '2',
       name: 'Gerente',
-      permissions: ['manage_users', 'view_reports', 'manage_department'],
+      permissions: ['read', 'write', 'delete'],
       userCount: 2
     },
     {
       id: '3',
       name: 'Usuário',
-      permissions: ['view_reports', 'edit_profile'],
+      permissions: ['read'],
       userCount: 8
     }
   ]);
 
+  // Estados de interface
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedRole, setSelectedRole] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
+  const [selectedRole, setSelectedRole] = useState<string>('all');
+  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<CompanyUser | null>(null);
+  const [editingUser, setEditingUser] = useState<CompanyUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Função para selecionar usuário para gerenciamento de permissões
+  const handleSelectUserForPermissions = (user: CompanyUser) => {
+    if (onUserSelected) {
+      onUserSelected(user.id);
+      toast.success(`Usuário "${user.name}" selecionado para gerenciamento de permissões`);
+    }
+  };
+
+  // Funções auxiliares
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return <Shield className="h-4 w-4" />;
+        return <Shield className="h-4 w-4 text-red-600" />;
       case 'MANAGER':
-        return <Building className="h-4 w-4" />;
+        return <Building className="h-4 w-4 text-blue-600" />;
       case 'USER':
-        return <User className="h-4 w-4" />;
+        return <User className="h-4 w-4 text-green-600" />;
       default:
-        return <User className="h-4 w-4" />;
+        return <User className="h-4 w-4 text-gray-600" />;
     }
   };
 
@@ -144,13 +163,13 @@ export default function UserManagementSettings() {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'ADMIN':
-        return 'destructive';
+        return 'secondary' as const;
       case 'MANAGER':
-        return 'default';
+        return 'default' as const;
       case 'USER':
-        return 'secondary';
+        return 'secondary' as const;
       default:
-        return 'secondary';
+        return 'secondary' as const;
     }
   };
 
@@ -335,6 +354,17 @@ export default function UserManagementSettings() {
                     <Button variant="outline" size="sm">
                       <Edit className="h-4 w-4" />
                     </Button>
+
+                    {/* Botão de Gerenciar Permissões */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSelectUserForPermissions(user)}
+                      className="text-blue-600 hover:text-blue-700"
+                    >
+                      <Key className="h-4 w-4" />
+                    </Button>
+
                     <Button
                       variant="outline"
                       size="sm"
@@ -346,7 +376,7 @@ export default function UserManagementSettings() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDeleteUser(user.id)}
-                      className="text-destructive hover:text-destructive"
+                      className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

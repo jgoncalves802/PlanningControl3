@@ -4,7 +4,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Building, User, Settings } from 'lucide-react';
+import { Shield, Building, User, Settings, Key } from 'lucide-react';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
+import { validateUserAccess } from '@/lib/auth-client';
 
 // Componentes Super Admin
 import UserManagement from './components/SuperAdminSettings/UserManagement';
@@ -23,14 +25,37 @@ import PersonalSettings from './components/UserSettings/PersonalSettings';
 import InterfaceSettings from './components/UserSettings/InterfaceSettings';
 import UserNotificationSettings from './components/UserSettings/NotificationSettings';
 
-export default function SettingsPage() {
-  const [userRole, setUserRole] = useState<'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'>('COMPANY_ADMIN');
+// Componente de Gerenciamento de Permissões
+import UserPermissionsManager from '@/components/settings/UserPermissionsManager';
 
-  const getUserRole = () => {
-    // Simular diferentes roles para teste
-    // Em produção, isso viria do contexto de autenticação
-    return userRole;
-  };
+export default function SettingsPage() {
+  const { user, loading } = useCurrentUser();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <span className="ml-2">Carregando configurações...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto py-6">
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <p className="text-red-600">Acesso negado. Faça login para continuar.</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const renderSuperAdminSettings = () => (
     <div className="space-y-6">
@@ -46,6 +71,10 @@ export default function SettingsPage() {
             <User className="h-4 w-4" />
             Usuários
           </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            Permissões
+          </TabsTrigger>
           <TabsTrigger value="companies" className="flex items-center gap-2">
             <Building className="h-4 w-4" />
             Empresas
@@ -57,7 +86,32 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="users">
-          <UserManagement />
+          <UserManagement onUserSelected={setSelectedUserId} />
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          {selectedUserId ? (
+            <UserPermissionsManager 
+              userId={selectedUserId}
+              userName="Usuário Selecionado"
+              userRole="USER"
+              onPermissionsUpdated={() => {
+                // Recarregar dados se necessário
+              }}
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <Key className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Gerenciar Permissões</h3>
+                  <p className="text-gray-600">
+                    Selecione um usuário na aba "Usuários" para configurar suas permissões granulares.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="companies">
@@ -87,7 +141,11 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="users" className="flex items-center gap-2">
             <User className="h-4 w-4" />
-            Usuários e Permissões
+            Usuários da Empresa
+          </TabsTrigger>
+          <TabsTrigger value="permissions" className="flex items-center gap-2">
+            <Key className="h-4 w-4" />
+            Permissões
           </TabsTrigger>
           <TabsTrigger value="contracts" className="flex items-center gap-2">
             <Settings className="h-4 w-4" />
@@ -108,7 +166,32 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="users">
-          <UserManagementSettings />
+          <UserManagementSettings onUserSelected={setSelectedUserId} />
+        </TabsContent>
+
+        <TabsContent value="permissions">
+          {selectedUserId ? (
+            <UserPermissionsManager 
+              userId={selectedUserId}
+              userName="Usuário Selecionado"
+              userRole="USER"
+              onPermissionsUpdated={() => {
+                // Recarregar dados se necessário
+              }}
+            />
+          ) : (
+            <Card>
+              <CardContent className="p-6">
+                <div className="text-center">
+                  <Key className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Gerenciar Permissões</h3>
+                  <p className="text-gray-600">
+                    Selecione um usuário da sua empresa na aba "Usuários da Empresa" para configurar suas permissões.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="contracts">
@@ -166,9 +249,24 @@ export default function SettingsPage() {
   );
 
   const renderContent = () => {
-    const role = getUserRole();
+    // Verificar se o usuário tem acesso às configurações
+    if (!validateUserAccess(user, 'USER')) {
+      return (
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center">
+              <Shield className="h-12 w-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Acesso Negado</h3>
+              <p className="text-gray-600">
+                Você não tem permissão para acessar as configurações.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
     
-    switch (role) {
+    switch (user.role) {
       case 'SUPER_ADMIN':
         return renderSuperAdminSettings();
       case 'COMPANY_ADMIN':
@@ -182,47 +280,40 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Seletor de Role para Teste */}
+      {/* Informações do Usuário */}
       <Card>
         <CardHeader>
-          <CardTitle>Seletor de Role (Apenas para Teste)</CardTitle>
+          <CardTitle>Informações do Usuário</CardTitle>
           <CardDescription>
-            Selecione o nível de acesso para testar as diferentes interfaces
+            Dados do usuário logado e suas permissões
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setUserRole('SUPER_ADMIN')}
-              className={`px-4 py-2 rounded-lg border ${
-                userRole === 'SUPER_ADMIN' 
-                  ? 'bg-red-100 border-red-300 text-red-700' 
-                  : 'bg-gray-100 border-gray-300'
-              }`}
-            >
-              Super Admin
-            </button>
-            <button
-              onClick={() => setUserRole('COMPANY_ADMIN')}
-              className={`px-4 py-2 rounded-lg border ${
-                userRole === 'COMPANY_ADMIN' 
-                  ? 'bg-blue-100 border-blue-300 text-blue-700' 
-                  : 'bg-gray-100 border-gray-300'
-              }`}
-            >
-              Company Admin
-            </button>
-            <button
-              onClick={() => setUserRole('USER')}
-              className={`px-4 py-2 rounded-lg border ${
-                userRole === 'USER' 
-                  ? 'bg-green-100 border-green-300 text-green-700' 
-                  : 'bg-gray-100 border-gray-300'
-              }`}
-            >
-              User
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="text-sm font-medium text-gray-600">Nome</label>
+              <p className="text-lg font-semibold">{user.name}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Email</label>
+              <p className="text-lg">{user.email}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-600">Nível de Acesso</label>
+              <Badge variant={
+                user.role === 'SUPER_ADMIN' ? 'destructive' :
+                user.role === 'COMPANY_ADMIN' ? 'default' : 'secondary'
+              }>
+                {user.role}
+              </Badge>
+            </div>
           </div>
+          {user.companyId && (
+            <div className="mt-4">
+              <label className="text-sm font-medium text-gray-600">Empresa</label>
+              <p className="text-lg">ID: {user.companyId}</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 

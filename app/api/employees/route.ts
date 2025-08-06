@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getServerSession } from '@/lib/auth-server';
+import { canAccessCompanyData, getCompanyFilters } from '@/lib/auth-client';
 import { formatCPF, convertExcelNumberToDate, isExcelNumber, convertNameToUpperCase } from '@/lib/csvEncodingUtils';
 
 // Função para normalizar caracteres especiais e garantir UTF-8
@@ -58,6 +60,11 @@ function normalizeTextFields(data: any): any {
 
 export async function GET(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -70,8 +77,13 @@ export async function GET(req: NextRequest) {
 
     const skip = (page - 1) * limit;
 
+    // Obter filtros de empresa baseados no role do usuário
+    const companyFilters = getCompanyFilters(session.user);
+
     // Construir filtros
-    const where: any = {};
+    const where: any = {
+      ...companyFilters // Aplicar filtros de empresa
+    };
     
     if (search) {
       where.OR = [
@@ -120,8 +132,6 @@ export async function GET(req: NextRequest) {
       include: includeOptions
     });
 
-
-
     // Mapear os status para garantir que estejam corretos
     const mappedEmployees = employees.map(emp => {
       let status = emp.status;
@@ -130,8 +140,6 @@ export async function GET(req: NextRequest) {
       if (!status || !['ACTIVE', 'ON_LEAVE', 'TRANSFERRED', 'SUSPENDED', 'DISMISSED', 'RETIRED'].includes(status)) {
         status = 'ACTIVE';
       }
-      
-
       
       return {
         ...emp,
@@ -223,6 +231,16 @@ function parseDateBR(dateStr: string | number) {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    // Verificar se o usuário pode criar funcionários
+    if (session.user.role === 'USER') {
+      return NextResponse.json({ error: 'Sem permissão para criar funcionários' }, { status: 403 })
+    }
+
     // Garantir que o request está sendo lido corretamente com UTF-8
     const rawData = await req.json();
     
@@ -236,6 +254,13 @@ export async function POST(req: NextRequest) {
 
     // Normalizar CPF (apenas números)
     if (data.cpf) data.cpf = formatCPF(data.cpf);
+
+    // Aplicar companyId baseado no role do usuário
+    if (session.user.role === 'COMPANY_ADMIN' || session.user.role === 'USER') {
+      // COMPANY_ADMIN e USER só podem criar funcionários para sua própria empresa
+      data.companyId = session.user.companyId;
+    }
+    // SUPER_ADMIN pode criar funcionários para qualquer empresa (companyId vem do request)
 
     // Normalizar e tratar datas (aceita DD/MM/YYYY ou YYYY-MM-DD)
     ['birthDate', 'admissionDate', 'dismissalDate', 'cnhValidity', 'primeiraExperiencia', 'segundaExperiencia', 'previsaoObra'].forEach(field => {

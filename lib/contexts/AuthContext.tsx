@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react'
 import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
-import { User } from '@/lib/auth'
+import { User } from '@/lib/auth-client'
 
 interface AuthContextType {
   user: User | null

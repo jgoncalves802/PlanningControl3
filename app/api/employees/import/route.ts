@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { autoCorrectEmployeeData, formatCPF, convertExcelNumberToDate, isExcelNumber, convertNameToUpperCase } from '@/lib/csvEncodingUtils';
-import { getCurrentUserServer } from '@/lib/auth';
+import { getCurrentUserServer } from '@/lib/auth-server';
 
 // Função para normalizar texto (caracteres especiais)
 function normalizeText(text: string): string {
@@ -141,15 +141,21 @@ async function validateEmployeeFromCSV(data: any, index: number) {
   // Validação de CPF
   if (!data.cpf || String(data.cpf).trim() === '') {
     errors.cpf = 'CPF é obrigatório';
-  } else if (!validateCPF(data.cpf)) {
-    errors.cpf = 'CPF inválido';
   } else {
-    // Verifica se CPF já existe
-    const existingCpf = await prisma.employee.findUnique({ 
-      where: { cpf: String(data.cpf).replace(/\D/g, '') } 
-    });
-    if (existingCpf) {
-      errors.cpf = 'CPF já cadastrado';
+    // Primeiro formatar o CPF para garantir 11 dígitos
+    const formattedCPF = formatCPF(data.cpf);
+    
+    // Depois validar o CPF formatado
+    if (!validateCPF(formattedCPF)) {
+      errors.cpf = 'CPF inválido';
+    } else {
+      // Verifica se CPF já existe
+      const existingCpf = await prisma.employee.findUnique({ 
+        where: { cpf: formattedCPF } 
+      });
+      if (existingCpf) {
+        errors.cpf = 'CPF já cadastrado';
+      }
     }
   }
   

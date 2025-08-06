@@ -1,95 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { CompanyService, AuditService } from '@/lib/services/settingsService';
+import { getServerSession } from '@/lib/auth-server';
 
-// Dados mockados para empresas (em produção, isso viria do banco)
-const mockCompanies = [
-  {
-    id: 'emp1',
-    name: 'Empresa 1 Ltda',
-    cnpj: '12.345.678/0001-90',
-    email: 'contato@empresa1.com',
-    phone: '(11) 99999-9999',
-    address: 'Rua das Flores, 123 - São Paulo/SP',
-    plan: 'BASIC' as const,
-    status: 'ACTIVE' as const,
-    userCount: 5,
-    contractCount: 3,
-    createdAt: '2025-01-15T10:00:00Z',
-    lastActivity: '2025-07-28T15:30:00Z'
-  },
-  {
-    id: 'emp2',
-    name: 'Empresa 2 Ltda',
-    cnpj: '98.765.432/0001-10',
-    email: 'contato@empresa2.com',
-    phone: '(21) 88888-8888',
-    address: 'Av. Principal, 456 - Rio de Janeiro/RJ',
-    plan: 'PRO' as const,
-    status: 'ACTIVE' as const,
-    userCount: 12,
-    contractCount: 8,
-    createdAt: '2025-02-20T14:00:00Z',
-    lastActivity: '2025-07-28T16:45:00Z'
-  },
-  {
-    id: 'emp3',
-    name: 'Empresa 3 Ltda',
-    cnpj: '55.444.333/0001-22',
-    email: 'contato@empresa3.com',
-    phone: '(31) 77777-7777',
-    address: 'Rua do Comércio, 789 - Belo Horizonte/MG',
-    plan: 'ENTERPRISE' as const,
-    status: 'ACTIVE' as const,
-    userCount: 25,
-    contractCount: 15,
-    createdAt: '2025-03-10T09:00:00Z',
-    lastActivity: '2025-07-28T17:20:00Z'
-  }
-];
-
-// GET /api/settings/super-admin/companies - Listar todas as empresas
+// GET /api/settings/super-admin/companies
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const search = searchParams.get('search') || '';
-    const status = searchParams.get('status');
-    const plan = searchParams.get('plan');
-    const skip = (page - 1) * limit;
-
-    // Filtrar empresas
-    let filteredCompanies = [...mockCompanies];
+    console.log('🔍 GET /api/settings/super-admin/companies - Iniciando busca');
     
-    if (search) {
-      filteredCompanies = filteredCompanies.filter(company =>
-        company.name.toLowerCase().includes(search.toLowerCase()) ||
-        company.cnpj.includes(search) ||
-        company.email.toLowerCase().includes(search.toLowerCase())
-      );
+    const session = await getServerSession();
+    console.log('📋 Session:', session ? 'Encontrada' : 'Não encontrada');
+    
+    if (!session?.user) {
+      console.log('❌ Usuário não autorizado');
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    if (status) {
-      filteredCompanies = filteredCompanies.filter(company => company.status === status);
-    }
+    console.log('✅ Usuário autorizado:', session.user.email);
 
-    if (plan) {
-      filteredCompanies = filteredCompanies.filter(company => company.plan === plan);
-    }
+    // Verificar se é super admin
+    // TODO: Implementar verificação de role
 
-    const total = filteredCompanies.length;
-    const companies = filteredCompanies.slice(skip, skip + limit);
-
+    console.log('✅ Buscando empresas...');
+    const companies = await CompanyService.getAllCompanies();
+    console.log('✅ Empresas encontradas:', companies.length);
+    
     return NextResponse.json({
-      companies,
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-      },
+      success: true,
+      data: companies
     });
   } catch (error) {
-    console.error('Erro ao buscar empresas:', error);
+    console.error('💥 Erro ao buscar empresas:', error);
+    console.error('💥 Stack trace:', error.stack);
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: error.message },
       { status: 500 }
@@ -97,65 +38,108 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/settings/super-admin/companies - Criar nova empresa
+// POST /api/settings/super-admin/companies
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json();
-
-    // Validação dos campos obrigatórios
-    const requiredFields = ['name', 'cnpj', 'email'];
-    const errors: Record<string, string> = {};
+    console.log('🔍 POST /api/settings/super-admin/companies - Iniciando criação');
     
-    requiredFields.forEach(field => {
-      if (!data[field]) {
-        errors[field] = 'Campo obrigatório';
-      }
+    const session = await getServerSession();
+    console.log('📋 Session:', session ? 'Encontrada' : 'Não encontrada');
+    
+    if (!session?.user) {
+      console.log('❌ Usuário não autorizado');
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    console.log('✅ Usuário autorizado:', session.user.email);
+
+    // Verificar se é super admin
+    // TODO: Implementar verificação de role
+
+    const body = await request.json();
+    console.log('📦 Dados recebidos:', JSON.stringify(body, null, 2));
+    
+    const { name, cnpj, email, phone, address, logoUrl, primaryColor, secondaryColor, domain, timezone, language, subscriptionPlan, maxUsers, maxContracts, maxEmployees } = body;
+
+    // Validações básicas
+    if (!name || !cnpj || !email) {
+      console.log('❌ Validação falhou - campos obrigatórios:', { name: !!name, cnpj: !!cnpj, email: !!email });
+      return NextResponse.json(
+        { error: 'Nome, CNPJ e email são obrigatórios' },
+        { status: 400 }
+      );
+    }
+
+    console.log('✅ Validação básica passou');
+
+    // Verificar se CNPJ já existe
+    console.log('🔍 Verificando CNPJ existente...');
+    const existingCnpj = await CompanyService.getCompanyByCnpj(cnpj);
+    if (existingCnpj) {
+      console.log('❌ CNPJ já cadastrado:', cnpj);
+      return NextResponse.json(
+        { error: 'CNPJ já cadastrado' },
+        { status: 400 }
+      );
+    }
+
+    // Verificar se email já existe
+    console.log('🔍 Verificando email existente...');
+    const existingEmail = await CompanyService.getCompanyByEmail(email);
+    if (existingEmail) {
+      console.log('❌ Email já cadastrado:', email);
+      return NextResponse.json(
+        { error: 'Email já cadastrado' },
+        { status: 400 }
+      );
+    }
+
+    console.log('✅ Verificações de duplicação passaram');
+
+    console.log('🏢 Criando empresa...');
+    const company = await CompanyService.createCompany({
+      name,
+      cnpj,
+      email,
+      phone,
+      address,
+      logoUrl,
+      primaryColor,
+      secondaryColor,
+      domain,
+      timezone,
+      language,
+      subscriptionPlan,
+      maxUsers,
+      maxContracts,
+      maxEmployees
     });
 
-    if (Object.keys(errors).length > 0) {
-      return NextResponse.json({ errors }, { status: 400 });
-    }
+    console.log('✅ Empresa criada:', company.id);
 
-    // Verificar se o CNPJ já existe
-    const existingCompany = mockCompanies.find(company => company.cnpj === data.cnpj);
-    if (existingCompany) {
-      return NextResponse.json(
-        { error: 'CNPJ já está cadastrado' },
-        { status: 409 }
-      );
-    }
+    // Log de auditoria
+    console.log('📝 Criando log de auditoria...');
+    await AuditService.createAuditLog({
+      userId: session.user.id,
+      action: 'CREATE_COMPANY',
+      entityType: 'COMPANY',
+      entityId: company.id,
+      details: { companyName: name, cnpj, email },
+      ipAddress: request.headers.get('x-forwarded-for') || request.ip,
+      userAgent: request.headers.get('user-agent')
+    });
 
-    // Verificar se o email já existe
-    const existingEmail = mockCompanies.find(company => company.email === data.email);
-    if (existingEmail) {
-      return NextResponse.json(
-        { error: 'Email já está em uso' },
-        { status: 409 }
-      );
-    }
+    console.log('✅ Log de auditoria criado');
+    console.log('🎉 Empresa criada com sucesso');
 
-    // Criar nova empresa
-    const newCompany = {
-      id: `emp${Date.now()}`,
-      name: data.name,
-      cnpj: data.cnpj,
-      email: data.email,
-      phone: data.phone || '',
-      address: data.address || '',
-      plan: data.plan || 'BASIC',
-      status: 'ACTIVE' as const,
-      userCount: 0,
-      contractCount: 0,
-      createdAt: new Date().toISOString(),
-      lastActivity: new Date().toISOString()
-    };
-
-    // Adicionar à lista mockada (em produção, seria salvo no banco)
-    mockCompanies.push(newCompany);
-
-    return NextResponse.json(newCompany, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      data: company,
+      message: 'Empresa criada com sucesso'
+    });
   } catch (error) {
-    console.error('Erro ao criar empresa:', error);
+    console.error('💥 Erro ao criar empresa:', error);
+    console.error('💥 Stack trace:', error.stack);
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: error.message },
       { status: 500 }

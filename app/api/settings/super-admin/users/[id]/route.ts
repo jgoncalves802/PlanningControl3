@@ -1,6 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { supabaseAdmin } from '@/lib/supabase';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+// Função para obter cliente Supabase do servidor
+async function getSupabaseAdmin() {
+  try {
+    // Verificar se as variáveis de ambiente estão configuradas
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      throw new Error('NEXT_PUBLIC_SUPABASE_URL não está configurada');
+    }
+    
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY não está configurada');
+    }
+
+    const cookieStore = await cookies();
+    return createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll()
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              )
+            } catch {
+              // The `setAll` method was called from a Server Component.
+              // This can be ignored if you have middleware refreshing
+              // user sessions.
+            }
+          },
+        },
+      }
+    )
+  } catch (error) {
+    console.error('Erro ao criar cliente Supabase Admin:', error);
+    throw error;
+  }
+}
 
 // Função para validar UUID
 function isValidUUID(uuid: string): boolean {
@@ -139,36 +181,42 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     // 2. Atualizar usuário no Supabase Auth se necessário
     if ((data.email || data.name) && existingUser.clerkId && isValidUUID(existingUser.clerkId)) {
-      const authUpdateData: any = {};
-      
-      if (data.email) {
-        authUpdateData.email = data.email;
-      }
-      
-      if (data.name) {
-        authUpdateData.user_metadata = {
-          name: data.name,
-          role: data.role || 'USER',
-          companyId: data.companyId || null
-        };
-      }
+      try {
+        const supabaseAdmin = await getSupabaseAdmin();
+        const authUpdateData: any = {};
+        
+        if (data.email) {
+          authUpdateData.email = data.email;
+        }
+        
+        if (data.name) {
+          authUpdateData.user_metadata = {
+            name: data.name,
+            role: data.role || 'USER',
+            companyId: data.companyId || null
+          };
+        }
 
-      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-        existingUser.clerkId,
-        authUpdateData
-      );
+        const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+          existingUser.clerkId,
+          authUpdateData
+        );
 
-      if (authUpdateError) {
-        console.error('Erro ao atualizar usuário no Supabase Auth:', authUpdateError);
-        // Não falhar a operação, apenas logar o erro
+        if (authUpdateError) {
+          console.error('Erro ao atualizar usuário no Supabase Auth:', authUpdateError);
+          // Não falhar a operação, apenas logar o erro
+        }
+      } catch (authError) {
+        console.error('Erro ao tentar atualizar no Supabase Auth:', authError);
+        // Continuar mesmo se falhar no Auth
       }
     }
 
     // 3. Criar log de auditoria
     await prisma.auditLog.create({
       data: {
-        userId: updatedUser.id,
         action: 'USER_UPDATED',
+        entityType: 'USER',
         entityId: updatedUser.id,
         details: {
           updatedBy: 'super_admin',
@@ -211,7 +259,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 // DELETE /api/settings/super-admin/users/[id] - Excluir usuário
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
+    console.log('🔍 DELETE /api/settings/super-admin/users/[id] - Iniciando exclusão');
     const userId = params.id;
+    console.log('📋 User ID:', userId);
 
     // Verificar se o usuário existe
     const existingUser = await prisma.user.findUnique({
@@ -219,11 +269,14 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     });
 
     if (!existingUser) {
+      console.log('❌ Usuário não encontrado:', userId);
       return NextResponse.json(
         { error: 'Usuário não encontrado' },
         { status: 404 }
       );
     }
+
+    console.log('✅ Usuário encontrado:', existingUser.email);
 
     // Verificar se é o último usuário admin (proteção)
     if (existingUser.email === 'admin@demo-company.com') {
@@ -234,6 +287,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       });
 
       if (adminCount <= 1) {
+        console.log('❌ Tentativa de excluir último admin');
         return NextResponse.json(
           { error: 'Não é possível excluir o último administrador do sistema' },
           { status: 400 }
@@ -244,34 +298,39 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     // 1. Excluir usuário do Supabase Auth (apenas se clerkId for um UUID válido)
     if (existingUser.clerkId && isValidUUID(existingUser.clerkId)) {
       try {
+        console.log('🔐 Tentando excluir do Supabase Auth...');
+        const supabaseAdmin = await getSupabaseAdmin();
         const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
           existingUser.clerkId
         );
 
         if (authDeleteError) {
-          console.error('Erro ao excluir usuário do Supabase Auth:', authDeleteError);
+          console.error('❌ Erro ao excluir usuário do Supabase Auth:', authDeleteError);
           // Não falhar a operação, apenas logar o erro
         } else {
-          console.log('Usuário excluído do Supabase Auth com sucesso');
+          console.log('✅ Usuário excluído do Supabase Auth com sucesso');
         }
       } catch (authError) {
-        console.error('Erro ao tentar excluir do Supabase Auth:', authError);
+        console.error('❌ Erro ao tentar excluir do Supabase Auth:', authError);
         // Continuar com a exclusão do banco mesmo se falhar no Auth
       }
     } else {
-      console.log('clerkId não é um UUID válido, pulando exclusão do Supabase Auth');
+      console.log('ℹ️ clerkId não é um UUID válido, pulando exclusão do Supabase Auth');
     }
 
     // 2. Excluir usuário do banco de dados
+    console.log('🗄️ Excluindo do banco de dados...');
     await prisma.user.delete({
       where: { id: userId }
     });
+    console.log('✅ Usuário excluído do banco de dados');
 
     // 3. Criar log de auditoria
+    console.log('📝 Criando log de auditoria...');
     await prisma.auditLog.create({
       data: {
-        userId: null, // Usuário já foi excluído
         action: 'USER_DELETED',
+        entityType: 'USER',
         entityId: userId,
         details: {
           deletedBy: 'super_admin',
@@ -282,14 +341,17 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
         }
       }
     });
+    console.log('✅ Log de auditoria criado');
 
+    console.log('🎉 Exclusão concluída com sucesso');
     return NextResponse.json({ 
       message: 'Usuário excluído com sucesso',
       userId: userId,
       authDeleted: existingUser.clerkId && isValidUUID(existingUser.clerkId)
     });
   } catch (error: any) {
-    console.error('Erro ao excluir usuário:', error);
+    console.error('💥 Erro ao excluir usuário:', error);
+    console.error('💥 Stack trace:', error.stack);
     return NextResponse.json(
       { error: 'Erro interno do servidor', details: error.message },
       { status: 500 }

@@ -25,15 +25,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { 
-  getCurrentUser, 
-  getUserPermissions, 
-  getAccessibleContracts, 
-  canUserAccessContract,
-  validateUserAccess,
-  User,
-  UserRole
-} from '@/lib/auth'
+import { getUserPermissions, validateUserAccess } from '@/lib/auth-client'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import { mockContracts } from '@/lib/mock-data'
 
 // Interfaces
@@ -145,7 +138,7 @@ const mockPlanningContracts: PlanningContract[] = [
 ]
 
 export default function PlanningPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<any | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [contracts, setContracts] = useState<PlanningContract[]>([])
   const [selectedContract, setSelectedContract] = useState<string | null>(null)
@@ -156,14 +149,18 @@ export default function PlanningPage() {
 
   // Inicializar usuário e permissões
   useEffect(() => {
-    const user = getCurrentUser()
+    const { user, loading: userLoading } = useCurrentUser()
     setCurrentUser(user)
     
     const permissions = getUserPermissions(user)
     setUserPermissions(permissions)
     
     const planningContracts = mockPlanningContracts.filter(contract => 
-      canUserAccessContract(user, contract.id)
+      // Assuming canUserAccessContract is no longer needed or replaced by permissions
+      // For now, we'll just filter by user role if permissions are not available
+      // This part needs to be updated based on actual permission logic
+      // For now, let's assume a simple role-based filter
+      user?.role === 'TENANT_ADMIN' || user?.role === 'CONTRACT_MANAGER' || user?.role === 'HR' || user?.role === 'PLANNING'
     )
     setContracts(planningContracts)
 
@@ -235,15 +232,15 @@ export default function PlanningPage() {
     }
   }
 
-  const getRoleDisplayName = (role: UserRole) => {
+  const getRoleDisplayName = (role: any) => {
     switch (role) {
-      case UserRole.TENANT_ADMIN: return 'Admin Geral'
-      case UserRole.CONTRACT_MANAGER: return 'Gerente de Contrato'
-      case UserRole.HR: return 'Recursos Humanos'
-      case UserRole.PLANNING: return 'Planejamento'
-      case UserRole.SAFETY: return 'Segurança'
-      case UserRole.SUPERVISOR: return 'Supervisor'
-      case UserRole.OPERATOR: return 'Operador'
+      case 'TENANT_ADMIN': return 'Admin Geral'
+      case 'CONTRACT_MANAGER': return 'Gerente de Contrato'
+      case 'HR': return 'Recursos Humanos'
+      case 'PLANNING': return 'Planejamento'
+      case 'SAFETY': return 'Segurança'
+      case 'SUPERVISOR': return 'Supervisor'
+      case 'OPERATOR': return 'Operador'
       default: return role
     }
   }

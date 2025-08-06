@@ -20,7 +20,7 @@ import {
   CompanyFunction,
   FunctionFilters as Filters
 } from '@/lib/useFunctions'
-import { validateUserAccess, User } from '@/lib/auth'
+import { validateUserAccess, User } from '@/lib/auth-client'
 
 interface FunctionsTabProps {
   currentUser: User

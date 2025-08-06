@@ -5,12 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Edit, Trash2, Users } from "lucide-react";
 import { mockContracts, Contract } from '@/lib/mock-data'
 import { 
-  getCurrentUser, 
   getUserPermissions, 
-  validateUserAccess,
-  User,
-  UserRole
-} from '@/lib/auth'
+  validateUserAccess
+} from '@/lib/auth-client'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 
 interface Role {
   id: string;
@@ -27,7 +25,7 @@ const mockRoles: Role[] = [
 ];
 
 export default function RolesPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const { user: currentUser, loading: userLoading } = useCurrentUser()
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [roles, setRoles] = useState<Role[]>(mockRoles)
   const [contracts] = useState<Contract[]>(mockContracts)
@@ -38,12 +36,11 @@ export default function RolesPage() {
   const [newRoleDescription, setNewRoleDescription] = useState("");
 
   useEffect(() => {
-    const user = getCurrentUser()
-    setCurrentUser(user)
-    
-    const permissions = getUserPermissions(user)
-    setUserPermissions(permissions)
-  }, [])
+    if (currentUser) {
+      const permissions = getUserPermissions(currentUser)
+      setUserPermissions(permissions)
+    }
+  }, [currentUser])
 
   const handleAddRole = () => {
     if (newRoleName.trim()) {

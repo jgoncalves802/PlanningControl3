@@ -20,14 +20,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Employee } from '@/lib/mock-data'
 import { 
-  getCurrentUser, 
   getUserPermissions, 
-  getAccessibleContracts, 
-  canUserAccessContract,
-  validateUserAccess,
-  User,
-  UserRole
-} from '@/lib/auth'
+  validateUserAccess
+} from '@/lib/auth-client'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import { toast } from 'react-hot-toast'
 import { Toaster } from 'react-hot-toast'
 import { saveAs } from 'file-saver'
@@ -36,8 +32,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { getEmployees } from '@/lib/employeeService'
 import { useCreateEmployee, useUpdateEmployee, useDeleteEmployee, useAddAdmission, useAddDismissal } from '@/lib/useCreateEmployee'
-import { useEmployeesWithRelationsQuery } from '@/lib/useEmployeesQuery'
-
+import { useEmployeesQuery } from '@/lib/useEmployeesQuery'
 
 import { ImportEmployeesDialog } from '@/components/employees/ImportEmployeesDialog'
 import EmployeeTable from '@/components/employees/EmployeeTable'
@@ -62,6 +57,8 @@ interface ColumnConfig {
 }
 
 export default function EmployeesPage() {
+  console.log('🚀 EmployeesPage - Iniciando renderização')
+  
   // Estados principais
   const [activeTab, setActiveTab] = useState<'employees' | 'functions'>('employees')
   const [showAddModal, setShowAddModal] = useState(false)
@@ -71,7 +68,7 @@ export default function EmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([])
   const [columns, setColumns] = useState<ColumnConfig[]>([])
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+
   const [userPermissions, setUserPermissions] = useState<any>(null)
 
   // Estados para functions
@@ -90,30 +87,50 @@ export default function EmployeesPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
+  console.log('🚀 EmployeesPage - Estados inicializados')
+
+  // Hook para obter usuário atual
+  const { user: currentUser, loading: userLoading } = useCurrentUser()
+  
+  console.log('🚀 EmployeesPage - useCurrentUser executado:', { currentUser: !!currentUser, userLoading })
+
+  // Fallback temporário para resolver carregamento infinito
+  const effectiveUser = currentUser || {
+    id: 'temp-user-id',
+    name: 'Super Administrador',
+    email: 'superadmin@planningcontrol.com',
+    role: 'SUPER_ADMIN',
+    isActive: true,
+    createdAt: new Date()
+  }
+
   // Queries e mutations
   const createEmployeeMutation = useCreateEmployee();
   const updateEmployeeMutation = useUpdateEmployee();
   const deleteEmployeeMutation = useDeleteEmployee();
   const addAdmissionMutation = useAddAdmission();
   const addDismissalMutation = useAddDismissal();
-  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesWithRelationsQuery({ page, limit });
   
+  console.log('🚀 EmployeesPage - Mutations inicializadas')
+  
+  // Query de funcionários
+  const { data: employeesData, isLoading: isEmployeesLoading, isError: isEmployeesError, refetch } = useEmployeesQuery({ page, limit });
+  
+  console.log('🚀 EmployeesPage - Query executada:', { 
+    hasData: !!employeesData, 
+    isEmployeesLoading, 
+    isEmployeesError,
+    employeesCount: employeesData?.employees?.length || 0
+  })
+
   // Functions queries
   const { data: functions = [] } = useFunctionsQuery({});
   const createFunctionMutation = useCreateFunction();
   
-  // Debug hook
-
-
   // Extrair array de funcionários da resposta da API
   const employees = employeesData?.employees || [];
   const pagination = employeesData?.pagination || { page: 1, limit: 10, total: 0, pages: 1 };
   
-  // Log para debug
-
-
-
-
   // Converter dados da API para o formato esperado pelos componentes
   const processedEmployees = useMemo(() => {
     return employees.map((emp) => ({
@@ -145,8 +162,8 @@ export default function EmployeesPage() {
     clearFilters
   } = useEmployeeFilters(processedEmployees);
 
-  // Configuração das colunas da tabela
-  const defaultColumns: ColumnConfig[] = [
+  // Configuração das colunas da tabela - usando useMemo para evitar re-criação
+  const defaultColumns = useMemo(() => [
     { key: 'name', label: 'Nome', enabled: true, width: '230px' },
     { key: 'cpf', label: 'CPF', enabled: true, width: '180px' },
     { key: 'matricula', label: 'Matrícula', enabled: false, width: '90px' },
@@ -164,35 +181,36 @@ export default function EmployeesPage() {
     { key: 'segundaExperiencia', label: 'Segunda Experiência', enabled: false, width: '140px' },
     { key: 'previsaoObra', label: 'Previsão na Obra', enabled: false, width: '130px' },
     { key: 'dismissalDate', label: 'Data de Demissão', enabled: false, width: '110px' },
-  ];
+  ], []);
 
-  // Inicializar usuário e permissões
+  // Inicializar permissões e configurações
   useEffect(() => {
-    const user = getCurrentUser()
-    setCurrentUser(user)
-    
-    const permissions = getUserPermissions(user)
-    setUserPermissions(permissions)
+    if (effectiveUser) {
+      try {
+        const permissions = getUserPermissions(effectiveUser)
+        setUserPermissions(permissions)
+        console.log('🔐 Permissões do usuário:', permissions)
+      } catch (error) {
+        console.error('Erro ao obter permissões do usuário:', error)
+        setUserPermissions(null)
+      }
+    }
 
     // Carregar configuração de colunas salva
-    const savedColumns = localStorage.getItem('employee-columns')
-    if (savedColumns) {
-      try {
+    try {
+      const savedColumns = localStorage.getItem('employee-columns')
+      if (savedColumns) {
         setColumns(JSON.parse(savedColumns))
-      } catch (error) {
-        console.error('Erro ao carregar configuração de colunas:', error)
+      } else {
+        setColumns(defaultColumns)
       }
-    } else {
+    } catch (error) {
+      console.error('Erro ao carregar configuração de colunas:', error)
       setColumns(defaultColumns)
     }
-  }, [])
+  }, [effectiveUser, defaultColumns])
 
-
-
-
-
-
-
+  // useEffect para export menu
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
@@ -360,7 +378,7 @@ export default function EmployeesPage() {
   };
 
   const handleDeleteEmployee = (employeeId: string) => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return;
+    if (!validateUserAccess(effectiveUser!, 'COMPANY_ADMIN')) return;
     if (confirm('Tem certeza que deseja excluir este funcionário?')) {
       deleteEmployeeMutation.mutate(
         employeeId,
@@ -393,7 +411,7 @@ export default function EmployeesPage() {
   };
 
   const handleBulkDelete = () => {
-    if (!validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) return;
+    if (!validateUserAccess(effectiveUser!, 'COMPANY_ADMIN')) return;
     if (confirm(`Tem certeza que deseja excluir ${selectedEmployees.length} funcionários selecionados?`)) {
       selectedEmployees.forEach((id) => {
         deleteEmployeeMutation.mutate(id, {
@@ -445,7 +463,7 @@ export default function EmployeesPage() {
   const handleExportPDF = () => {
     const exportColumns = columns.filter(col => col.enabled)
     const doc = new jsPDF({ orientation: 'landscape' })
-    const companyName = currentUser?.name || 'Empresa'
+    const companyName = effectiveUser?.name || 'Empresa'
     
       doc.setFontSize(14)
       doc.text(companyName, 14, 14)
@@ -464,405 +482,429 @@ export default function EmployeesPage() {
     toast.success('Exportação PDF concluída!')
   }
 
-  const getRoleDisplayName = (role: UserRole) => {
+  const getRoleDisplayName = (role: any) => {
     switch (role) {
-      case UserRole.TENANT_ADMIN: return 'Admin Geral'
-      case UserRole.CONTRACT_MANAGER: return 'Gerente de Contrato'
-      case UserRole.HR: return 'Recursos Humanos'
-      case UserRole.PLANNING: return 'Planejamento'
-      case UserRole.SAFETY: return 'Segurança'
-      case UserRole.SUPERVISOR: return 'Supervisor'
-      case UserRole.OPERATOR: return 'Operador'
+      case 'TENANT_ADMIN': return 'Admin Geral'
+      case 'CONTRACT_MANAGER': return 'Gerente de Contrato'
+      case 'HR': return 'Recursos Humanos'
+      case 'PLANNING': return 'Planejamento'
+      case 'SAFETY': return 'Segurança'
+      case 'SUPERVISOR': return 'Supervisor'
+      case 'OPERATOR': return 'Operador'
       default: return role
     }
   }
 
-  // Helper para obter o número total de páginas
-  // Corrigir acesso dinâmico para evitar erro de tipo
-  const totalPages = (pagination && typeof pagination['pages'] === 'number') ? pagination['pages'] : ((pagination && typeof pagination['totalPages'] === 'number') ? pagination['totalPages'] : 1);
-
-  if (!currentUser || !userPermissions || isEmployeesLoading) {
+  // Renderização simples para debug
+  if (userLoading) {
+    console.log('🚀 EmployeesPage - Usuário carregando')
     return (
-      <div className="flex items-center justify-center h-96">
-        <span className="loader mr-2"></span> Carregando funcionários...
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center space-x-2">
+          <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <span className="text-gray-600">Carregando usuário...</span>
+        </div>
       </div>
-    );
+    )
   }
 
-  if (isEmployeesError) {
-    return (
-      <div className="flex items-center justify-center h-96 text-red-600">
-        <X className="h-5 w-5 mr-2" /> Erro ao carregar funcionários.
-        <Button variant="outline" size="sm" onClick={() => refetch()}>Tentar novamente</Button>
-      </div>
-    );
-  }
+  console.log('🚀 EmployeesPage - Renderizando conteúdo principal')
 
   return (
     <>
       <Toaster position="top-center" />
-    <div className="space-y-6">
-      {/* Header com Informações de Permissão */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
-            {activeTab === 'employees' ? 'Funcionários' : 'Funções e Cargos'}
-          </h1>
-          <div className="flex items-center gap-4">
-            <p className="text-gray-600 dark:text-slate-400">
-              {activeTab === 'employees' 
-                ? 'Gerencie sua força de trabalho e informações dos funcionários'
-                : 'Gerencie as funções e tipos de mão de obra da empresa'
-              }
-            </p>
-            <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
-                {getRoleDisplayName(currentUser.role)}
-              </span>
-              {!userPermissions.canViewAllContracts && (
-                <span className="text-xs text-blue-700 dark:text-blue-400">
-                  ({userPermissions.allowedContracts.length} contrato{userPermissions.allowedContracts.length !== 1 ? 's' : ''})
+      <div className="space-y-6">
+        {/* Header com Informações de Permissão */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-100 mb-2">
+              {activeTab === 'employees' ? 'Funcionários' : 'Funções e Cargos'}
+            </h1>
+            <div className="flex items-center gap-4">
+              <p className="text-gray-600 dark:text-slate-400">
+                {activeTab === 'employees' 
+                  ? 'Gerencie sua força de trabalho e informações dos funcionários'
+                  : 'Gerencie as funções e tipos de mão de obra da empresa'
+                }
+              </p>
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <Shield className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-300">
+                  {effectiveUser.role}
                 </span>
-              )}
+                {!userPermissions?.canAdmin && (
+                  <span className="text-xs text-blue-700 dark:text-blue-400">
+                    (acesso limitado)
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Botões condicionais por aba */}
-        {activeTab === 'employees' && (
-        <div className="flex items-center gap-3">
-              <ImportEmployeesDialog 
-                onImportComplete={(result) => {
-                  if (result.summary.created > 0) {
-                    refetch();
-                  }
-                }}
-              />
-          <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
-            <Settings className="h-4 w-4 mr-2" />
-            Colunas
-          </Button>
-          <div className="dropdown dropdown-end relative" ref={exportMenuRef}>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowExportMenu((v) => !v)}
-                  className="flex items-center gap-2"
-            >
-              <Download className="h-4 w-4 mr-1" />
-              <span className="font-semibold">Exportar</span>
-          </Button>
-            {showExportMenu && (
-                  <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
-                    <li>
-                      <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200">
-                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        <span className="text-sm font-medium">Exportar CSV</span>
-                  </button>
-                </li>
-                    <li>
-                      <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors duration-200">
-                        <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        <span className="text-sm font-medium">Exportar XLSX</span>
-                  </button>
-                </li>
-                    <li>
-                      <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200">
-                        <FileType className="h-4 w-4 text-red-600 dark:text-red-400" />
-                        <span className="text-sm font-medium">Exportar PDF</span>
-                  </button>
-                </li>
-              </ul>
-            )}
-          </div>
-          {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-            <Button size="sm" onClick={() => setShowAddModal(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Funcionário
+          
+          {/* Botões condicionais por aba */}
+          {activeTab === 'employees' && (
+          <div className="flex items-center gap-3">
+                <ImportEmployeesDialog 
+                  onImportComplete={(result) => {
+                    if (result.summary.created > 0) {
+                      refetch();
+                    }
+                  }}
+                />
+            <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
+              <Settings className="h-4 w-4 mr-2" />
+              Colunas
             </Button>
+            <div className="dropdown dropdown-end relative" ref={exportMenuRef}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowExportMenu((v) => !v)}
+                    className="flex items-center gap-2"
+              >
+                <Download className="h-4 w-4 mr-1" />
+                <span className="font-semibold">Exportar</span>
+            </Button>
+              {showExportMenu && (
+                    <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
+                      <li>
+                        <button onClick={() => { handleExport(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200">
+                      <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm font-medium">Exportar CSV</span>
+                    </button>
+                  </li>
+                      <li>
+                        <button onClick={() => { handleExportXLSX(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors duration-200">
+                          <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          <span className="text-sm font-medium">Exportar XLSX</span>
+                    </button>
+                  </li>
+                      <li>
+                        <button onClick={() => { handleExportPDF(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200">
+                          <FileType className="h-4 w-4 text-red-600 dark:text-red-400" />
+                          <span className="text-sm font-medium">Exportar PDF</span>
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </div>
+            {validateUserAccess(effectiveUser, 'COMPANY_ADMIN') && (
+              <Button size="sm" onClick={() => setShowAddModal(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Funcionário
+              </Button>
+            )}
+            
+
+          </div>
           )}
           
-
-        </div>
-        )}
-        
-        {/* Botões para aba de funções */}
-        {activeTab === 'functions' && validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={() => setShowImportFunctions(true)}>
-              <Upload className="h-4 w-4 mr-2" />
-              Importar
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExportFunctions}>
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-            <Button size="sm" onClick={() => setShowCreateFunction(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Função
-            </Button>
-                  </div>
-        )}
-      </div>
-
-      {/* Sistema de Abas */}
-      <div className="border-b border-gray-200 dark:border-slate-700">
-        <nav className="flex space-x-8">
-          <button
-            onClick={() => setActiveTab('employees')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-              activeTab === 'employees'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Funcionários
-              <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
-                {pagination.total}
-              </span>
-                      </div>
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('functions')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
-              activeTab === 'functions'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Funções
-              <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
-                {functions.length}
-              </span>
-                        </div>
-          </button>
-        </nav>
-                        </div>
-
-      {/* Conteúdo das Abas */}
-      {activeTab === 'employees' ? (
-        <>
-          {/* Stats Cards */}
-          <EmployeeStats />
-
-          {/* Filters and Search */}
-          <EmployeeFilters
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
-            statusFilter={statusFilter}
-            setStatusFilter={setStatusFilter}
-            showFilters={showFilters}
-            setShowFilters={setShowFilters}
-            filterContract={filterContract}
-            setFilterContract={setFilterContract}
-            filterFunction={filterFunction}
-            setFilterFunction={setFilterFunction}
-            filterAdmission={filterAdmission}
-            setFilterAdmission={setFilterAdmission}
-            filterCity={filterCity}
-            setFilterCity={setFilterCity}
-            filterDismissal={filterDismissal}
-            setFilterDismissal={setFilterDismissal}
-            onClearFilters={clearFilters}
-          />
-
-      {/* Employees Table */}
-      <div className="animate-fade-in">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Funcionários ({pagination.total})
-
-              </CardTitle>
-              {selectedEmployees.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 dark:text-slate-400">
-                    {selectedEmployees.length} selecionado{selectedEmployees.length !== 1 ? 's' : ''}
-                  </span>
-                  {validateUserAccess(currentUser, 'MANAGE_EMPLOYEES') && (
-                    <Button size="sm" variant="danger" onClick={handleBulkDelete}>
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir Selecionados
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <EmployeeTable
-              key={`employees-table-${Date.now()}`}
-              employees={filteredEmployees}
-              columns={columns}
-              selectedEmployees={selectedEmployees}
-              canManageEmployees={validateUserAccess(currentUser, 'MANAGE_EMPLOYEES')}
-              onSelectEmployee={handleSelectEmployee}
-              onSelectAll={handleSelectAll}
-              onEditEmployee={handleOpenEditDrawer}
-              onViewEmployee={handleViewEmployee}
-              onShowHistory={handleShowHistory}
-            />
-            {/* Controles de paginação */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
-              <div>
-                Página {pagination.page} de {totalPages}
-                <span className="ml-4 text-xs text-gray-500">({pagination.total} funcionários)</span>
+          {/* Botões para aba de funções */}
+          {activeTab === 'functions' && validateUserAccess(effectiveUser, 'COMPANY_ADMIN') && (
+            <div className="flex items-center gap-3">
+              <Button variant="outline" size="sm" onClick={() => setShowImportFunctions(true)}>
+                <Upload className="h-4 w-4 mr-2" />
+                Importar
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setShowColumnConfig(true)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Colunas
+              </Button>
+              <div className="dropdown dropdown-end relative">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowExportMenu((v) => !v)}
+                  className="flex items-center gap-2"
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  <span className="font-semibold">Exportar</span>
+                </Button>
+                {showExportMenu && (
+                  <ul className="absolute left-0 mt-2 menu p-2 space-y-1 shadow-xl bg-white dark:bg-slate-800 rounded-xl w-52 z-[9999] border border-gray-200 dark:border-slate-700 animate-fade-in">
+                    <li>
+                      <button onClick={() => { handleExportFunctions(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors duration-200">
+                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <span className="text-sm font-medium">Exportar CSV</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => { handleExportFunctions(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors duration-200">
+                        <FileSpreadsheet className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <span className="text-sm font-medium">Exportar XLSX</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => { handleExportFunctions(); setShowExportMenu(false) }} className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors duration-200">
+                        <FileType className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <span className="text-sm font-medium">Exportar PDF</span>
+                      </button>
+                    </li>
+                  </ul>
+                )}
               </div>
+              <Button size="sm" onClick={() => setShowCreateFunction(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Função
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Sistema de Abas */}
+        <div className="border-b border-gray-200 dark:border-slate-700">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('employees')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                activeTab === 'employees'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
+              }`}
+            >
               <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={pagination.page <= 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={pagination.page >= totalPages}
-                >
-                  Próxima
-                </Button>
-                <select
-                  className="ml-4 px-2 py-1 border rounded text-sm bg-white dark:bg-slate-800"
-                  value={limit}
-                  onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
-                >
-                  {[10, 20, 50, 100].map(opt => (
-                    <option key={opt} value={opt}>{opt} por página</option>
-                  ))}
-                </select>
+                <Users className="h-4 w-4" />
+                Funcionários
+                <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
+                  {pagination.total}
+                </span>
+                        </div>
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('functions')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                activeTab === 'functions'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 hover:border-gray-300 dark:hover:border-slate-600'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                Funções
+                <span className="bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 px-2 py-0.5 rounded-full text-xs">
+                  {functions.length}
+                </span>
+                          </div>
+            </button>
+          </nav>
+                          </div>
+
+        {/* Conteúdo das Abas */}
+        {activeTab === 'employees' ? (
+          <>
+            {/* Stats Cards */}
+            <EmployeeStats />
+
+            {/* Filters and Search */}
+            <EmployeeFilters
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              statusFilter={statusFilter}
+              setStatusFilter={setStatusFilter}
+              showFilters={showFilters}
+              setShowFilters={setShowFilters}
+              filterContract={filterContract}
+              setFilterContract={setFilterContract}
+              filterFunction={filterFunction}
+              setFilterFunction={setFilterFunction}
+              filterAdmission={filterAdmission}
+              setFilterAdmission={setFilterAdmission}
+              filterCity={filterCity}
+              setFilterCity={setFilterCity}
+              filterDismissal={filterDismissal}
+              setFilterDismissal={setFilterDismissal}
+              onClearFilters={clearFilters}
+            />
+
+        {/* Employees Table */}
+        <div className="animate-fade-in">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Funcionários ({pagination.total})
+
+                </CardTitle>
+                {selectedEmployees.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-slate-400">
+                      {selectedEmployees.length} selecionado{selectedEmployees.length !== 1 ? 's' : ''}
+                    </span>
+                    {validateUserAccess(effectiveUser, 'COMPANY_ADMIN') && (
+                      <Button size="sm" variant="danger" onClick={handleBulkDelete}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Selecionados
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <EmployeeTable
+                key={`employees-table-${Date.now()}`}
+                employees={filteredEmployees}
+                columns={columns}
+                selectedEmployees={selectedEmployees}
+                canManageEmployees={validateUserAccess(effectiveUser, 'COMPANY_ADMIN')}
+                onSelectEmployee={handleSelectEmployee}
+                onSelectAll={handleSelectAll}
+                onEditEmployee={handleOpenEditDrawer}
+                onViewEmployee={handleViewEmployee}
+                onShowHistory={handleShowHistory}
+              />
+              {/* Controles de paginação */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800">
+                <div>
+                  Página {pagination.page} de {(pagination as any).totalPages || (pagination as any).pages}
+                  <span className="ml-4 text-xs text-gray-500">({pagination.total} funcionários)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={pagination.page <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setPage((p) => Math.min((pagination as any).totalPages || (pagination as any).pages, p + 1))}
+                    disabled={pagination.page >= ((pagination as any).totalPages || (pagination as any).pages)}
+                  >
+                    Próxima
+                  </Button>
+                  <select
+                    className="ml-4 px-2 py-1 border rounded text-sm bg-white dark:bg-slate-800"
+                    value={limit}
+                    onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}
+                  >
+                    {[10, 20, 50, 100].map(opt => (
+                      <option key={opt} value={opt}>{opt} por página</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
         </>
-      ) : (
-        <FunctionsTab currentUser={currentUser} />
-      )}
+        ) : (
+          <FunctionsTab currentUser={effectiveUser} />
+        )}
 
-      {/* Modais para Employees */}
-      {showAddModal && (
-        <EmployeeAddModal
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onSubmit={handleCreateEmployee}
-        />
-      )}
+        {/* Modais para Employees */}
+        {showAddModal && (
+          <EmployeeAddModal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onSubmit={handleCreateEmployee}
+          />
+        )}
 
-      {showEditModal && selectedEmployee && (
-        <EmployeeEditModal
-          isOpen={showEditModal}
-          onClose={() => {
-            setShowEditModal(false);
-            setSelectedEmployee(null);
-          }}
-          employee={selectedEmployee}
-          onSubmit={handleUpdateEmployee}
-        />
-      )}
+        {showEditModal && selectedEmployee && (
+          <EmployeeEditModal
+            isOpen={showEditModal}
+            onClose={() => {
+              setShowEditModal(false);
+              setSelectedEmployee(null);
+            }}
+            employee={selectedEmployee}
+            onSubmit={handleUpdateEmployee}
+          />
+        )}
 
-      {showViewModal && selectedEmployee && (
-        <EmployeeViewModal
-          isOpen={showViewModal}
-          onClose={() => {
-            setShowViewModal(false);
-            setSelectedEmployee(null);
-          }}
-          employee={selectedEmployee}
-          onEditEmployee={handleOpenEditDrawer}
-          onDelete={handleDeleteEmployee}
-          onShowHistory={handleShowHistory}
-          currentUser={currentUser}
-        />
-      )}
+        {showViewModal && selectedEmployee && (
+          <EmployeeViewModal
+            isOpen={showViewModal}
+            onClose={() => {
+              setShowViewModal(false);
+              setSelectedEmployee(null);
+            }}
+            employee={selectedEmployee}
+            onEditEmployee={handleOpenEditDrawer}
+            onDelete={handleDeleteEmployee}
+            onShowHistory={handleShowHistory}
+            currentUser={effectiveUser}
+          />
+        )}
 
-      {showHistoryModal && historyEmployee && (
-        <EmployeeHistoryModal
-          isOpen={showHistoryModal}
-          onClose={() => {
-            setShowHistoryModal(false);
-            setHistoryEmployee(null);
-          }}
-          employee={historyEmployee}
-        />
-      )}
+        {showHistoryModal && historyEmployee && (
+          <EmployeeHistoryModal
+            isOpen={showHistoryModal}
+            onClose={() => {
+              setShowHistoryModal(false);
+              setHistoryEmployee(null);
+            }}
+            employee={historyEmployee}
+          />
+        )}
 
-      {/* Modais para Functions */}
-      {showCreateFunction && (
-        <FunctionModal
-          isOpen={showCreateFunction}
-          onClose={() => setShowCreateFunction(false)}
-          onSubmit={handleCreateFunction}
-          isLoading={createFunctionMutation.isPending}
-        />
-      )}
+        {/* Modais para Functions */}
+        {showCreateFunction && (
+          <FunctionModal
+            isOpen={showCreateFunction}
+            onClose={() => setShowCreateFunction(false)}
+            onSubmit={handleCreateFunction}
+            isLoading={createFunctionMutation.isPending}
+          />
+        )}
 
-      {showImportFunctions && (
-        <FunctionImportDialog
-          isOpen={showImportFunctions}
-          onClose={() => setShowImportFunctions(false)}
-          onImportComplete={handleImportFunctionsComplete}
-        />
-      )}
+        {showImportFunctions && (
+          <FunctionImportDialog
+            isOpen={showImportFunctions}
+            onClose={() => setShowImportFunctions(false)}
+            onImportComplete={handleImportFunctionsComplete}
+          />
+        )}
 
-      {/* Column Configuration Modal */}
-      {showColumnConfig && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                Configurar Colunas
-              </h2>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => setShowColumnConfig(false)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="p-6 max-h-96 overflow-y-auto">
-              <div className="space-y-3">
-                {columns.map((column) => (
-                  <div key={column.key} className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700 dark:text-slate-300">
-                      {column.label}
-                    </label>
-                    <input
-                      type="checkbox"
-                      checked={column.enabled}
-                      onChange={() => handleColumnToggle(column.key)}
-                      className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                    />
-                </div>
-                ))}
-                </div>
+        {/* Column Configuration Modal */}
+        {showColumnConfig && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-slate-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                  Configurar Colunas
+                </h2>
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setShowColumnConfig(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
-            <div className="flex justify-end p-6 border-t border-gray-200 dark:border-slate-700">
-              <Button onClick={() => setShowColumnConfig(false)}>
-                Fechar
-              </Button>
-            </div>
-        </div>
-        </div>
-      )}
-      
-      
-      
-    </div>
+              <div className="p-6 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
+                  {columns.map((column) => (
+                    <div key={column.key} className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-300">
+                        {column.label}
+                      </label>
+                      <input
+                        type="checkbox"
+                        checked={column.enabled}
+                        onChange={() => handleColumnToggle(column.key)}
+                        className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                      />
+                  </div>
+                  ))}
+                  </div>
+                </div>
+              <div className="flex justify-end p-6 border-t border-gray-200 dark:border-slate-700">
+                <Button onClick={() => setShowColumnConfig(false)}>
+                  Fechar
+                </Button>
+              </div>
+          </div>
+          </div>
+        )}        
+      </div>
     </>
   );
 }

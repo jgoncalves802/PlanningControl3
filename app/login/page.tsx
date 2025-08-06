@@ -26,102 +26,7 @@ import {
   Settings
 } from 'lucide-react'
 import Link from 'next/link'
-
-// Fallback para autenticação mock se o contexto não estiver disponível
-const useAuthFallback = () => {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  const signIn = async (email: string, password: string) => {
-    setLoading(true)
-    
-    // Simular delay de autenticação
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Verificar credenciais mock
-    if (email === 'superadmin@planningcontrol.com' && password === '123456') {
-      const mockUser = {
-        id: 'cmdrema7a0000i84808xbgm2r',
-        name: 'Super Administrador',
-        email: email,
-        role: 'SUPER_ADMIN',
-        isActive: true,
-        createdAt: new Date()
-      }
-      setUser(mockUser)
-      localStorage.setItem('user_data', JSON.stringify(mockUser))
-      localStorage.setItem('auth_token', 'mock_token')
-      return { user: mockUser }
-    } else if (email === 'admin@planningcontrol.com' && password === '123456') {
-      const mockUser = {
-        id: 'cmdrema9n0001i848l1zltamw',
-        name: 'Administrador Regular',
-        email: email,
-        role: 'TENANT_ADMIN',
-        isActive: true,
-        createdAt: new Date()
-      }
-      setUser(mockUser)
-      localStorage.setItem('user_data', JSON.stringify(mockUser))
-      localStorage.setItem('auth_token', 'mock_token')
-      return { user: mockUser }
-    } else if (email === 'admin@demo-company.com' && password === '123456') {
-      const mockUser = {
-        id: '1',
-        name: 'Admin Geral',
-        email: email,
-        role: 'TENANT_ADMIN',
-        isActive: true,
-        createdAt: new Date()
-      }
-      setUser(mockUser)
-      localStorage.setItem('user_data', JSON.stringify(mockUser))
-      localStorage.setItem('auth_token', 'mock_token')
-      return { user: mockUser }
-    } else {
-      throw new Error('Credenciais inválidas. Use: superadmin@planningcontrol.com / 123456 ou admin@planningcontrol.com / 123456')
-    }
-  }
-
-  const signUp = async (email: string, password: string, userData: any) => {
-    setLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Simular criação de conta
-    const newUser = {
-      id: Date.now().toString(),
-      name: userData.name,
-      email: email,
-      role: 'OPERATOR',
-      isActive: true,
-      createdAt: new Date()
-    }
-    
-    setUser(newUser)
-    localStorage.setItem('user_data', JSON.stringify(newUser))
-    localStorage.setItem('auth_token', 'mock_token')
-    return { user: newUser }
-  }
-
-  const signOut = async () => {
-    setUser(null)
-    localStorage.removeItem('user_data')
-    localStorage.removeItem('auth_token')
-  }
-
-  const resetPassword = async (email: string) => {
-    throw new Error('Funcionalidade de recuperação de senha não implementada')
-  }
-
-  return {
-    user,
-    loading,
-    signIn,
-    signUp,
-    signOut,
-    resetPassword
-  }
-}
+import { useSupabaseAuth } from '@/lib/hooks/useSupabaseAuth'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -130,68 +35,74 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
   const [name, setName] = useState('')
-  const [authError, setAuthError] = useState<string | null>(null)
+  const [company, setCompany] = useState('')
   
   const router = useRouter()
-  
-  // Tentar usar o contexto de autenticação, com fallback
-  let auth
-  try {
-    // Tentar importar dinamicamente para evitar erros de SSR
-    const { useAuth } = require('@/lib/contexts/AuthContext')
-    auth = useAuth()
-  } catch (error) {
-    console.log('Usando autenticação fallback')
-    auth = useAuthFallback()
-  }
+  const { signIn, signUp, signOut, user, loading } = useSupabaseAuth()
 
-  const { signIn, signUp } = auth
-
-  // Verificar se já está logado
+  // Redirecionar se já estiver logado
   useEffect(() => {
-    const userData = localStorage.getItem('user_data')
-    const authToken = localStorage.getItem('auth_token')
-    
-    if (userData && authToken) {
-      try {
-        const user = JSON.parse(userData)
-        if (user && user.email) {
-          router.push('/dashboard')
-        }
-      } catch (error) {
-        console.error('Erro ao verificar usuário logado:', error)
-        localStorage.removeItem('user_data')
-        localStorage.removeItem('auth_token')
-      }
+    if (user && !loading) {
+      router.push('/dashboard')
     }
-  }, [router])
+  }, [user, loading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setAuthError(null)
 
     try {
       if (isSignUp) {
-        if (!name.trim()) {
-          throw new Error('Nome é obrigatório')
+        // Cadastro
+        const result = await signUp(email, password, { name, companyId: company })
+        if (result?.user) {
+          toast.success('Conta criada com sucesso! Verifique seu email.')
+          setIsSignUp(false)
         }
-        await signUp(email, password, { name })
-        toast.success('Conta criada com sucesso!')
-        router.push('/dashboard')
       } else {
-        await signIn(email, password)
-        toast.success('Login realizado com sucesso!')
-        router.push('/dashboard')
+        // Login
+        const result = await signIn(email, password)
+        if (result?.user) {
+          toast.success('Login realizado com sucesso!')
+          router.push('/dashboard')
+        }
       }
     } catch (error: any) {
-      console.error('Erro na autenticação:', error)
-      const errorMessage = error.message || 'Erro na autenticação'
-      setAuthError(errorMessage)
-      toast.error(errorMessage)
+      console.error('Erro de autenticação:', error)
+      toast.error(error.message || 'Erro na autenticação')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  const handleDemoLogin = async (demoEmail: string, demoPassword: string) => {
+    setEmail(demoEmail)
+    setPassword(demoPassword)
+    setIsLoading(true)
+
+    try {
+      const result = await signIn(demoEmail, demoPassword)
+      if (result?.user) {
+        toast.success('Login demo realizado com sucesso!')
+        router.push('/dashboard')
+      }
+    } catch (error: any) {
+      console.error('Erro no login demo:', error)
+      toast.error('Erro no login demo. Verifique as credenciais.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -447,17 +358,6 @@ export default function LoginPage() {
                   </CardHeader>
                   
                   <CardContent className="space-y-6">
-                    {authError && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3"
-                      >
-                        <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
-                        <p className="text-sm text-red-800 font-medium">{authError}</p>
-                      </motion.div>
-                    )}
-
                     <form onSubmit={handleSubmit} className="space-y-5">
                       {isSignUp && (
                         <motion.div
@@ -477,6 +377,31 @@ export default function LoginPage() {
                               value={name}
                               onChange={(e) => setName(e.target.value)}
                               placeholder="Digite seu nome completo"
+                              required={isSignUp}
+                              className="pl-10 h-12 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {isSignUp && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.3, delay: 0.1 }}
+                          className="space-y-2"
+                        >
+                          <Label htmlFor="company" className="text-sm font-medium text-gray-700">
+                            Empresa
+                          </Label>
+                          <div className="relative">
+                            <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                            <Input
+                              id="company"
+                              type="text"
+                              value={company}
+                              onChange={(e) => setCompany(e.target.value)}
+                              placeholder="Nome da empresa"
                               required={isSignUp}
                               className="pl-10 h-12 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
@@ -562,31 +487,12 @@ export default function LoginPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        onClick={() => {
-                          setIsSignUp(!isSignUp)
-                          setAuthError(null)
-                        }}
+                        onClick={() => setIsSignUp(!isSignUp)}
                         className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
                       >
                         {isSignUp ? 'Já tem uma conta? Faça login' : 'Não tem conta? Criar conta'}
                       </Button>
                     </div>
-
-                    {/* Forgot Password */}
-                    {!isSignUp && (
-                      <div className="text-center">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
-                          onClick={() => {
-                            toast('Funcionalidade em desenvolvimento')
-                          }}
-                        >
-                          Esqueceu sua senha?
-                        </Button>
-                      </div>
-                    )}
 
                     {/* Demo Credentials */}
                     {!isSignUp && (
@@ -609,6 +515,11 @@ export default function LoginPage() {
                           <div>
                             <strong>Admin Regular:</strong>
                             <div className="ml-2">Email: admin@planningcontrol.com</div>
+                            <div className="ml-2">Senha: 123456</div>
+                          </div>
+                          <div>
+                            <strong>Admin Empresa:</strong>
+                            <div className="ml-2">Email: admin@demo-company.com</div>
                             <div className="ml-2">Senha: 123456</div>
                           </div>
                         </div>

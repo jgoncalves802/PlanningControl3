@@ -12,10 +12,23 @@ export default function ReactQueryProvider({ children }: { children: ReactNode }
         refetchOnMount: true,
         refetchOnReconnect: true,
         refetchInterval: false, // Não usar polling, apenas SSE
-        retry: 2,
+        retry: (failureCount, error) => {
+          // Não tentar novamente para erros de rede específicos
+          if (error instanceof Error && error.message.includes('ECONNRESET')) {
+            return false;
+          }
+          return failureCount < 2;
+        },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       },
       mutations: {
-        retry: 1,
+        retry: (failureCount, error) => {
+          // Não tentar novamente para erros de rede específicos
+          if (error instanceof Error && error.message.includes('ECONNRESET')) {
+            return false;
+          }
+          return failureCount < 1;
+        },
       },
     },
   }));

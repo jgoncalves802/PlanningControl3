@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUserServer } from '@/lib/auth';
+import { getCurrentUserServer } from '@/lib/auth-server';
 
 // Forçar renderização dinâmica
 export const dynamic = 'force-dynamic';

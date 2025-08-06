@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getCurrentUser, getUserPermissions } from '@/lib/auth';
+import { getCurrentUserServer, getUserPermissions } from '@/lib/auth-server';
 import { AuditAction, AuditEntity, createAuditLog } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserServer();
     if (!user) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
     }

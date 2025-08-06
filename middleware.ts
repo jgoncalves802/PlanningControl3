@@ -3,31 +3,63 @@ import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
   // Rotas públicas que não precisam de autenticação
-  const publicRoutes = ['/login', '/signup', '/forgot-password']
+  const publicRoutes = ['/login', '/signup', '/forgot-password', '/']
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route))
 
-  // Por enquanto, permitir acesso a todas as rotas
-  // Quando Supabase estiver configurado, descomentar o código abaixo
+  // Verificar se há token de autenticação do Supabase
+  // O Supabase pode usar diferentes nomes de cookies dependendo da configuração
+  const possibleAuthCookies = [
+    'sb-cwilhwqrmjtljwgsgbey-auth-token',
+    'sb-access-token',
+    'sb-refresh-token',
+    'supabase-auth-token'
+  ]
   
-  /*
-  // Verificar se há token de autenticação
-  const token = req.cookies.get('sb-access-token')?.value
+  let hasAuthToken = false
+  let authToken = null
   
+  // Verificar todos os possíveis cookies de autenticação
+  for (const cookieName of possibleAuthCookies) {
+    const cookie = req.cookies.get(cookieName)
+    if (cookie?.value) {
+      hasAuthToken = true
+      authToken = cookie.value
+      break
+    }
+  }
+  
+  console.log('🔍 Middleware - Rota:', req.nextUrl.pathname)
+  console.log('🔍 Middleware - É rota pública:', isPublicRoute)
+  console.log('🔍 Middleware - Tem token:', hasAuthToken)
+  
+  // CORREÇÃO: Evitar loop de redirecionamento
   // Se não há token e não é rota pública, redirecionar para login
-  if (!token && !isPublicRoute) {
+  if (!hasAuthToken && !isPublicRoute) {
+    console.log('🔍 Middleware - Redirecionando para login (sem token)')
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Se há token e está em rota pública, redirecionar para dashboard
-  if (token && isPublicRoute) {
+  // CORREÇÃO: Remover redirecionamento automático de rotas públicas com token
+  // Deixar o React gerenciar o redirecionamento no lado cliente
+  // if (hasAuthToken && isPublicRoute && req.nextUrl.pathname !== '/') {
+  //   console.log('🔍 Middleware - Redirecionando para dashboard (com token)')
+  //   const redirectUrl = req.nextUrl.clone()
+  //   redirectUrl.pathname = '/dashboard'
+  //   return NextResponse.redirect(redirectUrl)
+  // }
+
+  // CORREÇÃO: Simplificar lógica da rota raiz
+  // Se está na rota raiz e não tem token, redirecionar para login
+  if (!hasAuthToken && req.nextUrl.pathname === '/') {
+    console.log('🔍 Middleware - Redirecionando raiz para login')
     const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/dashboard'
+    redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
-  */
 
+  console.log('🔍 Middleware - Permitindo acesso à rota')
   return NextResponse.next()
 }
 

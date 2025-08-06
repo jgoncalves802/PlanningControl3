@@ -25,18 +25,17 @@ import NFCReadModal from '@/components/nfc/NFCReadModal'
 import { useWorkforceRealTime, useProcessNFC } from '@/lib/useWorkforce'
 import { useContractsQuery } from '@/lib/useContracts'
 import { 
-  getCurrentUser, 
   getUserPermissions, 
-  getAccessibleContracts, 
-  UserRole
-} from '@/lib/auth'
+  validateUserAccess
+} from '@/lib/auth-client'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import { toast } from 'react-hot-toast'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { useDebounce } from '@/lib/hooks/useDebounce'
 
 export default function WorkforceControlPage() {
   // TODOS OS HOOKS DEVEM FICAR AQUI, no topo do componente
-  const currentUser = getCurrentUser();
+  const { user: currentUser, loading: userLoading } = useCurrentUser();
   const userPermissions = getUserPermissions(currentUser);
   const [selectedContract, setSelectedContract] = useState<string>('all');
   const [showNFCReader, setShowNFCReader] = useState(false);
@@ -92,7 +91,7 @@ export default function WorkforceControlPage() {
   const { entries, stats, isLoading, error, refetch, page, totalPages, total } = useWorkforceRealTime(filters, safePage, pageSize);
   const processNFCMutation = useProcessNFC();
   const contractGroups = entries?.contractGroups || [];
-  const accessibleContracts = currentUser ? getAccessibleContracts(currentUser, contracts) : [];
+  const accessibleContracts = contracts || [];
   const allEntryIds = contractGroups.flatMap(group => group.entries.map(entry => entry.id));
   const isAllSelected = allEntryIds.length > 0 && allEntryIds.every(id => selectedRows.includes(id));
   const [bulkDeleteLoading, setBulkDeleteLoading] = useState(false);
@@ -305,15 +304,15 @@ export default function WorkforceControlPage() {
     }
   }
 
-  const getRoleDisplayName = (role: UserRole) => {
+  const getRoleDisplayName = (role: string) => {
     switch (role) {
-      case UserRole.TENANT_ADMIN: return 'Admin Geral'
-      case UserRole.CONTRACT_MANAGER: return 'Gerente de Contrato'
-      case UserRole.HR: return 'Recursos Humanos'
-      case UserRole.PLANNING: return 'Planejamento'
-      case UserRole.SAFETY: return 'Segurança'
-      case UserRole.SUPERVISOR: return 'Supervisor'
-      case UserRole.OPERATOR: return 'Operador'
+      case 'TENANT_ADMIN': return 'Admin Geral'
+      case 'CONTRACT_MANAGER': return 'Gerente de Contrato'
+      case 'HR': return 'Recursos Humanos'
+      case 'PLANNING': return 'Planejamento'
+      case 'SAFETY': return 'Segurança'
+      case 'SUPERVISOR': return 'Supervisor'
+      case 'OPERATOR': return 'Operador'
       default: return role
     }
   }
@@ -439,9 +438,9 @@ export default function WorkforceControlPage() {
               <span className="text-sm font-medium text-blue-900">
                 {getRoleDisplayName(currentUser.role)}
               </span>
-              {!userPermissions.canViewAllContracts && (
+              {!userPermissions.canAdmin && (
                 <span className="text-xs text-blue-700">
-                  ({userPermissions.allowedContracts.length} contrato{userPermissions.allowedContracts.length !== 1 ? 's' : ''})
+                  (acesso limitado)
                 </span>
               )}
             </div>

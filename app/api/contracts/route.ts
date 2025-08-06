@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from '@/lib/auth-server'
+import { getCompanyFilters } from '@/lib/auth-client'
 import { emitContractEvent } from './events/route';
 
 // Função para normalizar caracteres especiais e garantir UTF-8
@@ -28,8 +30,11 @@ function normalizeContractFields(data: any): any {
 // GET /api/contracts - Listar contratos com filtros e paginação
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
 
-    
     const { searchParams } = new URL(request.url)
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '10')
@@ -37,11 +42,14 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get('isActive')
     
     const skip = (page - 1) * limit
-    
 
+    // Obter filtros de empresa baseados no role do usuário
+    const companyFilters = getCompanyFilters(session.user)
 
     // Construir where clause
-    const where: any = {}
+    const where: any = {
+      ...companyFilters // Aplicar filtros de empresa
+    }
     
     if (search) {
       where.OR = [
@@ -53,8 +61,6 @@ export async function GET(request: NextRequest) {
     if (isActive !== null && isActive !== undefined) {
       where.isActive = isActive === 'true'
     }
-
-
 
     // Buscar contratos com paginação simples
     const [contracts, totalCount] = await Promise.all([
@@ -74,8 +80,6 @@ export async function GET(request: NextRequest) {
       }),
       prisma.contract.count({ where })
     ])
-
-
 
     // Normalizar dados dos contratos
     const normalizedContracts = contracts.map((contract) => {
@@ -98,36 +102,15 @@ export async function GET(request: NextRequest) {
         pages: totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1
-      },
-      timestamp: new Date().toISOString()
+      }
     }
 
-    return NextResponse.json(response, {
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      }
-    })
-    
-  } catch (error: any) {
+    return NextResponse.json(response)
+  } catch (error) {
     console.error('Erro ao buscar contratos:', error)
-    if (error instanceof Error) {
-      console.error('Mensagem:', error.message)
-      console.error('Stack:', error.stack)
-    }
-    // Logar headers da request para debug
-    try {
-
-    } catch (e) {
-
-    }
     return NextResponse.json(
-      { error: 'Erro interno do servidor', details: error.message, stack: error.stack },
-      { 
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8'
-        }
-      }
+      { error: 'Erro interno do servidor' },
+      { status: 500 }
     )
   }
 }
@@ -135,13 +118,21 @@ export async function GET(request: NextRequest) {
 // POST /api/contracts - Criar novo contrato
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
 
-    
-    const rawData = await request.json()
-    const data = normalizeContractFields(rawData)
+    // Verificar se o usuário pode criar contratos
+    if (session.user.role === 'USER') {
+      return NextResponse.json({ error: 'Sem permissão para criar contratos' }, { status: 403 })
+    }
 
+    const body = await request.json()
+    const { name, code, workdayHours, includesWeekends, includesHolidays } = body
 
-    const { name, code, workdayHours, includesWeekends, includesHolidays } = data
+    // Normalizar dados
+    const normalizedData = normalizeContractFields(body)
 
     // Validações
     const errors: Record<string, string> = {}
@@ -164,10 +155,17 @@ export async function POST(request: NextRequest) {
       errors.workdayHours = 'Horas de trabalho deve ser um número entre 1 e 24'
     }
 
-    // Verificar se já existe contrato com mesmo código
+    // Verificar se já existe contrato com mesmo código na empresa do usuário
     if (code) {
-      const existingContract = await prisma.contract.findUnique({
-        where: { code: code.trim().toUpperCase() }
+      const whereClause: any = { code: code.trim().toUpperCase() }
+      
+      // Aplicar filtro de empresa se não for SUPER_ADMIN
+      if (session.user.role !== 'SUPER_ADMIN') {
+        whereClause.companyId = session.user.companyId
+      }
+      
+      const existingContract = await prisma.contract.findFirst({
+        where: whereClause
       })
 
       if (existingContract) {
@@ -184,16 +182,26 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Preparar dados para criação
+    const contractData: any = {
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
+      workdayHours: Number(workdayHours),
+      includesWeekends: Boolean(includesWeekends || false),
+      includesHolidays: Boolean(includesHolidays || false),
+      isActive: true
+    }
+
+    // Aplicar companyId baseado no role do usuário
+    if (session.user.role === 'COMPANY_ADMIN') {
+      // COMPANY_ADMIN só pode criar contratos para sua própria empresa
+      contractData.companyId = session.user.companyId
+    }
+    // SUPER_ADMIN pode criar contratos para qualquer empresa (companyId vem do request)
+
     // Criar contrato
     const newContract = await prisma.contract.create({
-      data: {
-        name: name.trim(),
-        code: code.trim().toUpperCase(),
-        workdayHours: Number(workdayHours),
-        includesWeekends: Boolean(includesWeekends || false),
-        includesHolidays: Boolean(includesHolidays || false),
-        isActive: true
-      },
+      data: contractData,
       include: {
         responsibles: {
           include: {
@@ -215,8 +223,6 @@ export async function POST(request: NextRequest) {
         }
       }
     })
-
-
 
     // Emitir evento SSE
     emitContractEvent('created', newContract);

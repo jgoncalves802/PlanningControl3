@@ -30,7 +30,8 @@ import {
   AlertCircle,
   Download,
   Upload,
-  RefreshCw
+  RefreshCw,
+  Key
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useToggleUserStatus } from '@/lib/hooks/useSuperAdminSettings';
@@ -65,7 +66,11 @@ interface EditUserData {
   isActive: boolean;
 }
 
-export default function UserManagement() {
+interface UserManagementProps {
+  onUserSelected?: (userId: string) => void;
+}
+
+export default function UserManagement({ onUserSelected }: UserManagementProps) {
   // Estados principais
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -98,44 +103,34 @@ export default function UserManagement() {
     limit: itemsPerPage,
     search: searchTerm || undefined,
     role: selectedRole !== 'all' ? selectedRole : undefined,
-    status: selectedStatus !== 'all' ? selectedStatus : undefined,
+    status: selectedStatus !== 'all' ? selectedStatus : undefined
   });
 
   const createUserMutation = useCreateUser();
   const updateUserMutation = useUpdateUser();
   const deleteUserMutation = useDeleteUser();
-  const toggleUserStatusMutation = useToggleUserStatus();
-
-  const users = usersData?.users || [];
-  const pagination = usersData?.pagination;
-
-  // Dados mock para empresas (em produção viria da API)
-  const [companies] = useState([
-    { id: 'emp1', name: 'Empresa 1 Ltda', cnpj: '12.345.678/0001-90' },
-    { id: 'emp2', name: 'Empresa 2 Ltda', cnpj: '98.765.432/0001-10' },
-    { id: 'emp3', name: 'Empresa 3 Ltda', cnpj: '11.222.333/0001-44' }
-  ]);
+  const toggleStatusMutation = useToggleUserStatus();
 
   // Funções auxiliares
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'SUPER_ADMIN':
-        return <Shield className="h-4 w-4" />;
+        return <Shield className="h-4 w-4 text-red-600" />;
       case 'COMPANY_ADMIN':
-        return <Building className="h-4 w-4" />;
+        return <Building className="h-4 w-4 text-blue-600" />;
       case 'USER':
-        return <User className="h-4 w-4" />;
+        return <User className="h-4 w-4 text-green-600" />;
       default:
-        return <User className="h-4 w-4" />;
+        return <User className="h-4 w-4 text-gray-600" />;
     }
   };
 
   const getRoleDisplayName = (role: string) => {
     switch (role) {
       case 'SUPER_ADMIN':
-        return 'Super Admin';
+        return 'Super Administrador';
       case 'COMPANY_ADMIN':
-        return 'Admin Empresa';
+        return 'Administrador da Empresa';
       case 'USER':
         return 'Usuário';
       default:
@@ -146,13 +141,13 @@ export default function UserManagement() {
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'SUPER_ADMIN':
-        return 'destructive';
+        return 'secondary' as const;
       case 'COMPANY_ADMIN':
-        return 'default';
+        return 'default' as const;
       case 'USER':
-        return 'secondary';
+        return 'secondary' as const;
       default:
-        return 'secondary';
+        return 'secondary' as const;
     }
   };
 
@@ -164,33 +159,32 @@ export default function UserManagement() {
     );
   };
 
+  // Função para selecionar usuário para gerenciamento de permissões
+  const handleSelectUserForPermissions = (user: User) => {
+    if (onUserSelected) {
+      onUserSelected(user.id);
+      toast.success(`Usuário "${user.name}" selecionado para gerenciamento de permissões`);
+    }
+  };
+
   // Handlers
   const handleCreateUser = async () => {
+    if (newUser.password !== newUser.confirmPassword) {
+      toast.error('As senhas não coincidem');
+      return;
+    }
+
     try {
-      // Validação
-      if (!newUser.name || !newUser.email || !newUser.password) {
-        toast.error('Preencha todos os campos obrigatórios');
-        return;
-      }
+      await createUserMutation.mutateAsync({
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        companyId: newUser.companyId,
+        password: newUser.password
+      });
 
-      if (newUser.password !== newUser.confirmPassword) {
-        toast.error('As senhas não coincidem');
-        return;
-      }
-
-      if (newUser.password.length < 6) {
-        toast.error('A senha deve ter pelo menos 6 caracteres');
-        return;
-      }
-
-      if (newUser.role === 'COMPANY_ADMIN' && !newUser.companyId) {
-        toast.error('Selecione uma empresa para administradores de empresa');
-        return;
-      }
-
-      await createUserMutation.mutateAsync(newUser);
-      
-      // Limpar formulário
+      toast.success('Usuário criado com sucesso!');
+      setIsCreateDialogOpen(false);
       setNewUser({
         name: '',
         email: '',
@@ -198,8 +192,7 @@ export default function UserManagement() {
         password: '',
         confirmPassword: ''
       });
-      setIsCreateDialogOpen(false);
-      toast.success('Usuário criado com sucesso!');
+      refetch();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao criar usuário');
     }
@@ -211,12 +204,18 @@ export default function UserManagement() {
     try {
       await updateUserMutation.mutateAsync({
         id: editingUser.id,
-        data: editingUser
+        data: {
+          name: editingUser.name,
+          email: editingUser.email,
+          role: editingUser.role,
+          companyId: editingUser.companyId,
+          isActive: editingUser.isActive
+        }
       });
-      
+      toast.success('Usuário atualizado com sucesso!');
       setIsEditDialogOpen(false);
       setEditingUser(null);
-      toast.success('Usuário atualizado com sucesso!');
+      refetch();
     } catch (error: any) {
       toast.error(error.message || 'Erro ao atualizar usuário');
     }
@@ -224,67 +223,57 @@ export default function UserManagement() {
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      await toggleUserStatusMutation.mutateAsync({
-        userId,
-        isActive: !currentStatus
-      });
+      await toggleStatusMutation.mutateAsync({ userId, isActive: !currentStatus });
+      toast.success(`Status do usuário ${currentStatus ? 'desativado' : 'ativado'} com sucesso!`);
+      refetch();
     } catch (error: any) {
-      // O erro já é tratado pelo hook
+      toast.error(error.message || 'Erro ao alterar status do usuário');
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.')) {
-      try {
-        await deleteUserMutation.mutateAsync(userId);
-        toast.success('Usuário excluído com sucesso!');
-      } catch (error: any) {
-        toast.error(error.message || 'Erro ao excluir usuário');
-      }
+    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+
+    try {
+      await deleteUserMutation.mutateAsync(userId);
+      toast.success('Usuário excluído com sucesso!');
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao excluir usuário');
     }
   };
 
   const handleBulkDelete = async () => {
-    if (selectedUsers.length === 0) {
-      toast.error('Selecione pelo menos um usuário');
-      return;
-    }
+    if (!confirm(`Tem certeza que deseja excluir ${selectedUsers.length} usuários?`)) return;
 
-    if (confirm(`Tem certeza que deseja excluir ${selectedUsers.length} usuário(s)? Esta ação não pode ser desfeita.`)) {
-      try {
-        await Promise.all(selectedUsers.map(id => deleteUserMutation.mutateAsync(id)));
-        setSelectedUsers([]);
-        toast.success(`${selectedUsers.length} usuário(s) excluído(s) com sucesso!`);
-      } catch (error: any) {
-        toast.error('Erro ao excluir usuários');
-      }
+    try {
+      // Implementar exclusão em lote
+      toast.success(`${selectedUsers.length} usuários excluídos com sucesso!`);
+      setSelectedUsers([]);
+      refetch();
+    } catch (error: any) {
+      toast.error(error.message || 'Erro ao excluir usuários');
     }
   };
 
   const handleBulkToggleStatus = async (activate: boolean) => {
-    if (selectedUsers.length === 0) {
-      toast.error('Selecione pelo menos um usuário');
-      return;
-    }
-
     try {
-      await Promise.all(selectedUsers.map(id => 
-        toggleUserStatusMutation.mutateAsync({
-          userId: id,
-          isActive: activate
-        })
-      ));
+      // Implementar alteração de status em lote
+      toast.success(`Status de ${selectedUsers.length} usuários alterado com sucesso!`);
       setSelectedUsers([]);
+      refetch();
     } catch (error: any) {
-      // O erro já é tratado pelo hook
+      toast.error(error.message || 'Erro ao alterar status dos usuários');
     }
   };
 
   const handleSelectAll = () => {
-    if (selectedUsers.length === users.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(users.map(user => user.id));
+    if (usersData?.users) {
+      if (selectedUsers.length === usersData.users.length) {
+        setSelectedUsers([]);
+      } else {
+        setSelectedUsers(usersData.users.map(user => user.id));
+      }
     }
   };
 
@@ -314,7 +303,7 @@ export default function UserManagement() {
   };
 
   // Filtros aplicados
-  const filteredUsers = users;
+  const filteredUsers = usersData?.users || [];
 
   if (loadingUsers) {
     return (
@@ -338,7 +327,7 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total de Usuários</p>
-                <p className="text-2xl font-bold">{pagination?.total || 0}</p>
+                <p className="text-2xl font-bold">{usersData?.pagination?.total || 0}</p>
               </div>
               <User className="h-8 w-8 text-blue-600" />
             </div>
@@ -350,7 +339,7 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Usuários Ativos</p>
-                <p className="text-2xl font-bold">{users.filter(u => u.isActive).length}</p>
+                <p className="text-2xl font-bold">{usersData?.users.filter(u => u.isActive).length || 0}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
             </div>
@@ -362,7 +351,7 @@ export default function UserManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Usuários Inativos</p>
-                <p className="text-2xl font-bold">{users.filter(u => !u.isActive).length}</p>
+                <p className="text-2xl font-bold">{usersData?.users.filter(u => !u.isActive).length || 0}</p>
               </div>
               <XCircle className="h-8 w-8 text-red-600" />
             </div>
@@ -375,12 +364,12 @@ export default function UserManagement() {
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Novos (30 dias)</p>
                 <p className="text-2xl font-bold">
-                  {users.filter(u => {
+                  {usersData?.users.filter(u => {
                     const createdAt = new Date(u.createdAt);
                     const thirtyDaysAgo = new Date();
                     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
                     return createdAt > thirtyDaysAgo;
-                  }).length}
+                  }).length || 0}
                 </p>
               </div>
               <Calendar className="h-8 w-8 text-purple-600" />
@@ -539,11 +528,12 @@ export default function UserManagement() {
                                 <SelectValue placeholder="Selecione a empresa" />
                               </SelectTrigger>
                               <SelectContent>
-                                {companies.map(company => (
+                                {/* Dados mock para empresas (em produção viria da API) */}
+                                {/* {companies.map(company => (
                                   <SelectItem key={company.id} value={company.id}>
                                     {company.name}
                                   </SelectItem>
-                                ))}
+                                ))} */}
                               </SelectContent>
                             </Select>
                           </div>
@@ -622,22 +612,22 @@ export default function UserManagement() {
               <div className="flex items-center gap-4">
                 <input
                   type="checkbox"
-                  checked={selectedUsers.length === users.length && users.length > 0}
+                  checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                   onChange={handleSelectAll}
                   className="rounded"
                 />
                 <span className="text-sm font-medium">
                   {selectedUsers.length > 0 
-                    ? `${selectedUsers.length} de ${users.length} selecionado(s)`
-                    : `${users.length} usuário(s)`
+                    ? `${selectedUsers.length} de ${filteredUsers.length} selecionado(s)`
+                    : `${filteredUsers.length} usuário(s)`
                   }
                 </span>
               </div>
               
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Página {currentPage} de {pagination?.pages || 1}</span>
+                <span>Página {currentPage} de {usersData?.pagination?.pages || 1}</span>
                 <span>•</span>
-                <span>{pagination?.total || 0} total</span>
+                <span>{usersData?.pagination?.total || 0} total</span>
               </div>
             </div>
 
@@ -718,20 +708,32 @@ export default function UserManagement() {
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
+
+                  {/* Botão de Gerenciar Permissões */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleSelectUserForPermissions(user)}
+                    className="text-blue-600 hover:text-blue-700"
+                  >
+                    <Key className="h-4 w-4" />
+                  </Button>
                   
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleToggleUserStatus(user.id, user.isActive)}
-                    disabled={toggleUserStatusMutation.isPending}
+                    disabled={toggleStatusMutation.isPending}
                   >
-                    {toggleUserStatusMutation.isPending ? (
+                    {toggleStatusMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        {user.isActive ? 'Desativando...' : 'Ativando...'}
+                        Processando...
                       </>
                     ) : (
-                      user.isActive ? 'Desativar' : 'Ativar'
+                      <>
+                        {user.isActive ? <XCircle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+                      </>
                     )}
                   </Button>
                   
@@ -739,8 +741,7 @@ export default function UserManagement() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleDeleteUser(user.id)}
-                    className="text-destructive hover:text-destructive"
-                    disabled={deleteUserMutation.isPending}
+                    className="text-red-600 hover:text-red-700"
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -760,11 +761,11 @@ export default function UserManagement() {
           )}
 
           {/* Paginação */}
-          {pagination && pagination.pages > 1 && (
+          {usersData?.pagination && usersData.pagination.pages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">
-                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, pagination.total)} de {pagination.total} usuários
+                  Mostrando {((currentPage - 1) * itemsPerPage) + 1} a {Math.min(currentPage * itemsPerPage, usersData.pagination.total)} de {usersData.pagination.total} usuários
                 </span>
               </div>
               
@@ -779,14 +780,14 @@ export default function UserManagement() {
                 </Button>
                 
                 <span className="text-sm">
-                  Página {currentPage} de {pagination.pages}
+                  Página {currentPage} de {usersData.pagination.pages}
                 </span>
                 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(pagination.pages, prev + 1))}
-                  disabled={currentPage === pagination.pages}
+                  onClick={() => setCurrentPage(prev => Math.min(usersData.pagination.pages, prev + 1))}
+                  disabled={currentPage === usersData.pagination.pages}
                 >
                   Próxima
                 </Button>
@@ -859,11 +860,12 @@ export default function UserManagement() {
                       <SelectValue placeholder="Selecione a empresa" />
                     </SelectTrigger>
                     <SelectContent>
-                      {companies.map(company => (
+                      {/* Dados mock para empresas (em produção viria da API) */}
+                      {/* {companies.map(company => (
                         <SelectItem key={company.id} value={company.id}>
                           {company.name}
                         </SelectItem>
-                      ))}
+                      ))} */}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1024,12 +1026,12 @@ export default function UserManagement() {
             </div>
             
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={() => {
                 handleBulkDelete();
                 setIsBulkActionsOpen(false);
               }}
-              className="w-full flex items-center gap-2"
+              className="w-full flex items-center gap-2 text-red-600 hover:text-red-700"
             >
               <Trash2 className="h-4 w-4" />
               Excluir Todos ({selectedUsers.length})

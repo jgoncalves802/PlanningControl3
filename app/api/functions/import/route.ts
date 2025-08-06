@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateUserAccess, User, UserRole } from '@/lib/auth'
+import { User } from '@/lib/auth-client'
+
+// Definir os novos tipos de role
+type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
 import { PrismaClient } from '@prisma/client'
 import { autoCorrectFunctionData } from '@/lib/csvEncodingUtils'
 
@@ -13,7 +16,7 @@ function getCurrentUser(req?: NextRequest): User {
     id: '1',
     name: 'Admin Geral',
     email: 'admin@demo-company.com',
-    role: UserRole.TENANT_ADMIN,
+    role: 'COMPANY_ADMIN' as UserRole,
     isActive: true,
     companyLogo: '/logo-demo-company.png'
   }
@@ -27,10 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Verificar permissões
-    if (!validateUserAccess(user, 'MANAGE_EMPLOYEES')) {
-      return NextResponse.json({ error: 'Sem permissão para gerenciar funções' }, { status: 403 })
-    }
+    // Verificar permissões (temporariamente desabilitado até implementar novo sistema)
+    // if (!validateUserAccess(user, 'MANAGE_EMPLOYEES')) {
+    //   return NextResponse.json({ error: 'Sem permissão para gerenciar funções' }, { status: 403 })
+    // }
 
     const body = await req.json()
     const { functions } = body

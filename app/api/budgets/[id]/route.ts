@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUserServer } from '@/lib/auth';
+import { getCurrentUserServer } from '@/lib/auth-server';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/budgets/[id] - Buscar orçamento específico

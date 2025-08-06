@@ -1,6 +1,9 @@
 // Mock data for demonstration purposes
 import { addDays, subDays, addHours } from 'date-fns'
-import { User, UserRole } from './auth'
+import { User } from './auth'
+
+// Definir os novos tipos de role
+type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
 import { EmployeeStatus } from '@/components/ui/status-badge'
 
 export interface Contract {
@@ -377,7 +380,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Supervisor Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 100),
         notes: 'Obrigatório para todas as funções'
       },
@@ -389,7 +392,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Supervisor Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 95),
         notes: 'Necessário para funções que envolvem trabalho em altura'
       },
@@ -401,7 +404,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Supervisor Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 90),
         notes: 'Específico para soldadores'
       }
@@ -469,7 +472,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Gerente Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 180),
         notes: 'Base para todas as atividades industriais'
       },
@@ -481,7 +484,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Gerente Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 175),
         notes: 'Essencial para manter qualidade dos produtos'
       },
@@ -493,7 +496,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Gerente Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 170),
         notes: 'Para trabalhos em tanques e equipamentos'
       }
@@ -561,7 +564,7 @@ export const mockContracts: Contract[] = [
         isRequired: true,
         isImpeditive: true,
         addedBy: 'Coordenador Segurança',
-        addedByRole: UserRole.SAFETY,
+        addedByRole: 'COMPANY_ADMIN' as UserRole,
         addedAt: subDays(new Date(), 80),
         notes: 'Fundamental para todos os serviços'
       }
@@ -785,7 +788,7 @@ export const mockTransferRequests: TransferRequest[] = [
     toContract: 'Manufacturing Unit B',
     toFunction: 'Quality Inspector',
     requestedBy: 'Gestor Contrato A',
-    requestedByRole: UserRole.CONTRACT_MANAGER,
+    requestedByRole: 'COMPANY_ADMIN' as UserRole,
     status: TransferStatus.BLOCKED_SAFETY,
     currentStep: TransferStep.DESTINATION_APPROVAL,
     reason: 'Oportunidade de desenvolvimento de habilidades',
@@ -812,7 +815,7 @@ export const mockTransferRequests: TransferRequest[] = [
     toContract: 'Construction Project Alpha',
     toFunction: 'Site Engineer',
     requestedBy: 'Planejador Contrato B',
-    requestedByRole: UserRole.PLANNING,
+    requestedByRole: 'COMPANY_ADMIN' as UserRole,
     status: TransferStatus.PENDING_CONTRACTOR_SYSTEM,
     currentStep: TransferStep.CONTRACTOR_SYSTEM,
     reason: 'Necessidade do projeto',
@@ -823,7 +826,7 @@ export const mockTransferRequests: TransferRequest[] = [
         id: '1',
         step: TransferStep.DESTINATION_APPROVAL,
         approvedBy: 'Gestor Contrato A',
-        approvedByRole: UserRole.CONTRACT_MANAGER,
+        approvedByRole: 'COMPANY_ADMIN' as UserRole,
         approvedAt: subDays(new Date(), 4),
         action: 'APPROVED',
         comments: 'Aprovado - funcionário tem perfil adequado'
@@ -832,7 +835,7 @@ export const mockTransferRequests: TransferRequest[] = [
         id: '2',
         step: TransferStep.ADMIN_APPROVAL,
         approvedBy: 'Admin RH',
-        approvedByRole: UserRole.HR,
+        approvedByRole: 'COMPANY_ADMIN' as UserRole,
         approvedAt: subDays(new Date(), 3),
         action: 'APPROVED',
         comments: 'Documentação em ordem, aprovado'
@@ -858,7 +861,7 @@ export const mockTransferRequests: TransferRequest[] = [
     toContract: 'Facility Services',
     toFunction: 'Security Guard',
     requestedBy: 'Supervisor Segurança',
-    requestedByRole: UserRole.SUPERVISOR,
+    requestedByRole: 'USER' as UserRole,
     status: TransferStatus.COMPLETED,
     currentStep: TransferStep.COMPLETED,
     reason: 'Solicitação de mudança de carreira',
@@ -874,7 +877,7 @@ export const mockTransferRequests: TransferRequest[] = [
         id: '3',
         step: TransferStep.DESTINATION_APPROVAL,
         approvedBy: 'Gestor Facility',
-        approvedByRole: UserRole.CONTRACT_MANAGER,
+        approvedByRole: 'COMPANY_ADMIN' as UserRole,
         approvedAt: subDays(new Date(), 8),
         action: 'APPROVED'
       },
@@ -882,7 +885,7 @@ export const mockTransferRequests: TransferRequest[] = [
         id: '4',
         step: TransferStep.ADMIN_APPROVAL,
         approvedBy: 'Admin RH',
-        approvedByRole: UserRole.HR,
+        approvedByRole: 'COMPANY_ADMIN' as UserRole,
         approvedAt: subDays(new Date(), 7),
         action: 'APPROVED'
       },
@@ -890,7 +893,7 @@ export const mockTransferRequests: TransferRequest[] = [
         id: '5',
         step: TransferStep.CONTRACTOR_RELEASE,
         approvedBy: 'Planejador Facility',
-        approvedByRole: UserRole.PLANNING,
+        approvedByRole: 'COMPANY_ADMIN' as UserRole,
         approvedAt: subDays(new Date(), 1),
         action: 'APPROVED'
       }
@@ -915,7 +918,7 @@ export const mockTransferRequests: TransferRequest[] = [
     toContract: 'Construction Project Alpha',
     toFunction: 'Safety Officer',
     requestedBy: 'Gerente Operações',
-    requestedByRole: UserRole.CONTRACT_MANAGER,
+    requestedByRole: 'COMPANY_ADMIN' as UserRole,
     status: TransferStatus.REJECTED,
     currentStep: TransferStep.DESTINATION_APPROVAL,
     reason: 'Atribuição temporária',
@@ -926,7 +929,7 @@ export const mockTransferRequests: TransferRequest[] = [
         id: '6',
         step: TransferStep.DESTINATION_APPROVAL,
         approvedBy: 'Gestor Contrato A',
-        approvedByRole: UserRole.CONTRACT_MANAGER,
+        approvedByRole: 'COMPANY_ADMIN' as UserRole,
         approvedAt: subDays(new Date(), 6),
         action: 'REJECTED',
         comments: 'Não há vaga disponível no momento'
@@ -1067,7 +1070,7 @@ export const mockUsers: User[] = [
     id: '1',
     email: 'admin@demo-company.com',
     name: 'Admin User',
-    role: UserRole.TENANT_ADMIN,
+    role: 'COMPANY_ADMIN' as UserRole,
     isActive: true,
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin',
     createdAt: subDays(new Date(), 365)
@@ -1076,7 +1079,7 @@ export const mockUsers: User[] = [
     id: '2',
     email: 'hr@demo-company.com',
     name: 'HR Manager',
-    role: UserRole.HR,
+    role: 'COMPANY_ADMIN' as UserRole,
     isActive: true,
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=hr',
     createdAt: subDays(new Date(), 200)
@@ -1085,7 +1088,7 @@ export const mockUsers: User[] = [
     id: '3',
     email: 'safety@demo-company.com',
     name: 'Safety Officer',
-    role: UserRole.SAFETY,
+    role: 'COMPANY_ADMIN' as UserRole,
     isActive: true,
     avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=safety',
     createdAt: subDays(new Date(), 150)

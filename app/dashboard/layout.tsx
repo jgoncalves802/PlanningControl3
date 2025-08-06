@@ -5,7 +5,7 @@ import Sidebar from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { Toaster } from 'react-hot-toast'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
-import { useAuth } from '@/lib/contexts/AuthContext'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 
 export default function DashboardLayout({
   children,
@@ -13,7 +13,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const { user } = useAuth()
+  const { user } = useCurrentUser()
 
   return (
     <ProtectedRoute>

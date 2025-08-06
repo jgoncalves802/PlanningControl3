@@ -43,14 +43,10 @@ import {
 } from '@/lib/utils'
 import { NFCReader } from '@/components/nfc/nfc-reader'
 import { 
-  getCurrentUser, 
   getUserPermissions, 
-  getAccessibleContracts, 
-  canUserAccessContract,
-  validateUserAccess,
-  User,
-  UserRole
-} from '@/lib/auth'
+  validateUserAccess
+} from '@/lib/auth-client'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 import { useTransferRequests } from '@/lib/hooks/useTransferRequests';
 import { useTransferStats } from '@/lib/hooks/useTransferStats';
 import { TransferDetailModal } from './TransferDetailModal';
@@ -120,7 +116,7 @@ export default function TransfersPage() {
   console.log('   params:', transferRequestsParams)
   console.log('')
 
-  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [currentUser, setCurrentUser] = useState<any | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [accessibleContracts, setAccessibleContracts] = useState<any[]>([])
   const [transfers, setTransfers] = useState<TransferRequest[]>([])
@@ -136,7 +132,7 @@ export default function TransfersPage() {
 
   // Inicializar usuário e permissões
   useEffect(() => {
-    const user = getCurrentUser()
+    const { user, loading: userLoading } = useCurrentUser()
     setCurrentUser(user)
     
     const permissions = getUserPermissions(user)
@@ -265,15 +261,15 @@ export default function TransfersPage() {
     }
   }
 
-  const getRoleDisplayName = (role: UserRole) => {
+  const getRoleDisplayName = (role: any) => {
     switch (role) {
-      case UserRole.TENANT_ADMIN: return 'Admin Geral'
-      case UserRole.CONTRACT_MANAGER: return 'Gerente de Contrato'
-      case UserRole.HR: return 'Recursos Humanos'
-      case UserRole.PLANNING: return 'Planejamento'
-      case UserRole.SAFETY: return 'Segurança'
-      case UserRole.SUPERVISOR: return 'Supervisor'
-      case UserRole.OPERATOR: return 'Operador'
+      case 'TENANT_ADMIN': return 'Admin Geral'
+      case 'CONTRACT_MANAGER': return 'Gerente de Contrato'
+      case 'HR': return 'Recursos Humanos'
+      case 'PLANNING': return 'Planejamento'
+      case 'SAFETY': return 'Segurança'
+      case 'SUPERVISOR': return 'Supervisor'
+      case 'OPERATOR': return 'Operador'
       default: return role
     }
   }

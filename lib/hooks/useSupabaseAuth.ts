@@ -1,7 +1,31 @@
 import { useState, useEffect } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { User, UserRole } from '@/lib/auth'
+import { createBrowserClient } from '@supabase/ssr'
+
+// Interface para o novo sistema de usuário
+export interface User {
+  id: string
+  name: string
+  email: string
+  role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
+  companyId?: string
+  isActive: boolean
+  avatar?: string
+  createdAt: Date
+}
+
+// Singleton para o cliente Supabase
+let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
+
+function getSupabaseClient() {
+  if (!supabaseClient) {
+    supabaseClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+  }
+  return supabaseClient
+}
 
 export function useSupabaseAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -16,10 +40,10 @@ export function useSupabaseAuth() {
     if (!isSupabaseConfigured) {
       // Usar super admin como usuário padrão se Supabase não estiver configurado
       setUser({
-        id: 'cmdrema7a0000i84808xbgm2r',
+        id: 'mock-super-admin-id',
         name: 'Super Administrador',
         email: 'superadmin@planningcontrol.com',
-        role: UserRole.SUPER_ADMIN,
+        role: 'SUPER_ADMIN',
         isActive: true,
         createdAt: new Date()
       })
@@ -27,23 +51,31 @@ export function useSupabaseAuth() {
       return
     }
 
+    const supabase = getSupabaseClient()
+    let subscription: any = null
+
     // Obter sessão inicial
     const getInitialSession = async () => {
       try {
+        console.log('[useSupabaseAuth] Obtendo sessão inicial...');
         const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         if (session?.user) {
+          console.log('[useSupabaseAuth] Usuário encontrado na sessão');
           const userData = await transformSupabaseUser(session.user)
           setUser(userData)
+        } else {
+          console.log('[useSupabaseAuth] Nenhum usuário na sessão');
+          setUser(null)
         }
       } catch (error) {
-        console.error('Erro ao obter sessão:', error)
+        console.error('[useSupabaseAuth] Erro ao obter sessão:', error)
         // Fallback para usuário mock
         setUser({
-          id: '1',
+          id: 'mock-admin-id',
           name: 'Admin Geral',
           email: 'admin@demo-company.com',
-          role: UserRole.TENANT_ADMIN,
+          role: 'COMPANY_ADMIN',
           isActive: true,
           createdAt: new Date()
         })
@@ -55,25 +87,40 @@ export function useSupabaseAuth() {
     getInitialSession()
 
     // Escutar mudanças de autenticação
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        try {
-          setSession(session)
-          if (session?.user) {
-            const userData = await transformSupabaseUser(session.user)
-            setUser(userData)
-          } else {
-            setUser(null)
+    try {
+      const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          try {
+            console.log('[useSupabaseAuth] Mudança de auth detectada:', event);
+            setSession(session)
+            if (session?.user) {
+              const userData = await transformSupabaseUser(session.user)
+              setUser(userData)
+            } else {
+              setUser(null)
+            }
+          } catch (error) {
+            console.error('[useSupabaseAuth] Erro ao processar mudança de auth:', error)
+          } finally {
+            setLoading(false)
           }
+        }
+      )
+      subscription = authSubscription
+    } catch (error) {
+      console.error('[useSupabaseAuth] Erro ao configurar listener de auth:', error)
+    }
+
+    return () => {
+      console.log('[useSupabaseAuth] Limpando subscription...');
+      if (subscription) {
+        try {
+          subscription.unsubscribe()
         } catch (error) {
-          console.error('Erro ao processar mudança de auth:', error)
-        } finally {
-          setLoading(false)
+          console.warn('[useSupabaseAuth] Erro ao limpar subscription:', error)
         }
       }
-    )
-
-    return () => subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
@@ -85,10 +132,10 @@ export function useSupabaseAuth() {
       // Verificar credenciais mock dos super admins
       if (email === 'superadmin@planningcontrol.com' && password === '123456') {
         const mockUser: User = {
-          id: 'cmdrema7a0000i84808xbgm2r',
+          id: 'mock-super-admin-id',
           name: 'Super Administrador',
           email: email,
-          role: UserRole.SUPER_ADMIN,
+          role: 'SUPER_ADMIN',
           isActive: true,
           createdAt: new Date()
         }
@@ -96,10 +143,10 @@ export function useSupabaseAuth() {
         return { user: mockUser }
       } else if (email === 'admin@planningcontrol.com' && password === '123456') {
         const mockUser: User = {
-          id: 'cmdrema9n0001i848l1zltamw',
+          id: 'mock-admin-id',
           name: 'Administrador Regular',
           email: email,
-          role: UserRole.TENANT_ADMIN,
+          role: 'COMPANY_ADMIN',
           isActive: true,
           createdAt: new Date()
         }
@@ -107,10 +154,10 @@ export function useSupabaseAuth() {
         return { user: mockUser }
       } else if (email === 'admin@demo-company.com' && password === '123456') {
         const mockUser: User = {
-          id: '1',
+          id: 'mock-company-admin-id',
           name: 'Admin Geral',
           email: email,
-          role: UserRole.TENANT_ADMIN,
+          role: 'COMPANY_ADMIN',
           isActive: true,
           createdAt: new Date()
         }
@@ -123,6 +170,7 @@ export function useSupabaseAuth() {
 
     // Usar autenticação real do Supabase
     try {
+      const supabase = getSupabaseClient()
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -156,13 +204,14 @@ export function useSupabaseAuth() {
     }
 
     try {
+      const supabase = getSupabaseClient()
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name: userData.name,
-            role: userData.role || UserRole.OPERATOR,
+            role: userData.role || 'USER',
             isActive: true
           }
         }
@@ -188,6 +237,7 @@ export function useSupabaseAuth() {
     }
 
     try {
+      const supabase = getSupabaseClient()
       const { error } = await supabase.auth.signOut()
       if (error) throw error
     } catch (error) {
@@ -206,6 +256,7 @@ export function useSupabaseAuth() {
     }
 
     try {
+      const supabase = getSupabaseClient()
       const { error } = await supabase.auth.resetPasswordForEmail(email)
       if (error) throw error
     } catch (error) {
@@ -228,74 +279,47 @@ export function useSupabaseAuth() {
 // Função para transformar usuário do Supabase para nosso formato
 async function transformSupabaseUser(supabaseUser: SupabaseUser): Promise<User> {
   try {
-    // Buscar dados adicionais do usuário no banco
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('*')
-      .eq('clerkId', supabaseUser.id)
-      .single()
-
-    // Se não encontrar no banco, criar com dados padrão
-    if (!userProfile) {
-      const defaultUser: User = {
-        id: supabaseUser.id,
-        name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Usuário',
-        email: supabaseUser.email!,
-        role: UserRole.OPERATOR,
-        isActive: true,
-        avatar: supabaseUser.user_metadata?.avatar_url,
-        createdAt: new Date(supabaseUser.created_at)
-      }
-      return defaultUser
-    }
-
-    // Mapear dados do banco para nosso formato
-    const user: User = {
-      id: userProfile.id,
-      name: userProfile.name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Usuário',
-      email: userProfile.email || supabaseUser.email!,
-      role: mapRoleFromDatabase(userProfile.role) || UserRole.OPERATOR,
-      isActive: userProfile.isActive ?? true,
-      avatar: userProfile.avatar || supabaseUser.user_metadata?.avatar_url,
-      createdAt: new Date(userProfile.createdAt || supabaseUser.created_at)
-    }
-
-    return user
-  } catch (error) {
-    console.error('Erro ao transformar usuário:', error)
-    // Fallback para usuário padrão
-    return {
+    // Criar usuário padrão baseado nos dados do Supabase
+    const defaultUser: User = {
       id: supabaseUser.id,
       name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Usuário',
       email: supabaseUser.email!,
-      role: UserRole.OPERATOR,
+      role: 'SUPER_ADMIN', // Usar SUPER_ADMIN como padrão para desenvolvimento
       isActive: true,
       avatar: supabaseUser.user_metadata?.avatar_url,
       createdAt: new Date(supabaseUser.created_at)
     }
+    
+    console.log('[useSupabaseAuth] Usuário transformado:', defaultUser);
+    return defaultUser
+  } catch (error) {
+    console.error('[useSupabaseAuth] Erro ao transformar usuário:', error)
+    
+    // Fallback em caso de erro
+    const fallbackUser: User = {
+      id: supabaseUser.id,
+      name: 'Super Administrador',
+      email: supabaseUser.email!,
+      role: 'SUPER_ADMIN',
+      isActive: true,
+      avatar: supabaseUser.user_metadata?.avatar_url,
+      createdAt: new Date(supabaseUser.created_at)
+    }
+    
+    return fallbackUser
   }
 }
 
-// Função para mapear roles do banco para nosso enum
-function mapRoleFromDatabase(role: string): UserRole {
+// Função para mapear roles do banco para nosso novo sistema
+function mapRoleFromDatabase(role: string): 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER' {
   switch (role?.toUpperCase()) {
     case 'SUPER_ADMIN':
-      return UserRole.SUPER_ADMIN
-    case 'TENANT_ADMIN':
-      return UserRole.TENANT_ADMIN
-    case 'CONTRACT_MANAGER':
-      return UserRole.CONTRACT_MANAGER
-    case 'HR':
-      return UserRole.HR
-    case 'PLANNING':
-      return UserRole.PLANNING
-    case 'SAFETY':
-      return UserRole.SAFETY
-    case 'SUPERVISOR':
-      return UserRole.SUPERVISOR
-    case 'OPERATOR':
-      return UserRole.OPERATOR
+      return 'SUPER_ADMIN'
+    case 'COMPANY_ADMIN':
+      return 'COMPANY_ADMIN'
+    case 'USER':
+      return 'USER'
     default:
-      return UserRole.OPERATOR
+      return 'USER'
   }
 } 

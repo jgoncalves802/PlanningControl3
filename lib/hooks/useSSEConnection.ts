@@ -27,108 +27,116 @@ export function useSSEConnection({
   const queryClient = useQueryClient();
 
   const connect = () => {
+    // Limpar conexão anterior se existir
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
+      eventSourceRef.current = null;
     }
 
+    try {
+      const eventSource = new EventSource(url);
+      eventSourceRef.current = eventSource;
 
-    const eventSource = new EventSource(url);
-    eventSourceRef.current = eventSource;
+      eventSource.onopen = (event) => {
+        console.log('[SSE] Connection opened:', url);
+        reconnectCountRef.current = 0; // Reset reconnect count on successful connection
+        onOpen?.(event);
+      };
 
-    eventSource.onopen = (event) => {
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          onMessage?.(data);
+        } catch (error) {
+          console.error('[SSE] Failed to parse message:', error);
+        }
+      };
 
-      reconnectCountRef.current = 0; // Reset reconnect count on successful connection
-      onOpen?.(event);
-    };
+      // Adicionar listener específico para employee-update
+      eventSource.addEventListener('employee-update', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          onMessage?.(data);
+        } catch (error) {
+          console.error('[SSE] Failed to parse employee update:', error);
+        }
+      });
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      eventSource.onerror = (event) => {
+        console.error('[SSE] Connection error:', event);
+        onError?.(event);
 
-        onMessage?.(data);
-      } catch (error) {
-        console.error('[SSE] Failed to parse message:', error);
-      }
-    };
+        if (autoReconnect && reconnectCountRef.current < 5) {
+          const delay = reconnectDelay * Math.pow(2, reconnectCountRef.current); // Exponential backoff
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectCountRef.current++;
+            connect();
+          }, delay);
+        }
+      };
 
-    // Adicionar listener específico para employee-update
-    eventSource.addEventListener('employee-update', (event) => {
-      try {
-        const data = JSON.parse(event.data);
+      // Add specific event listeners
+      eventSource.addEventListener('connection', (event) => {
+        console.log('[SSE] Connection event received');
+      });
 
-        onMessage?.(data);
-      } catch (error) {
-        console.error('[SSE] Failed to parse employee update:', error);
-      }
-    });
+      eventSource.addEventListener('heartbeat', (event) => {
+        console.log('[SSE] Heartbeat received');
+      });
 
-    eventSource.onerror = (event) => {
-      console.error('[SSE] Connection error:', event);
-      onError?.(event);
+      eventSource.addEventListener('nfc-badge-update', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          // Invalidate and refetch relevant queries immediately
+          queryClient.invalidateQueries({ queryKey: ['nfc-badges'] });
+          queryClient.refetchQueries({ queryKey: ['nfc-badges'] });
+          queryClient.invalidateQueries({ queryKey: ['employees'] });
+          queryClient.invalidateQueries({ queryKey: ['workforce'] });
+          queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+          
+          onMessage?.(data);
+        } catch (error) {
+          console.error('[SSE] Failed to parse badge update:', error);
+        }
+      });
 
-      if (autoReconnect && reconnectCountRef.current < 5) {
-        const delay = reconnectDelay * Math.pow(2, reconnectCountRef.current); // Exponential backoff
+      eventSource.addEventListener('stats-update', (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          // Invalidate stats queries specifically
+          queryClient.invalidateQueries({ queryKey: ['nfc-badges', 'stats'] });
+          
+          onMessage?.(data);
+        } catch (error) {
+          console.error('[SSE] Failed to parse stats update:', error);
+        }
+      });
 
-        
-        reconnectTimeoutRef.current = setTimeout(() => {
-          reconnectCountRef.current++;
-          connect();
-        }, delay);
-      }
-    };
-
-    // Add specific event listeners
-    eventSource.addEventListener('connection', (event) => {
-
-    });
-
-    eventSource.addEventListener('heartbeat', (event) => {
-
-    });
-
-    eventSource.addEventListener('nfc-badge-update', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        
-        // Invalidate and refetch relevant queries immediately
-        queryClient.invalidateQueries({ queryKey: ['nfc-badges'] });
-        queryClient.refetchQueries({ queryKey: ['nfc-badges'] });
-        queryClient.invalidateQueries({ queryKey: ['employees'] });
-        queryClient.invalidateQueries({ queryKey: ['workforce'] });
-        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-        
-        onMessage?.(data);
-      } catch (error) {
-        console.error('[SSE] Failed to parse badge update:', error);
-      }
-    });
-
-    eventSource.addEventListener('stats-update', (event) => {
-      try {
-        const data = JSON.parse(event.data);
-
-        
-        // Invalidate stats queries specifically
-        queryClient.invalidateQueries({ queryKey: ['nfc-badges', 'stats'] });
-        
-        onMessage?.(data);
-      } catch (error) {
-        console.error('[SSE] Failed to parse stats update:', error);
-      }
-    });
+    } catch (error) {
+      console.error('[SSE] Failed to create EventSource:', error);
+      onError?.(new Event('error'));
+    }
   };
 
   const disconnect = () => {
-
+    console.log('[SSE] Disconnecting:', url);
     
+    // Limpar timeout de reconexão
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
 
+    // Fechar conexão SSE
     if (eventSourceRef.current) {
-      eventSourceRef.current.close();
+      try {
+        eventSourceRef.current.close();
+      } catch (error) {
+        console.warn('[SSE] Error closing connection:', error);
+      }
       eventSourceRef.current = null;
     }
   };

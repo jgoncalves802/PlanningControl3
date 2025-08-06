@@ -39,6 +39,10 @@ model User {
   transferRequestsMade     TransferRequest[]     @relation("RequestedBy")
   responsibleBy            TransferRequest[]     @relation("ResponsibleBy")
   finalizedBy              TransferRequest[]     @relation("FinalizedBy")
+  userRoles                UserRoleAssignment[]
+  pagePermissions          UserPagePermission[]
+  systemPermissions        UserSystemPermission[]
+  settings                 UserSettings?
 
   @@map("users")
 }
@@ -345,11 +349,20 @@ model NFCBadge {
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
+  companyId String?
   action    String
-  entityId  String
+  entityType String
+  entityId  String?
   details   Json
+  ipAddress String?
+  userAgent String?
   createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+
+  // Relacionamentos
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
 }
 
 enum PlanType {
@@ -428,6 +441,187 @@ enum EmployeeStatus {
   TERMINATED
 }
 
+// ========================================
+// SISTEMA DE CONFIGURAÇÕES HIERÁRQUICAS
+// ========================================
+
+enum CompanyStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+  CANCELLED
+}
+
+enum SubscriptionPlan {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum InfrastructureStatus {
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+  ERROR
+}
+
+enum SecurityLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// Empresas
+model Company {
+  id                String             @id @default(cuid())
+  name              String
+  cnpj              String             @unique
+  email             String             @unique
+  phone             String?
+  address           Json?
+  logoUrl           String?
+  primaryColor      String             @default("#007bff")
+  secondaryColor    String             @default("#6c757d")
+  domain            String?            @unique
+  timezone          String             @default("America/Sao_Paulo")
+  language          String             @default("pt-BR")
+  subscriptionPlan  SubscriptionPlan   @default(BASIC)
+  status            CompanyStatus      @default(ACTIVE)
+  maxUsers          Int                @default(10)
+  maxContracts      Int                @default(5)
+  maxEmployees      Int                @default(100)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  // Relacionamentos
+  settings          CompanySettings?
+  userRoles         UserRoleAssignment[]
+  auditLogs         AuditLog[]
+
+  @@map("companies")
+}
+
+// Configurações da Empresa
+model CompanySettings {
+  id                    String        @id @default(cuid())
+  companyId             String        @unique
+  notificationsEnabled  Boolean       @default(true)
+  emailNotifications    Boolean       @default(true)
+  pushNotifications     Boolean       @default(true)
+  autoBackup            Boolean       @default(true)
+  backupFrequency       String        @default("daily")
+  dataRetentionDays     Int           @default(365)
+  apiRateLimit          Int           @default(1000)
+  maxFileSize           Int           @default(10)
+  allowedFileTypes      String[]
+  securityLevel         SecurityLevel @default(MEDIUM)
+  twoFactorRequired     Boolean       @default(false)
+  sessionTimeout        Int           @default(30)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  // Relacionamentos
+  company               Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_settings")
+}
+
+// Configurações de Infraestrutura
+model InfrastructureSettings {
+  id               String                @id @default(cuid())
+  serverName       String
+  serverType       String
+  status           InfrastructureStatus  @default(ONLINE)
+  cpuUsage         Decimal               @default(0) @db.Decimal(5,2)
+  memoryUsage      Decimal               @default(0) @db.Decimal(5,2)
+  diskUsage        Decimal               @default(0) @db.Decimal(5,2)
+  networkUsage     Decimal               @default(0) @db.Decimal(5,2)
+  lastMaintenance  DateTime?
+  nextMaintenance  DateTime?
+  backupStatus     String                @default("OK")
+  securityStatus   String                @default("OK")
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@map("infrastructure_settings")
+}
+
+// Configurações Globais
+model GlobalSettings {
+  id                  String            @id @default(cuid())
+  systemName          String            @default("PlanningControl")
+  systemVersion       String            @default("1.0.0")
+  maintenanceMode     Boolean           @default(false)
+  registrationEnabled Boolean           @default(true)
+  maxCompanies        Int               @default(1000)
+  maxUsersPerCompany  Int               @default(100)
+  defaultPlan         SubscriptionPlan  @default(BASIC)
+  supportEmail        String            @default("support@planningcontrol.com")
+  supportPhone        String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  @@map("global_settings")
+}
+
+// Roles de Usuário
+model UserRoleAssignment {
+  id          String   @id @default(cuid())
+  userId      String
+  companyId   String?
+  role        String   // Usando string para compatibilidade com o enum antigo
+  permissions Json?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("user_roles")
+}
+
+// Permissões Granulares de Páginas
+model UserPagePermission {
+  id          String   @id @default(cuid())
+  userId      String
+  page        String
+  canView     Boolean  @default(false)
+  canEdit     Boolean  @default(false)
+  canDelete   Boolean  @default(false)
+  canCreate   Boolean  @default(false)
+  canExport   Boolean  @default(false)
+  canImport   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, page])
+  @@map("user_page_permissions")
+}
+
+// Permissões Granulares do Sistema
+model UserSystemPermission {
+  id          String   @id @default(cuid())
+  userId      String
+  permission  String
+  isGranted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+  @@map("user_system_permissions")
+}
+
+
+
 // Configurações do Usuário
 model UserSettings {
   id                    String                    @id @default(cuid())
@@ -437,6 +631,9 @@ model UserSettings {
   personalSettings      PersonalSettings?
   interfaceSettings     InterfaceSettings?
   notificationSettings  NotificationSettings?
+
+  // Relacionamentos
+  user                  User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_settings")
 }
