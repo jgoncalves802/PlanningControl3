@@ -20,6 +20,22 @@ export async function GET(
     }
 
     const { userId } = params
+    console.log('🔍 Buscando permissões para userId:', userId)
+
+    // Primeiro verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) {
+      console.log('❌ Usuário não encontrado:', userId)
+      return NextResponse.json({ 
+        error: 'Usuário não encontrado',
+        details: `UserId ${userId} não existe no banco de dados`
+      }, { status: 404 })
+    }
+
+    console.log('✅ Usuário encontrado:', user.name)
 
     // Buscar role assignment do usuário
     const userRole = await prisma.userRoleAssignment.findFirst({
@@ -29,9 +45,24 @@ export async function GET(
       }
     })
 
+    // Se não há role assignment, retornar permissões padrão baseadas no role padrão
     if (!userRole) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+      console.log('⚠️ Usuário não tem role assignment ativo, usando permissões padrão...')
+      
+      // Usar 'USER' como padrão já que não há role assignment
+      const defaultRole = 'USER'
+      const defaultPermissions = getDefaultPermissions(defaultRole as any)
+      
+      return NextResponse.json({
+        userId,
+        role: defaultRole,
+        permissions: defaultPermissions,
+        customPermissions: null,
+        message: 'Usando permissões padrão (sem role assignment)'
+      })
     }
+
+    console.log('✅ Role assignment encontrado:', userRole.id, 'Role:', userRole.role)
 
     // Obter permissões padrão baseadas no role
     const defaultPermissions = getDefaultPermissions(userRole.role as any)
@@ -50,9 +81,22 @@ export async function GET(
     })
 
   } catch (error) {
-    console.error('Erro ao obter permissões do usuário:', error)
+    console.error('❌ Erro ao obter permissões do usuário:', error)
+    
+    // Log detalhado do erro para debug
+    if (error instanceof Error) {
+      console.error('Erro detalhado:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      })
+    }
+    
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     )
   }
@@ -83,7 +127,16 @@ export async function PUT(
       return NextResponse.json({ error: 'Permissões inválidas' }, { status: 400 })
     }
 
-    // Buscar role assignment existente
+    // Verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    // Buscar role assignment existente ou criar um novo
     let userRole = await prisma.userRoleAssignment.findFirst({
       where: {
         userId: userId,
@@ -92,20 +145,29 @@ export async function PUT(
     })
 
     if (!userRole) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+      // Criar novo role assignment
+      const defaultRole = 'USER'
+      userRole = await prisma.userRoleAssignment.create({
+        data: {
+          userId: userId,
+          role: role || defaultRole,
+          permissions: permissions,
+          isActive: true
+        }
+      })
+    } else {
+      // Atualizar role assignment existente
+      userRole = await prisma.userRoleAssignment.update({
+        where: {
+          id: userRole.id
+        },
+        data: {
+          permissions: permissions,
+          role: role || userRole.role,
+          updatedAt: new Date()
+        }
+      })
     }
-
-    // Atualizar permissões
-    const updatedUserRole = await prisma.userRoleAssignment.update({
-      where: {
-        id: userRole.id
-      },
-      data: {
-        permissions: permissions,
-        role: role || userRole.role,
-        updatedAt: new Date()
-      }
-    })
 
     // Registrar no audit log
     await prisma.auditLog.create({
@@ -125,13 +187,16 @@ export async function PUT(
 
     return NextResponse.json({
       message: 'Permissões atualizadas com sucesso',
-      userRole: updatedUserRole
+      userRole: userRole
     })
 
   } catch (error) {
     console.error('Erro ao atualizar permissões do usuário:', error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     )
   }
@@ -164,7 +229,10 @@ export async function DELETE(
     })
 
     if (!userRole) {
-      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+      return NextResponse.json({ 
+        error: 'Usuário não encontrado ou sem role assignment',
+        message: 'Usuário já está usando permissões padrão'
+      }, { status: 404 })
     }
 
     // Remover permissões personalizadas (definir como null)
@@ -201,7 +269,10 @@ export async function DELETE(
   } catch (error) {
     console.error('Erro ao remover permissões personalizadas:', error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
     )
   }

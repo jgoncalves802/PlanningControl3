@@ -23,8 +23,7 @@ model Tenant {
 }
 
 model User {
-  id                       String                @id @default(cuid())
-  clerkId                  String?               @unique
+  id                       String                @id // Agora é o mesmo ID do Supabase Auth
   email                    String                @unique
   name                     String?
   isActive                 Boolean                 @default(true)
@@ -580,6 +579,8 @@ model UserRoleAssignment {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company     Company? @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
+  // Constraint única para evitar múltiplos roles ativos para o mesmo usuário
+  @@unique([userId, role])
   @@map("user_roles")
 }
 

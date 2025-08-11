@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Sidebar from '@/components/layout/sidebar'
 import { Header } from '@/components/layout/header'
 import { Toaster } from 'react-hot-toast'
-import ProtectedRoute from '@/components/auth/ProtectedRoute'
+import RouteGuard from '@/components/auth/RouteGuard'
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 
 export default function DashboardLayout({
@@ -16,7 +16,7 @@ export default function DashboardLayout({
   const { user } = useCurrentUser()
 
   return (
-    <ProtectedRoute>
+    <RouteGuard>
       <div className="min-h-screen bg-gray-50 flex">
         <Toaster position="top-center" />
         <Sidebar />
@@ -27,6 +27,6 @@ export default function DashboardLayout({
           </main>
         </div>
       </div>
-    </ProtectedRoute>
+    </RouteGuard>
   )
 }

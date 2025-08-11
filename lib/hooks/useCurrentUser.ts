@@ -57,38 +57,35 @@ const clearCachedUser = (): void => {
 }
 
 export function useCurrentUser() {
-  // Verificar se estamos no cliente e se React está disponível
-  if (typeof window === 'undefined' || typeof useState === 'undefined') {
-    console.log('[useCurrentUser] Renderização no servidor ou React não disponível');
-    return {
-      user: null,
-      loading: true,
-      refreshUser: async () => {}
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  const fetchingRef = useRef(false)
+  const mountedRef = useRef(false)
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
     }
-  }
+  }, [])
 
-  // Verificar se estamos dentro de um componente React
-  try {
-    const [user, setUser] = useState<User | null>(null)
-    const [loading, setLoading] = useState(true)
-    const fetchingRef = useRef(false)
-
-    useEffect(() => {
-      const fetchUser = async () => {
-        // Evitar múltiplas chamadas simultâneas
-        if (fetchingRef.current) {
-          console.log('[useCurrentUser] Fetch já em andamento, ignorando');
-          return
-        }
+  useEffect(() => {
+    const fetchUser = async () => {
+      // Evitar múltiplas chamadas simultâneas
+      if (fetchingRef.current) {
+        console.log('[useCurrentUser] Fetch já em andamento, ignorando');
+        return
+      }
+      
+      console.log('[useCurrentUser] Iniciando busca do usuário');
+      
+      fetchingRef.current = true
+      
+      try {
+        console.log('[useCurrentUser] Buscando usuário do servidor...');
+        const currentUser = await getCurrentUser()
         
-        console.log('[useCurrentUser] Iniciando busca do usuário');
-        
-        fetchingRef.current = true
-        
-        try {
-          console.log('[useCurrentUser] Buscando usuário do servidor...');
-          const currentUser = await getCurrentUser()
-          
+        if (mountedRef.current) {
           if (currentUser) {
             console.log('[useCurrentUser] Usuário autenticado encontrado');
             setUser(currentUser)
@@ -96,26 +93,32 @@ export function useCurrentUser() {
             console.log('[useCurrentUser] Nenhum usuário autenticado');
             setUser(null)
           }
-        } catch (error) {
-          console.error('[useCurrentUser] Erro ao obter usuário atual:', error)
-          setUser(null)
-        } finally {
-          setLoading(false)
-          fetchingRef.current = false
-          console.log('[useCurrentUser] Busca finalizada');
         }
+      } catch (error) {
+        console.error('[useCurrentUser] Erro ao obter usuário atual:', error)
+        if (mountedRef.current) {
+          setUser(null)
+        }
+      } finally {
+        if (mountedRef.current) {
+          setLoading(false)
+        }
+        fetchingRef.current = false
+        console.log('[useCurrentUser] Busca finalizada');
       }
+    }
 
-      fetchUser()
-    }, [])
+    fetchUser()
+  }, [])
 
-    // Função para forçar refresh do usuário
-    const refreshUser = async () => {
-      console.log('[useCurrentUser] Forçando refresh do usuário');
-      setLoading(true)
-      
-      try {
-        const currentUser = await getCurrentUser()
+  // Função para forçar refresh do usuário
+  const refreshUser = async () => {
+    console.log('[useCurrentUser] Forçando refresh do usuário');
+    setLoading(true)
+    
+    try {
+      const currentUser = await getCurrentUser()
+      if (mountedRef.current) {
         if (currentUser) {
           console.log('[useCurrentUser] Usuário atualizado com sucesso');
           setUser(currentUser)
@@ -123,21 +126,18 @@ export function useCurrentUser() {
           console.log('[useCurrentUser] Usuário removido');
           setUser(null)
         }
-      } catch (error) {
-        console.error('[useCurrentUser] Erro ao atualizar usuário:', error)
+      }
+    } catch (error) {
+      console.error('[useCurrentUser] Erro ao atualizar usuário:', error)
+      if (mountedRef.current) {
         setUser(null)
-      } finally {
+      }
+    } finally {
+      if (mountedRef.current) {
         setLoading(false)
       }
     }
-
-    return { user, loading, refreshUser }
-  } catch (error) {
-    console.error('[useCurrentUser] Erro ao inicializar hook:', error)
-    return {
-      user: null,
-      loading: true,
-      refreshUser: async () => {}
-    }
   }
+
+  return { user, loading, refreshUser }
 } 

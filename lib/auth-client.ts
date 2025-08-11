@@ -104,10 +104,10 @@ async function transformSupabaseUser(supabaseUser: SupabaseUser): Promise<User> 
   } catch (error) {
     console.error('[auth-client] Erro ao transformar usuário:', error)
     
-    // Fallback em caso de erro
+    // Fallback em caso de erro - usar permissões de SUPER_ADMIN
     const fallbackUser: User = {
       id: supabaseUser.id,
-      name: 'Super Administrador',
+      name: supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Super Administrador',
       email: supabaseUser.email!,
       role: 'SUPER_ADMIN',
       isActive: true,
@@ -116,6 +116,7 @@ async function transformSupabaseUser(supabaseUser: SupabaseUser): Promise<User> 
       permissions: getDefaultPermissions('SUPER_ADMIN')
     }
     
+    console.log('[auth-client] Usando usuário fallback:', fallbackUser)
     return fallbackUser
   }
 }
@@ -123,12 +124,20 @@ async function transformSupabaseUser(supabaseUser: SupabaseUser): Promise<User> 
 // Função para buscar dados do role assignment do usuário
 async function getUserRoleData(userId: string): Promise<{ role: string; companyId?: string } | null> {
   try {
+    console.log('[auth-client] Buscando role data para userId:', userId)
     const response = await fetch(`/api/settings/user-role/${userId}`)
+    
     if (response.ok) {
       const data = await response.json()
+      console.log('[auth-client] Role data encontrado:', data)
       return data
+    } else if (response.status === 404) {
+      console.log('[auth-client] Usuário não encontrado no banco, usando fallback')
+      return null
+    } else {
+      console.error('[auth-client] Erro na API user-role:', response.status, response.statusText)
+      return null
     }
-    return null
   } catch (error) {
     console.error('[auth-client] Erro ao buscar dados do role:', error)
     return null
@@ -138,12 +147,20 @@ async function getUserRoleData(userId: string): Promise<{ role: string; companyI
 // Função para buscar permissões personalizadas do banco
 async function getUserCustomPermissions(userId: string): Promise<UserPermissions | null> {
   try {
+    console.log('[auth-client] Buscando permissões para userId:', userId)
     const response = await fetch(`/api/settings/user-permissions/${userId}`)
+    
     if (response.ok) {
       const data = await response.json()
+      console.log('[auth-client] Permissões encontradas:', data.permissions ? 'Sim' : 'Não')
       return data.permissions
+    } else if (response.status === 404) {
+      console.log('[auth-client] Usuário não encontrado no banco, usando permissões padrão')
+      return null
+    } else {
+      console.error('[auth-client] Erro na API user-permissions:', response.status, response.statusText)
+      return null
     }
-    return null
   } catch (error) {
     console.error('[auth-client] Erro ao buscar permissões personalizadas:', error)
     return null
@@ -323,19 +340,19 @@ export function validatePageAccess(user: User | null, page: string): boolean {
   // Se o usuário tem permissões granulares, usar elas
   if (user.permissions) {
     const pagePermissions: Record<string, boolean> = {
-      '/dashboard': user.permissions.dashboard.canView,
-      '/dashboard/employees': user.permissions.employees.canView,
-      '/dashboard/contracts': user.permissions.contracts.canView,
-      '/dashboard/budgets': user.permissions.budgets.canView,
-      '/dashboard/safety': user.permissions.safety.canView,
-      '/dashboard/planning': user.permissions.planning.canView,
-      '/dashboard/transfers': user.permissions.transfers.canView,
-      '/dashboard/employee-assignment': user.permissions.employeeAssignment.canView,
-      '/dashboard/workforce-control': user.permissions.workforceControl.canView,
-      '/dashboard/nfc-management': user.permissions.nfcManagement.canView,
-      '/dashboard/analytics': user.permissions.analytics.canView,
-      '/dashboard/settings': user.permissions.settings.canView,
-      '/dashboard/backup': user.permissions.backup.canView,
+      '/dashboard': user.permissions.dashboard?.canView || false,
+      '/dashboard/employees': user.permissions.employees?.canView || false,
+      '/dashboard/contracts': user.permissions.contracts?.canView || false,
+      '/dashboard/budgets': user.permissions.budgets?.canView || false,
+      '/dashboard/safety': user.permissions.safety?.canView || false,
+      '/dashboard/planning': user.permissions.planning?.canView || false,
+      '/dashboard/transfers': user.permissions.transfers?.canView || false,
+      '/dashboard/employee-assignment': user.permissions.employeeAssignment?.canView || false,
+      '/dashboard/workforce-control': user.permissions.workforceControl?.canView || false,
+      '/dashboard/nfc-management': user.permissions.nfcManagement?.canView || false,
+      '/dashboard/analytics': user.permissions.analytics?.canView || false,
+      '/dashboard/settings': user.permissions.settings?.canView || false,
+      '/dashboard/backup': user.permissions.backup?.canView || false,
     }
 
     return pagePermissions[page] || false

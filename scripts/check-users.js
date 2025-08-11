@@ -1,67 +1,70 @@
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient } = require('@prisma/client')
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
 async function checkUsers() {
+  console.log('🔍 Verificando usuários no banco de dados...')
+  
   try {
-    console.log('🔍 Verificando usuários no banco de dados...');
-    console.log('');
-
     // Buscar todos os usuários
     const users = await prisma.user.findMany({
       select: {
         id: true,
         name: true,
         email: true,
-        clerkId: true,
+        isActive: true,
         createdAt: true
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
-    });
-
-    console.log(`📊 Total de usuários encontrados: ${users.length}`);
-    console.log('');
-
-    if (users.length > 0) {
-      console.log('👥 Usuários no banco:');
-      users.forEach((user, index) => {
-        console.log(`   ${index + 1}. ID: ${user.id}`);
-        console.log(`      Nome: ${user.name || 'N/A'}`);
-        console.log(`      Email: ${user.email}`);
-        console.log(`      Clerk ID: ${user.clerkId || 'N/A'}`);
-        console.log(`      Criado em: ${user.createdAt.toLocaleDateString('pt-BR')}`);
-        console.log('');
-      });
-    } else {
-      console.log('❌ Nenhum usuário encontrado no banco de dados');
-      console.log('');
-      console.log('💡 Para resolver o problema de transferências:');
-      console.log('   1. Crie pelo menos um usuário no sistema');
-      console.log('   2. Ou modifique o código para usar um ID válido');
-    }
-
-    // Verificar se existe usuário com ID '1'
-    const userWithId1 = await prisma.user.findUnique({
-      where: { id: '1' }
-    });
-
-    if (userWithId1) {
-      console.log('✅ Usuário com ID "1" encontrado');
-      console.log(`   Nome: ${userWithId1.name}`);
-      console.log(`   Email: ${userWithId1.email}`);
-    } else {
-      console.log('❌ Usuário com ID "1" NÃO encontrado');
-      console.log('');
-      console.log('🔧 Soluções possíveis:');
-      console.log('   1. Criar um usuário com ID "1"');
-      console.log('   2. Modificar o código para usar um ID existente');
-      console.log('   3. Implementar autenticação real');
-    }
-
+    })
+    
+    console.log(`\n✅ Encontrados ${users.length} usuários:`)
+    users.forEach((user, index) => {
+      console.log(`${index + 1}. ID: ${user.id}`)
+      console.log(`   Nome: ${user.name}`)
+      console.log(`   Email: ${user.email}`)
+      console.log(`   Ativo: ${user.isActive}`)
+      console.log(`   Criado: ${user.createdAt}`)
+      console.log('')
+    })
+    
+    // Verificar role assignments
+    console.log('🔍 Verificando role assignments...')
+    const roleAssignments = await prisma.userRoleAssignment.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
+        company: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      }
+    })
+    
+    console.log(`\n✅ Encontrados ${roleAssignments.length} role assignments:`)
+    roleAssignments.forEach((assignment, index) => {
+      console.log(`${index + 1}. ID: ${assignment.id}`)
+      console.log(`   Usuário: ${assignment.user.name} (${assignment.user.email})`)
+      console.log(`   Role: ${assignment.role}`)
+      console.log(`   Ativo: ${assignment.isActive}`)
+      console.log(`   Empresa: ${assignment.company?.name || 'N/A'}`)
+      console.log('')
+    })
+    
   } catch (error) {
-    console.error('❌ Erro ao verificar usuários:', error);
+    console.error('❌ Erro durante a verificação:', error)
   } finally {
-    await prisma.$disconnect();
+    await prisma.$disconnect()
   }
 }
 
-checkUsers(); 
+checkUsers() 

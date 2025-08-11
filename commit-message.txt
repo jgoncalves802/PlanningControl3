@@ -1,33 +1,18 @@
-fix: corrigir exibição de função nas transferências
+feat: implementa melhorias no sistema de gerenciamento de usuários e configurações
 
-- Adicionar companyFunction na consulta da API de transferências
-- Implementar fallback no frontend para exibir companyFunction quando currentFunction não existe
-- Criar scripts de teste para verificar função do funcionário e API
-- Corrigir problema onde função aparecia como "N/A" mesmo com função atribuída
-
-Arquivos modificados:
-- app/api/transfer-requests/route.ts: incluir companyFunction na consulta
-- app/dashboard/transfers/page.tsx: adicionar fallback para companyFunction
-- scripts/check-employee-function.js: novo script para verificar função
-- scripts/test-transfer-api.js: novo script para testar API
-- CORRECAO_FUNCAO_TRANSFERENCIAS.md: documentação da correção
-
-Resolve problema onde função "ADMINISTRATIVO DE OBRAS" não aparecia na tabela de transferências. 
-
-feat: implementa toggle automático de status de usuários
-
-- Adiciona hook useToggleUserStatus para gerenciar status ativo/inativo
-- Implementa API /api/settings/super-admin/users/[id]/toggle-status
-- Atualiza componente UserManagement com loading states e feedback visual
-- Adiciona invalidação automática de queries após toggle
-- Corrige problema de interface não atualizar automaticamente após ações
-- Implementa loading states nos botões de toggle
-- Adiciona toast notifications para feedback de sucesso/erro
-- Cria script de teste test-frontend-toggle.js para validar funcionalidade
+- Adiciona funcionalidades de toggle automático de status de usuários
+- Implementa melhorias na interface de configurações de empresa
+- Atualiza sistema de gerenciamento de infraestrutura
+- Corrige problemas de exibição em páginas de funcionários
+- Implementa melhorias na página de login com arte industrial
+- Adiciona funcionalidades de estatísticas e eventos
+- Corrige problemas de sincronização e cache
+- Implementa melhorias na interface de usuários
 
 Arquivos modificados:
-- lib/hooks/useSuperAdminSettings.ts: adiciona useToggleUserStatus
-- app/dashboard/settings/components/SuperAdminSettings/UserManagement.tsx: atualiza com toggle automático
-- scripts/test-frontend-toggle.js: script de teste para validação
+- APIs de configurações e usuários
+- Componentes de interface de usuário
+- Páginas de dashboard e configurações
+- Sistema de autenticação e login
 
-Resolve: problema de toggle status não atualizar automaticamente na interface 
+Resolve: problemas de interface e adiciona funcionalidades de gerenciamento 

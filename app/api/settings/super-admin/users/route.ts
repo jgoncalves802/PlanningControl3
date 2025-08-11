@@ -1,174 +1,248 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server'
+import { PrismaClient } from '@prisma/client'
+import { createClient } from '@supabase/supabase-js'
+import { getServerSession } from '@/lib/auth-server'
+import { 
+  validateUserRoleExists, 
+  validateUserRoleLimit, 
+  validateRolePermissions, 
+  normalizeUserRoleData, 
+  validateUserRoleIntegrity 
+} from '@/lib/validations/user-role'
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient()
 
-// GET - Listar todos os usuários
-export async function GET(request: NextRequest) {
+// Função para criar usuário no Supabase Auth
+async function createSupabaseUser(email: string, password: string = '123456') {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Configurações do Supabase não encontradas')
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  const { data, error } = await supabaseAdmin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true // Confirma o email automaticamente
+  })
+
+  if (error) {
+    console.error('Erro ao criar usuário no Supabase Auth:', error.message)
+    throw new Error(`Erro ao criar usuário no Supabase Auth: ${error.message}`)
+  }
+
+  return data.user
+}
+
+// Função para buscar usuário no Supabase Auth
+async function findSupabaseUser(email: string) {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error('Configurações do Supabase não encontradas')
+  }
+
+  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  })
+
+  const { data, error } = await supabaseAdmin.auth.admin.listUsers()
+
+  if (error) {
+    throw new Error(`Erro ao listar usuários no Supabase Auth: ${error.message}`)
+  }
+
+  return data.users.find(user => user.email === email)
+}
+
+// GET - Listar usuários
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const search = searchParams.get('search') || '';
-    const role = searchParams.get('role') || '';
-    const status = searchParams.get('status') || '';
-
-    const skip = (page - 1) * limit;
-
-    // Construir filtros
-    const where: any = {};
-    
-    if (search) {
-      where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } }
-      ];
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Buscar usuários
+    // Verificar se o usuário atual pode listar usuários
+    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'COMPANY_ADMIN') {
+      return NextResponse.json({ error: 'Sem permissão para listar usuários' }, { status: 403 })
+    }
+
     const users = await prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        clerkId: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        contractResponsibilities: {
-          select: {
-            contract: {
+      include: {
+        userRoles: {
+          where: { isActive: true },
+          include: {
+            company: {
               select: {
                 id: true,
-                name: true,
-                code: true
+                name: true
               }
             }
-          }
-        },
-        _count: {
-          select: {
-            auditLogs: true,
-            transferRequestsMade: true,
-            transferRequestsApproved: true
           }
         }
       },
       orderBy: {
         createdAt: 'desc'
-      },
-      skip,
-      take: limit
-    });
-
-    // Contar total
-    const total = await prisma.user.count({ where });
-
-    // Estatísticas
-    const stats = await prisma.user.aggregate({
-      _count: {
-        id: true
       }
-    });
+    })
 
-    return NextResponse.json({
-      users,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      },
-      stats: {
-        total: stats._count.id
-      }
-    });
+    return NextResponse.json({ users })
 
   } catch (error) {
-    console.error('❌ Erro ao listar usuários:', error);
+    console.error('Erro ao listar usuários:', error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
-    );
+    )
   }
 }
 
 // POST - Criar novo usuário
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { name, email, clerkId } = body;
-
-    // Validações
-    if (!name || !email) {
-      return NextResponse.json(
-        { error: 'Nome e email são obrigatórios' },
-        { status: 400 }
-      );
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    // Verificar se email já existe
+    // Verificar se o usuário atual pode criar usuários
+    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'COMPANY_ADMIN') {
+      return NextResponse.json({ error: 'Sem permissão para criar usuários' }, { status: 403 })
+    }
+
+    const body = await request.json()
+    const { email, name, role, permissions, companyId } = body
+
+    // Validações básicas
+    if (!email || !name || !role) {
+      return NextResponse.json({ 
+        error: 'Email, nome e role são obrigatórios' 
+      }, { status: 400 })
+    }
+
+    // Normalizar e validar dados
+    const normalizedData = normalizeUserRoleData({
+      email: email.trim(),
+      name: name.trim(),
+      role: role.trim().toUpperCase(),
+      companyId: companyId?.trim() || null,
+      permissions: permissions || null
+    })
+
+    const integrityCheck = validateUserRoleIntegrity(normalizedData)
+    if (!integrityCheck.valid) {
+      return NextResponse.json({ 
+        error: 'Dados inválidos',
+        details: integrityCheck.errors
+      }, { status: 400 })
+    }
+
+    // Verificar se o email já existe
     const existingUser = await prisma.user.findUnique({
-      where: { email }
-    });
+      where: { email: normalizedData.email }
+    })
 
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'Email já cadastrado no sistema' },
-        { status: 409 }
-      );
+      return NextResponse.json({ 
+        error: 'Email já está em uso' 
+      }, { status: 409 })
     }
 
-    // Verificar se Clerk ID já existe (se fornecido)
-    if (clerkId) {
-      const existingClerkId = await prisma.user.findUnique({
-        where: { clerkId }
-      });
-
-      if (existingClerkId) {
-        return NextResponse.json(
-          { error: 'Clerk ID já cadastrado no sistema' },
-          { status: 409 }
-        );
-      }
+    // Verificar se o role é válido
+    if (!validateRolePermissions(normalizedData.role, normalizedData.permissions)) {
+      return NextResponse.json({ 
+        error: `Role '${normalizedData.role}' deve ter permissões válidas` 
+      }, { status: 400 })
     }
 
-    // Criar usuário
-    const createData: any = {
-      name,
-      email
-    };
-    
-    // Só adicionar clerkId se ele existir e não for vazio
-    if (clerkId && clerkId.trim() !== '') {
-      createData.clerkId = clerkId;
+    // Criar usuário no Supabase Auth primeiro
+    let supabaseUser
+    try {
+      supabaseUser = await createSupabaseUser(normalizedData.email)
+      console.log('✅ Usuário criado no Supabase Auth:', supabaseUser.id)
+    } catch (error) {
+      console.error('❌ Erro ao criar usuário no Supabase Auth:', error)
+      return NextResponse.json({ 
+        error: 'Erro ao criar usuário no sistema de autenticação',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      }, { status: 500 })
     }
 
+    // Criar usuário no banco de dados usando o ID do Supabase Auth
     const newUser = await prisma.user.create({
-      data: createData,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        clerkId: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true
+      data: {
+        id: supabaseUser.id, // Usar o ID do Supabase Auth diretamente
+        email: normalizedData.email,
+        name: normalizedData.name,
+        isActive: true
       }
-    });
+    })
+
+    console.log('✅ Usuário criado no banco de dados:', newUser.id)
+
+    // Criar role assignment
+    const userRole = await prisma.userRoleAssignment.create({
+      data: {
+        userId: supabaseUser.id, // Usar o ID do Supabase Auth diretamente
+        role: normalizedData.role,
+        companyId: normalizedData.companyId,
+        permissions: normalizedData.permissions,
+        isActive: true
+      }
+    })
+
+    console.log('✅ Role assignment criado:', userRole.id)
+
+    // Registrar no audit log
+    await prisma.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: 'CREATE_USER',
+        entityType: 'USER',
+        entityId: newUser.id,
+        details: {
+          email: normalizedData.email,
+          name: normalizedData.name,
+          role: normalizedData.role,
+          companyId: normalizedData.companyId
+        },
+        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+      }
+    })
 
     return NextResponse.json({
       message: 'Usuário criado com sucesso',
-      user: newUser
-    }, { status: 201 });
+      user: {
+        ...newUser,
+        userRoles: [userRole]
+      }
+    }, { status: 201 })
 
   } catch (error) {
-    console.error('❌ Erro ao criar usuário:', error);
+    console.error('Erro ao criar usuário:', error)
     return NextResponse.json(
-      { error: 'Erro interno do servidor' },
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
       { status: 500 }
-    );
+    )
   }
 }
 
@@ -176,7 +250,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
-    const { id, name, email, clerkId } = body;
+    const { id, name, email, password } = body;
 
     if (!id) {
       return NextResponse.json(
@@ -211,17 +285,24 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // Verificar se Clerk ID já existe (se foi alterado e fornecido)
-    if (clerkId && clerkId !== existingUser.clerkId) {
-      const clerkIdExists = await prisma.user.findUnique({
-        where: { clerkId }
-      });
-
-      if (clerkIdExists) {
-        return NextResponse.json(
-          { error: 'Clerk ID já cadastrado no sistema' },
-          { status: 409 }
-        );
+    // Se o email foi alterado, tentar vincular ao Supabase Auth
+    if (email && email !== existingUser.email) {
+      try {
+        console.log(`🔄 Tentando vincular usuário ${email} ao Supabase Auth...`);
+        
+        // Verificar se o usuário já existe no Supabase Auth
+        const existingSupabaseUser = await findSupabaseUser(email);
+        
+        if (existingSupabaseUser) {
+          console.log(`✅ Usuário ${email} já existe no Supabase Auth`);
+        } else {
+          // Criar usuário no Supabase Auth
+          const userPassword = password || '123456';
+          const supabaseUser = await createSupabaseUser(email, userPassword);
+          console.log(`✅ Usuário ${email} criado no Supabase Auth com ID: ${supabaseUser.id}`);
+        }
+      } catch (supabaseError) {
+        console.error(`⚠️ Erro ao vincular ao Supabase Auth: ${supabaseError}`);
       }
     }
 
@@ -231,13 +312,6 @@ export async function PUT(request: NextRequest) {
     // Só adicionar campos que foram fornecidos
     if (name) updateData.name = name;
     if (email) updateData.email = email;
-    if (clerkId !== undefined) {
-      if (clerkId && clerkId.trim() !== '') {
-        updateData.clerkId = clerkId;
-      } else {
-        updateData.clerkId = null;
-      }
-    }
 
     const updatedUser = await prisma.user.update({
       where: { id },
@@ -253,9 +327,12 @@ export async function PUT(request: NextRequest) {
       }
     });
 
+    console.log(`✅ Usuário ${updatedUser.email} atualizado com sucesso`);
+
     return NextResponse.json({
       message: 'Usuário atualizado com sucesso',
-      user: updatedUser
+      user: updatedUser,
+      supabaseLinked: !!updatedUser.clerkId
     });
 
   } catch (error) {
@@ -264,6 +341,125 @@ export async function PUT(request: NextRequest) {
       { error: 'Erro interno do servidor' },
       { status: 500 }
     );
+  }
+}
+
+// PATCH - Atualizar permissões de um usuário
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  try {
+    const session = await getServerSession()
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    // Verificar se o usuário atual pode gerenciar permissões
+    if (session.user.role !== 'SUPER_ADMIN' && session.user.role !== 'COMPANY_ADMIN') {
+      return NextResponse.json({ error: 'Sem permissão para gerenciar usuários' }, { status: 403 })
+    }
+
+    const { userId } = params
+    const body = await request.json()
+    const { permissions, role } = body
+
+    // Validar dados
+    if (!permissions || typeof permissions !== 'object') {
+      return NextResponse.json({ error: 'Permissões inválidas' }, { status: 400 })
+    }
+
+    // Verificar se o usuário existe
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    // Verificar se já existe um role assignment para este usuário com o mesmo role
+    const existingRoleAssignment = await prisma.userRoleAssignment.findFirst({
+      where: {
+        userId: userId,
+        role: role || 'USER'
+      }
+    })
+
+    if (existingRoleAssignment) {
+      // Atualizar role assignment existente
+      const updatedUserRole = await prisma.userRoleAssignment.update({
+        where: {
+          id: existingRoleAssignment.id
+        },
+        data: {
+          permissions: permissions,
+          role: role || existingRoleAssignment.role,
+          updatedAt: new Date()
+        }
+      })
+
+      // Registrar no audit log
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: 'UPDATE_USER_PERMISSIONS',
+          entityType: 'USER_ROLE',
+          entityId: userId,
+          details: {
+            oldPermissions: existingRoleAssignment.permissions,
+            newPermissions: permissions,
+            role: role || existingRoleAssignment.role
+          },
+          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+        }
+      })
+
+      return NextResponse.json({
+        message: 'Permissões atualizadas com sucesso',
+        userRole: updatedUserRole
+      })
+    } else {
+      // Criar novo role assignment
+      const newUserRole = await prisma.userRoleAssignment.create({
+        data: {
+          userId: userId,
+          role: role || 'USER',
+          permissions: permissions,
+          isActive: true
+        }
+      })
+
+      // Registrar no audit log
+      await prisma.auditLog.create({
+        data: {
+          userId: session.user.id,
+          action: 'CREATE_USER_ROLE',
+          entityType: 'USER_ROLE',
+          entityId: userId,
+          details: {
+            newPermissions: permissions,
+            role: role || 'USER'
+          },
+          ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+        }
+      })
+
+      return NextResponse.json({
+        message: 'Role assignment criado com sucesso',
+        userRole: newUserRole
+      })
+    }
+
+  } catch (error) {
+    console.error('Erro ao atualizar permissões do usuário:', error)
+    return NextResponse.json(
+      { 
+        error: 'Erro interno do servidor',
+        details: error instanceof Error ? error.message : 'Erro desconhecido'
+      },
+      { status: 500 }
+    )
   }
 }
 

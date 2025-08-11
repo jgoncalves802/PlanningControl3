@@ -116,7 +116,6 @@ export default function TransfersPage() {
   console.log('   params:', transferRequestsParams)
   console.log('')
 
-  const [currentUser, setCurrentUser] = useState<any | null>(null)
   const [userPermissions, setUserPermissions] = useState<any>(null)
   const [accessibleContracts, setAccessibleContracts] = useState<any[]>([])
   const [transfers, setTransfers] = useState<TransferRequest[]>([])
@@ -130,14 +129,16 @@ export default function TransfersPage() {
   const [showTransferDetails, setShowTransferDetails] = useState(false)
   const [showContractorSystemModal, setShowContractorSystemModal] = useState(false)
 
-  // Inicializar usuário e permissões
+  // Hook para obter usuário atual
+  const { user: currentUser, loading: userLoading } = useCurrentUser()
+
+  // Inicializar permissões quando usuário mudar
   useEffect(() => {
-    const { user, loading: userLoading } = useCurrentUser()
-    setCurrentUser(user)
-    
-    const permissions = getUserPermissions(user)
-    setUserPermissions(permissions)
-  }, [])
+    if (currentUser) {
+      const permissions = getUserPermissions(currentUser)
+      setUserPermissions(permissions)
+    }
+  }, [currentUser])
 
   const handleApprove = async () => {
     // Implementar lógica de aprovação
@@ -250,7 +251,7 @@ export default function TransfersPage() {
       avatar: ''
     }
     
-    if (employee && employee.currentContractId && canUserAccessContract(currentUser!, employee.currentContractId)) {
+    if (employee && employee.currentContractId && validateUserAccess(currentUser!, 'MANAGE_EMPLOYEES')) {
       setSelectedEmployee(employee)
       setNfcStatus('success')
       setShowNFCReader(false)

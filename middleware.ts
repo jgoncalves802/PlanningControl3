@@ -2,6 +2,13 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export async function middleware(req: NextRequest) {
+  // Permitir acesso a arquivos estáticos do Next.js
+  if (req.nextUrl.pathname.startsWith('/_next/') || 
+      req.nextUrl.pathname.startsWith('/favicon.ico') ||
+      req.nextUrl.pathname.startsWith('/api/')) {
+    return NextResponse.next()
+  }
+
   // Rotas públicas que não precisam de autenticação
   const publicRoutes = ['/login', '/signup', '/forgot-password', '/']
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route))
@@ -40,15 +47,6 @@ export async function middleware(req: NextRequest) {
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
-
-  // CORREÇÃO: Remover redirecionamento automático de rotas públicas com token
-  // Deixar o React gerenciar o redirecionamento no lado cliente
-  // if (hasAuthToken && isPublicRoute && req.nextUrl.pathname !== '/') {
-  //   console.log('🔍 Middleware - Redirecionando para dashboard (com token)')
-  //   const redirectUrl = req.nextUrl.clone()
-  //   redirectUrl.pathname = '/dashboard'
-  //   return NextResponse.redirect(redirectUrl)
-  // }
 
   // CORREÇÃO: Simplificar lógica da rota raiz
   // Se está na rota raiz e não tem token, redirecionar para login

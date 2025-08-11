@@ -6,8 +6,10 @@
     "dev": "next dev",
     "dev:no-lint": "node scripts/start-dev.js",
     "dev:https": "node scripts/https-server.js",
+    "dev:ngrok": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "next build",
     "start": "next start",
+    "start:ngrok": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
     "cert:create": "node scripts/create-cert.js",
@@ -20,7 +22,9 @@
     "nfc:test": "echo 'Use npm run nfc:localtunnel (sem conta) ou npm run nfc:tunnel (com conta ngrok)'",
     "supabase:setup": "node scripts/setup-supabase-auth.js",
     "supabase:db": "node scripts/setup-supabase-database.js",
-    "supabase:config": "echo 'Configure as variáveis no .env.local e execute: npm run supabase:db && npm run supabase:setup'"
+    "supabase:config": "echo 'Configure as variáveis no .env.local e execute: npm run supabase:db && npm run supabase:setup'",
+    "ngrok:start": "npm run dev:ngrok & npx ngrok http 3000",
+    "ngrok:build": "npm run build && npm run start:ngrok & npx ngrok http 3000"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",
