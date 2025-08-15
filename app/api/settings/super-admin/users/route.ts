@@ -9,6 +9,7 @@ import {
   normalizeUserRoleData, 
   validateUserRoleIntegrity 
 } from '@/lib/validations/user-role'
+import { validateUserLimit, updateCompanyUserCount } from '@/lib/validations/license'
 
 const prisma = new PrismaClient()
 
@@ -136,6 +137,114 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
+    // 🔐 VALIDAÇÃO CRÍTICA: Apenas SUPER_ADMIN pode criar outros SUPER_ADMIN
+    if (role === 'SUPER_ADMIN' && session.user.role !== 'SUPER_ADMIN') {
+      console.error(`🚨 Tentativa de criação de SUPER_ADMIN por usuário não autorizado: ${session.user.email} (${session.user.role})`)
+      
+      // Log de auditoria para tentativa não autorizada
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: 'SUPER_ADMIN_CREATION_ATTEMPT',
+            entityId: 'N/A',
+            details: {
+              attemptedBy: session.user.email,
+              attemptedByRole: session.user.role,
+              targetEmail: email,
+              targetRole: role,
+              timestamp: new Date().toISOString(),
+              blocked: true
+            }
+          }
+        })
+      } catch (auditError) {
+        console.error('Erro ao registrar log de auditoria:', auditError)
+      }
+      
+      return NextResponse.json({ 
+        error: 'Apenas Super Administradores podem criar outros Super Administradores',
+        code: 'SUPER_ADMIN_CREATION_DENIED'
+      }, { status: 403 })
+    }
+
+    // Log de auditoria para criação autorizada de SUPER_ADMIN
+    if (role === 'SUPER_ADMIN' && session.user.role === 'SUPER_ADMIN') {
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: 'SUPER_ADMIN_CREATION_AUTHORIZED',
+            entityId: 'N/A',
+            details: {
+              createdBy: session.user.email,
+              createdByRole: session.user.role,
+              targetEmail: email,
+              targetRole: role,
+              timestamp: new Date().toISOString(),
+              authorized: true
+            }
+          }
+        })
+      } catch (auditError) {
+        console.error('Erro ao registrar log de auditoria:', auditError)
+      }
+    }
+
+    // 🔐 VALIDAÇÃO DE LICENÇAS: Verificar limite de usuários por empresa
+    if (companyId && role !== 'SUPER_ADMIN') {
+      try {
+        const licenseCheck = await validateUserLimit(companyId)
+        
+        if (!licenseCheck.canCreate) {
+          console.error(`🚨 Tentativa de criação de usuário além do limite: ${session.user.email} para empresa ${companyId}`)
+          
+          // Log de auditoria para tentativa de criação além do limite
+          try {
+            await prisma.auditLog.create({
+              data: {
+                userId: session.user.id,
+                action: 'USER_CREATION_LIMIT_EXCEEDED',
+                entityId: companyId,
+                details: {
+                  attemptedBy: session.user.email,
+                  attemptedByRole: session.user.role,
+                  targetEmail: email,
+                  targetRole: role,
+                  companyId,
+                  currentUsers: licenseCheck.current,
+                  maxUsers: licenseCheck.limit,
+                  usagePercentage: licenseCheck.usagePercentage,
+                  timestamp: new Date().toISOString(),
+                  blocked: true
+                }
+              }
+            })
+          } catch (auditError) {
+            console.error('Erro ao registrar log de auditoria:', auditError)
+          }
+          
+          return NextResponse.json({
+            error: 'Limite de usuários atingido',
+            details: {
+              current: licenseCheck.current,
+              limit: licenseCheck.limit,
+              usagePercentage: licenseCheck.usagePercentage,
+              planName: licenseCheck.planName,
+              message: licenseCheck.message
+            },
+            code: 'LICENSE_LIMIT_EXCEEDED'
+          }, { status: 400 })
+        }
+      } catch (licenseError) {
+        console.error('Erro ao validar limite de licenças:', licenseError)
+        return NextResponse.json({
+          error: 'Erro ao validar limite de licenças',
+          details: licenseError instanceof Error ? licenseError.message : 'Erro desconhecido'
+        }, { status: 500 })
+      }
+    }
+
     // Normalizar e validar dados
     const normalizedData = normalizeUserRoleData({
       email: email.trim(),
@@ -208,6 +317,17 @@ export async function POST(request: NextRequest) {
     })
 
     console.log('✅ Role assignment criado:', userRole.id)
+
+    // 🔄 ATUALIZAR CONTADOR DE USUÁRIOS DA EMPRESA
+    if (normalizedData.companyId) {
+      try {
+        await updateCompanyUserCount(normalizedData.companyId)
+        console.log('✅ Contador de usuários da empresa atualizado')
+      } catch (updateError) {
+        console.error('❌ Erro ao atualizar contador de usuários:', updateError)
+        // Não falhar a criação do usuário por erro no contador
+      }
+    }
 
     // Registrar no audit log
     await prisma.auditLog.create({

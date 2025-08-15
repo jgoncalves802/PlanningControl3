@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useToggleUserStatus } from '@/lib/hooks/useSuperAdminSettings';
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser';
 
 interface User {
   id: string;
@@ -71,6 +72,9 @@ interface UserManagementProps {
 }
 
 export default function UserManagement({ onUserSelected }: UserManagementProps) {
+  // Obter usuário atual para validação de permissões
+  const { user: currentUser } = useCurrentUser();
+  
   // Estados principais
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');
@@ -493,12 +497,15 @@ export default function UserManagement({ onUserSelected }: UserManagementProps) 
                               <SelectValue placeholder="Selecione o nível de acesso" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="SUPER_ADMIN">
-                                <div className="flex items-center gap-2">
-                                  <Shield className="h-4 w-4" />
-                                  Super Administrador
-                                </div>
-                              </SelectItem>
+                              {/* 🔐 Proteção: Apenas SUPER_ADMIN pode criar outros SUPER_ADMIN */}
+                              {currentUser?.role === 'SUPER_ADMIN' && (
+                                <SelectItem value="SUPER_ADMIN">
+                                  <div className="flex items-center gap-2">
+                                    <Shield className="h-4 w-4" />
+                                    Super Administrador
+                                  </div>
+                                </SelectItem>
+                              )}
                               <SelectItem value="COMPANY_ADMIN">
                                 <div className="flex items-center gap-2">
                                   <Building className="h-4 w-4" />
@@ -840,7 +847,10 @@ export default function UserManagement({ onUserSelected }: UserManagementProps) 
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="SUPER_ADMIN">Super Administrador</SelectItem>
+                    {/* 🔐 Proteção: Apenas SUPER_ADMIN pode editar para SUPER_ADMIN */}
+                    {currentUser?.role === 'SUPER_ADMIN' && (
+                      <SelectItem value="SUPER_ADMIN">Super Administrador</SelectItem>
+                    )}
                     <SelectItem value="COMPANY_ADMIN">Administrador da Empresa</SelectItem>
                     <SelectItem value="USER">Usuário</SelectItem>
                   </SelectContent>
