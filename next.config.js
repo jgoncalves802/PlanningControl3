@@ -6,12 +6,8 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  output: 'standalone',
-  experimental: {
-    serverComponentsExternalPackages: ['@prisma/client'],
-  },
-  // Configuração para funcionar com ngrok
-  assetPrefix: process.env.NODE_ENV === 'production' ? undefined : '',
+  // Configuração para funcionar com ngrok (mantida mínima)
+  assetPrefix: undefined,
   basePath: '',
   trailingSlash: false,
   // Configuração de headers para CORS e cache
@@ -46,15 +42,6 @@ const nextConfig = {
             value: 'public, max-age=31536000, immutable',
           },
         ],
-      },
-    ];
-  },
-  // Configuração de rewrites para ngrok
-  async rewrites() {
-    return [
-      {
-        source: '/_next/static/:path*',
-        destination: '/_next/static/:path*',
       },
     ];
   },

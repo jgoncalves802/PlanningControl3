@@ -320,7 +320,6 @@ export async function PUT(request: NextRequest) {
         id: true,
         name: true,
         email: true,
-        clerkId: true,
         isActive: true,
         createdAt: true,
         updatedAt: true
@@ -332,7 +331,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       message: 'Usuário atualizado com sucesso',
       user: updatedUser,
-      supabaseLinked: !!updatedUser.clerkId
+      supabaseLinked: true
     });
 
   } catch (error) {

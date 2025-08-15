@@ -12,6 +12,7 @@ import {
   ChevronDown
 } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useAuth } from '@/lib/contexts/AuthContext'
 
 interface HeaderProps {
   user?: {
@@ -36,6 +37,7 @@ export function Header({ user }: HeaderProps) {
   const [locale, setLocale] = useState('pt-BR')
   const router = useRouter()
   const pathname = usePathname()
+  const { signOut } = useAuth()
 
   useEffect(() => {
     // Check for saved theme preference or default to light mode
@@ -68,10 +70,36 @@ export function Header({ user }: HeaderProps) {
     }
   }
 
-  const handleLogout = () => {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_data')
-    router.push('/login')
+  const handleLogout = async () => {
+    try {
+      // Usar a função signOut do contexto de autenticação
+      await signOut()
+      
+      // Limpar dados locais adicionais
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_data')
+      localStorage.removeItem('planning_control_user')
+      localStorage.removeItem('planning_control_permissions')
+      
+      // Limpar cache do usuário atual
+      localStorage.removeItem('planning_control_user_cache')
+      localStorage.removeItem('planning_control_user_timestamp')
+      
+      // Forçar recarregamento da página para limpar estado
+      window.location.href = '/login'
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error)
+      // Mesmo com erro, limpar dados e redirecionar
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('user_data')
+      localStorage.removeItem('planning_control_user')
+      localStorage.removeItem('planning_control_permissions')
+      localStorage.removeItem('planning_control_user_cache')
+      localStorage.removeItem('planning_control_user_timestamp')
+      
+      // Forçar recarregamento da página
+      window.location.href = '/login'
+    }
   }
 
   // Função para trocar idioma

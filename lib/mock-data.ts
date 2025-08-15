@@ -1,6 +1,6 @@
 // Mock data for demonstration purposes
 import { addDays, subDays, addHours } from 'date-fns'
-import { User } from './auth'
+import type { User } from '@/lib/types/user'
 
 // Definir os novos tipos de role
 type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'

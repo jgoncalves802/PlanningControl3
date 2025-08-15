@@ -14,7 +14,6 @@ export async function middleware(req: NextRequest) {
   const isPublicRoute = publicRoutes.some(route => req.nextUrl.pathname.startsWith(route))
 
   // Verificar se há token de autenticação do Supabase
-  // O Supabase pode usar diferentes nomes de cookies dependendo da configuração
   const possibleAuthCookies = [
     'sb-cwilhwqrmjtljwgsgbey-auth-token',
     'sb-access-token',
@@ -23,14 +22,12 @@ export async function middleware(req: NextRequest) {
   ]
   
   let hasAuthToken = false
-  let authToken = null
   
   // Verificar todos os possíveis cookies de autenticação
   for (const cookieName of possibleAuthCookies) {
     const cookie = req.cookies.get(cookieName)
     if (cookie?.value) {
       hasAuthToken = true
-      authToken = cookie.value
       break
     }
   }
@@ -39,25 +36,21 @@ export async function middleware(req: NextRequest) {
   console.log('🔍 Middleware - É rota pública:', isPublicRoute)
   console.log('🔍 Middleware - Tem token:', hasAuthToken)
   
-  // CORREÇÃO: Evitar loop de redirecionamento
+  // Permitir acesso a rotas públicas (incluindo a página home)
+  if (isPublicRoute) {
+    console.log('🔍 Middleware - Permitindo acesso à rota pública')
+    return NextResponse.next()
+  }
+
   // Se não há token e não é rota pública, redirecionar para login
-  if (!hasAuthToken && !isPublicRoute) {
+  if (!hasAuthToken) {
     console.log('🔍 Middleware - Redirecionando para login (sem token)')
     const redirectUrl = req.nextUrl.clone()
     redirectUrl.pathname = '/login'
     return NextResponse.redirect(redirectUrl)
   }
 
-  // CORREÇÃO: Simplificar lógica da rota raiz
-  // Se está na rota raiz e não tem token, redirecionar para login
-  if (!hasAuthToken && req.nextUrl.pathname === '/') {
-    console.log('🔍 Middleware - Redirecionando raiz para login')
-    const redirectUrl = req.nextUrl.clone()
-    redirectUrl.pathname = '/login'
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  console.log('🔍 Middleware - Permitindo acesso à rota')
+  console.log('🔍 Middleware - Permitindo acesso à rota protegida')
   return NextResponse.next()
 }
 

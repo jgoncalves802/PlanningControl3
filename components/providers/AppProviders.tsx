@@ -1,10 +1,10 @@
 "use client";
 
 import React, { ReactNode } from 'react';
+import { AuthProvider } from '@/lib/contexts/AuthContext';
 import ThemeProvider from '@/lib/providers/ThemeProvider';
 import LanguageProvider from '@/lib/providers/LanguageProvider';
 import { AppSettingsProvider } from '@/lib/contexts/AppSettingsContext';
-import { AuthProvider } from '@/lib/contexts/AuthContext';
 
 interface AppProvidersProps {
   children: ReactNode;

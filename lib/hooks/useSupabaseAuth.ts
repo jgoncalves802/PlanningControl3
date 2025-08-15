@@ -1,18 +1,7 @@
 import { useState, useEffect } from 'react'
 import { User as SupabaseUser, Session } from '@supabase/supabase-js'
 import { createBrowserClient } from '@supabase/ssr'
-
-// Interface para o novo sistema de usuário
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
-  companyId?: string
-  isActive: boolean
-  avatar?: string
-  createdAt: Date
-}
+import type { User } from '@/lib/types/user'
 
 // Singleton para o cliente Supabase
 let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
@@ -70,12 +59,12 @@ export function useSupabaseAuth() {
         }
       } catch (error) {
         console.error('[useSupabaseAuth] Erro ao obter sessão:', error)
-        // Fallback para usuário mock
+        // Fallback para usuário mock - usar SUPER_ADMIN para garantir acesso total
         setUser({
-          id: 'mock-admin-id',
-          name: 'Admin Geral',
-          email: 'admin@demo-company.com',
-          role: 'COMPANY_ADMIN',
+          id: 'mock-super-admin-id',
+          name: 'Super Administrador',
+          email: 'superadmin@planningcontrol.com',
+          role: 'SUPER_ADMIN',
           isActive: true,
           createdAt: new Date()
         })

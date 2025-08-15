@@ -1,19 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
 import { User as SupabaseUser } from '@supabase/supabase-js'
 import { UserPermissions, getDefaultPermissions, mergePermissions } from '@/lib/types/permissions'
-
-// Interface para o usuário do sistema
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
-  companyId?: string
-  isActive: boolean
-  avatar?: string
-  createdAt: Date
-  permissions?: UserPermissions
-}
+import type { User } from '@/lib/types/user'
 
 // Singleton para o cliente Supabase
 let supabaseClient: ReturnType<typeof createBrowserClient> | null = null
@@ -337,6 +325,9 @@ export function validateUserAccess(user: User | null, requiredRole: 'SUPER_ADMIN
 export function validatePageAccess(user: User | null, page: string): boolean {
   if (!user) return false
 
+  // Normalizar a página para remover parâmetros dinâmicos
+  const normalizedPage = normalizePagePath(page)
+
   // Se o usuário tem permissões granulares, usar elas
   if (user.permissions) {
     const pagePermissions: Record<string, boolean> = {
@@ -355,7 +346,7 @@ export function validatePageAccess(user: User | null, page: string): boolean {
       '/dashboard/backup': user.permissions.backup?.canView || false,
     }
 
-    return pagePermissions[page] || false
+    return pagePermissions[normalizedPage] || false
   }
 
   // Fallback para o sistema antigo
@@ -377,7 +368,32 @@ export function validatePageAccess(user: User | null, page: string): boolean {
     '/dashboard/backup': permissions.canAccessBackup,
   }
 
-  return pagePermissions[page] || false
+  return pagePermissions[normalizedPage] || false
+}
+
+// Função para normalizar caminhos de página (remover parâmetros dinâmicos)
+function normalizePagePath(page: string): string {
+  // Remover IDs dinâmicos (UUIDs, números, etc.)
+  let normalized = page
+  
+  // Padrões comuns de IDs dinâmicos
+  const dynamicPatterns = [
+    /\/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i, // UUID
+    /\/[a-z0-9]{20,}$/i, // IDs longos (como os do Prisma)
+    /\/\d+$/i, // Números
+    /\/[a-z0-9]{16,}$/i, // IDs médios
+  ]
+  
+  for (const pattern of dynamicPatterns) {
+    normalized = normalized.replace(pattern, '')
+  }
+  
+  // Se a página termina com /, remover
+  if (normalized.endsWith('/') && normalized !== '/') {
+    normalized = normalized.slice(0, -1)
+  }
+  
+  return normalized
 }
 
 // Função para validar permissões granulares

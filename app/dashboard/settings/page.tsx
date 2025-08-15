@@ -58,32 +58,32 @@ export default function SettingsPage() {
   }
 
   const renderSuperAdminSettings = () => (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Shield className="h-6 w-6 text-red-600" />
-        <h1 className="text-2xl font-bold">Configurações Super Admin</h1>
-        <Badge variant="destructive">Super Administrador</Badge>
-      </div>
+      <div className="space-y-6">
+        <div className="flex items-center gap-2 mb-6">
+          <Shield className="h-6 w-6 text-red-600" />
+          <h1 className="text-2xl font-bold">Configurações Super Admin</h1>
+          <Badge variant="destructive">Super Administrador</Badge>
+        </div>
       
-      <Tabs defaultValue="users" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="users" className="flex items-center gap-2">
-            <User className="h-4 w-4" />
-            Usuários
-          </TabsTrigger>
-          <TabsTrigger value="permissions" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
-            Permissões
-          </TabsTrigger>
-          <TabsTrigger value="companies" className="flex items-center gap-2">
-            <Building className="h-4 w-4" />
-            Empresas
-          </TabsTrigger>
-          <TabsTrigger value="infrastructure" className="flex items-center gap-2">
-            <Settings className="h-4 w-4" />
-            Infraestrutura
-          </TabsTrigger>
-        </TabsList>
+              <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Usuários
+            </TabsTrigger>
+            <TabsTrigger value="permissions" className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              Permissões
+            </TabsTrigger>
+            <TabsTrigger value="companies" className="flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              Empresas
+            </TabsTrigger>
+            <TabsTrigger value="infrastructure" className="flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Infraestrutura
+            </TabsTrigger>
+          </TabsList>
 
         <TabsContent value="users">
           <UserManagement onUserSelected={setSelectedUserId} />

@@ -1,18 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { User as SupabaseUser } from '@supabase/supabase-js'
-
-// Interface para o usuário do sistema
-export interface User {
-  id: string
-  name: string
-  email: string
-  role: 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'
-  companyId?: string
-  isActive: boolean
-  avatar?: string
-  createdAt: Date
-}
+import type { User } from '@/lib/types/user'
 
 // Função para obter usuário atual no servidor (API routes)
 export async function getCurrentUserServer(): Promise<User | null> {

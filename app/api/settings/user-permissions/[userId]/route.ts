@@ -136,7 +136,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
     }
 
-    // Buscar role assignment existente ou criar um novo
+    // Buscar role assignment existente para este usuário
     let userRole = await prisma.userRoleAssignment.findFirst({
       where: {
         userId: userId,
@@ -144,26 +144,40 @@ export async function PUT(
       }
     })
 
+    const defaultRole = 'USER'
+    const targetRole = role || defaultRole
+
     if (!userRole) {
       // Criar novo role assignment
-      const defaultRole = 'USER'
       userRole = await prisma.userRoleAssignment.create({
         data: {
           userId: userId,
-          role: role || defaultRole,
+          role: targetRole,
+          permissions: permissions,
+          isActive: true
+        }
+      })
+    } else if (userRole.role !== targetRole) {
+      // Se o role mudou, desativar o atual e criar um novo
+      await prisma.userRoleAssignment.update({
+        where: { id: userRole.id },
+        data: { isActive: false, updatedAt: new Date() }
+      })
+      
+      userRole = await prisma.userRoleAssignment.create({
+        data: {
+          userId: userId,
+          role: targetRole,
           permissions: permissions,
           isActive: true
         }
       })
     } else {
-      // Atualizar role assignment existente
+      // Atualizar role assignment existente com o mesmo role
       userRole = await prisma.userRoleAssignment.update({
-        where: {
-          id: userRole.id
-        },
+        where: { id: userRole.id },
         data: {
           permissions: permissions,
-          role: role || userRole.role,
           updatedAt: new Date()
         }
       })

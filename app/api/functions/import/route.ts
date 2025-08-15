@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { User } from '@/lib/auth-client'
+import type { User } from '@/lib/types/user'
 
 // Definir os novos tipos de role
 type UserRole = 'SUPER_ADMIN' | 'COMPANY_ADMIN' | 'USER'

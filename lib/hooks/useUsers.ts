@@ -1,26 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-export interface User {
-  id: string;
-  name: string | null;
-  email: string;
-  clerkId: string | null;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-  contractResponsibilities: {
-    contract: {
-      id: string;
-      name: string;
-      code: string;
-    };
-  }[];
-  _count: {
-    auditLogs: number;
-    transferRequestsMade: number;
-    transferRequestsApproved: number;
-  };
-}
+import type { User } from '@/lib/types/user';
 
 export interface UsersResponse {
   users: User[];
@@ -38,14 +17,12 @@ export interface UsersResponse {
 export interface CreateUserData {
   name: string;
   email: string;
-  clerkId?: string;
 }
 
 export interface UpdateUserData {
   id: string;
   name?: string;
   email?: string;
-  clerkId?: string;
 }
 
 // Hook para listar usuários

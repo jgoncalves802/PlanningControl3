@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, type User } from '@/lib/hooks/useUsers';
+import { useUsers, useCreateUser, useUpdateUser, useDeleteUser } from '@/lib/hooks/useUsers';
+import type { User } from '@/lib/types/user';
 import { useUserPermissions, useAddContractPermission, useRemoveContractPermission } from '@/lib/hooks/useUserPermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

@@ -61,7 +61,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         id: true,
         name: true,
         email: true,
-        clerkId: true,
         createdAt: true,
         updatedAt: true,
         auditLogs: {
@@ -173,14 +172,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         id: true,
         name: true,
         email: true,
-        clerkId: true,
         createdAt: true,
         updatedAt: true
       }
     });
 
     // 2. Atualizar usuário no Supabase Auth se necessário
-    if ((data.email || data.name) && existingUser.clerkId && isValidUUID(existingUser.clerkId)) {
+    if (data.email || data.name) {
       try {
         const supabaseAdmin = await getSupabaseAdmin();
         const authUpdateData: any = {};
@@ -198,7 +196,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         }
 
         const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-          existingUser.clerkId,
+          userId, // Usar o ID do usuário diretamente
           authUpdateData
         );
 
@@ -295,27 +293,23 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       }
     }
 
-    // 1. Excluir usuário do Supabase Auth (apenas se clerkId for um UUID válido)
-    if (existingUser.clerkId && isValidUUID(existingUser.clerkId)) {
-      try {
-        console.log('🔐 Tentando excluir do Supabase Auth...');
-        const supabaseAdmin = await getSupabaseAdmin();
-        const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
-          existingUser.clerkId
-        );
+    // 1. Excluir usuário do Supabase Auth
+    try {
+      console.log('🔐 Tentando excluir do Supabase Auth...');
+      const supabaseAdmin = await getSupabaseAdmin();
+      const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(
+        userId // Usar o ID do usuário diretamente
+      );
 
-        if (authDeleteError) {
-          console.error('❌ Erro ao excluir usuário do Supabase Auth:', authDeleteError);
-          // Não falhar a operação, apenas logar o erro
-        } else {
-          console.log('✅ Usuário excluído do Supabase Auth com sucesso');
-        }
-      } catch (authError) {
-        console.error('❌ Erro ao tentar excluir do Supabase Auth:', authError);
-        // Continuar com a exclusão do banco mesmo se falhar no Auth
+      if (authDeleteError) {
+        console.error('❌ Erro ao excluir usuário do Supabase Auth:', authDeleteError);
+        // Não falhar a operação, apenas logar o erro
+      } else {
+        console.log('✅ Usuário excluído do Supabase Auth com sucesso');
       }
-    } else {
-      console.log('ℹ️ clerkId não é um UUID válido, pulando exclusão do Supabase Auth');
+    } catch (authError) {
+      console.error('❌ Erro ao tentar excluir do Supabase Auth:', authError);
+      // Continuar com a exclusão do banco mesmo se falhar no Auth
     }
 
     // 2. Excluir usuário do banco de dados
@@ -336,8 +330,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
           deletedBy: 'super_admin',
           deletedUserEmail: existingUser.email,
           deletedUserName: existingUser.name,
-          clerkId: existingUser.clerkId,
-          authDeleted: existingUser.clerkId && isValidUUID(existingUser.clerkId)
+          authDeleted: true
         }
       }
     });
@@ -347,7 +340,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     return NextResponse.json({ 
       message: 'Usuário excluído com sucesso',
       userId: userId,
-      authDeleted: existingUser.clerkId && isValidUUID(existingUser.clerkId)
+      authDeleted: true
     });
   } catch (error: any) {
     console.error('💥 Erro ao excluir usuário:', error);

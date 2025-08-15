@@ -1,168 +1,155 @@
-const { PrismaClient } = require('@prisma/client')
-
-const prisma = new PrismaClient()
-
-// Permissões padrão para cada role (simplificado)
-const DEFAULT_PERMISSIONS = {
-  SUPER_ADMIN: {
-    dashboard: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    employees: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    contracts: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    budgets: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    safety: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    planning: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    transfers: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    employeeAssignment: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    workforceControl: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    nfcManagement: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    analytics: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    settings: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    backup: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    canManageUsers: true,
-    canManageCompanies: true,
-    canAccessSuperAdmin: true,
-    canAccessCompanyAdmin: true,
-    canViewAuditLogs: true,
-    canManageSystemSettings: true,
-    canAccessReports: true
-  },
-  COMPANY_ADMIN: {
-    dashboard: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    employees: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    contracts: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    budgets: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    safety: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    planning: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    transfers: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    employeeAssignment: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    workforceControl: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    nfcManagement: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    analytics: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    settings: { canView: true, canEdit: true, canDelete: true, canCreate: true, canExport: true, canImport: true },
-    backup: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    canManageUsers: false,
-    canManageCompanies: false,
-    canAccessSuperAdmin: false,
-    canAccessCompanyAdmin: true,
-    canViewAuditLogs: true,
-    canManageSystemSettings: false,
-    canAccessReports: true
-  },
-  USER: {
-    dashboard: { canView: true, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    employees: { canView: true, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    contracts: { canView: true, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    budgets: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    safety: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    planning: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    transfers: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    employeeAssignment: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    workforceControl: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    nfcManagement: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    analytics: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    settings: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    backup: { canView: false, canEdit: false, canDelete: false, canCreate: false, canExport: false, canImport: false },
-    canManageUsers: false,
-    canManageCompanies: false,
-    canAccessSuperAdmin: false,
-    canAccessCompanyAdmin: false,
-    canViewAuditLogs: false,
-    canManageSystemSettings: false,
-    canAccessReports: false
-  }
-}
-
-function getDefaultPermissions(role) {
-  return DEFAULT_PERMISSIONS[role] || DEFAULT_PERMISSIONS.USER
-}
+// Script para testar a API de permissões de usuário
+const { PrismaClient } = require('@prisma/client');
 
 async function testUserPermissionsAPI() {
-  const userId = 'cmdt1nl930001i8bc2qwokeuu'
+  const prisma = new PrismaClient();
   
-  console.log('🧪 Testando API de permissões para userId:', userId)
+  console.log('\\n--- Teste da API de Permissões de Usuário ---');
+  console.log('==============================================\\n');
   
   try {
-    // 1. Verificar se o usuário existe
-    console.log('\n1. Verificando se o usuário existe...')
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    })
+    // 1. Verificar usuário super admin
+    console.log('🔍 Verificando usuário super admin...');
     
-    if (!user) {
-      console.log('❌ Usuário não encontrado no banco de dados')
-      return
-    }
-    
-    console.log('✅ Usuário encontrado:', {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      isActive: user.isActive
-    })
-    
-    // 2. Simular a lógica da API GET
-    console.log('\n2. Simulando lógica da API GET...')
-    
-    // Buscar role assignment do usuário
-    const userRole = await prisma.userRoleAssignment.findFirst({
+    const superAdmin = await prisma.user.findFirst({
       where: {
-        userId: userId,
+        email: 'superadmin@planningcontrol.com'
+      },
+      include: {
+        userRoles: true
+      }
+    });
+
+    if (!superAdmin) {
+      console.log('❌ Usuário super admin não encontrado');
+      return;
+    }
+
+    console.log('✅ Super admin encontrado:');
+    console.log(`   ID: ${superAdmin.id}`);
+    console.log(`   Email: ${superAdmin.email}`);
+    console.log(`   Roles ativos: ${superAdmin.userRoles.filter(r => r.isActive).length}`);
+
+    // 2. Verificar role assignments existentes
+    console.log('\\n🔍 Verificando role assignments existentes...');
+    
+    const existingRoles = await prisma.userRoleAssignment.findMany({
+      where: {
+        userId: superAdmin.id
+      }
+    });
+
+    console.log(`📋 Total de role assignments: ${existingRoles.length}`);
+    existingRoles.forEach((role, index) => {
+      console.log(`   ${index + 1}. Role: ${role.role}, Ativo: ${role.isActive}, ID: ${role.id}`);
+    });
+
+    // 3. Simular atualização de permissões
+    console.log('\\n🧪 Simulando atualização de permissões...');
+    
+    const testPermissions = {
+      "dashboard": { "canView": true, "canEdit": true, "canCreate": false, "canDelete": false, "canExport": true, "canImport": false },
+      "employees": { "canView": true, "canEdit": true, "canCreate": true, "canDelete": true, "canExport": true, "canImport": true },
+      "contracts": { "canView": true, "canEdit": true, "canCreate": true, "canDelete": true, "canExport": true, "canImport": true }
+    };
+
+    // Verificar se já existe um role assignment ativo
+    const activeRole = await prisma.userRoleAssignment.findFirst({
+      where: {
+        userId: superAdmin.id,
         isActive: true
       }
-    })
-    
-    if (!userRole) {
-      console.log('⚠️ Usuário não tem role assignment ativo, usando permissões padrão...')
+    });
+
+    if (activeRole) {
+      console.log(`📝 Atualizando role assignment existente (ID: ${activeRole.id})`);
       
-      // Usar o role do usuário ou 'USER' como padrão
-      const defaultRole = user.role || 'USER'
-      const defaultPermissions = getDefaultPermissions(defaultRole)
+      // Atualizar role assignment existente
+      const updatedRole = await prisma.userRoleAssignment.update({
+        where: { id: activeRole.id },
+        data: {
+          permissions: testPermissions,
+          updatedAt: new Date()
+        }
+      });
       
-      console.log('✅ Resposta simulada da API:')
-      console.log(JSON.stringify({
-        userId,
-        role: defaultRole,
-        permissions: defaultPermissions,
-        customPermissions: null,
-        message: 'Usando permissões padrão (sem role assignment)'
-      }, null, 2))
+      console.log('✅ Role assignment atualizado com sucesso');
+      console.log(`   ID: ${updatedRole.id}`);
+      console.log(`   Role: ${updatedRole.role}`);
+      console.log(`   Permissões: ${Object.keys(updatedRole.permissions).length} páginas`);
+    } else {
+      console.log('📝 Criando novo role assignment');
       
-      return
+      // Criar novo role assignment
+      const newRole = await prisma.userRoleAssignment.create({
+        data: {
+          userId: superAdmin.id,
+          role: 'SUPER_ADMIN',
+          permissions: testPermissions,
+          isActive: true
+        }
+      });
+      
+      console.log('✅ Novo role assignment criado com sucesso');
+      console.log(`   ID: ${newRole.id}`);
+      console.log(`   Role: ${newRole.role}`);
+      console.log(`   Permissões: ${Object.keys(newRole.permissions).length} páginas`);
     }
+
+    // 4. Verificar resultado final
+    console.log('\\n🔍 Verificando resultado final...');
     
-    console.log('✅ Role assignment encontrado:', userRole.id, 'Role:', userRole.role)
+    const finalRoles = await prisma.userRoleAssignment.findMany({
+      where: {
+        userId: superAdmin.id
+      }
+    });
+
+    console.log(`📋 Total de role assignments após teste: ${finalRoles.length}`);
+    finalRoles.forEach((role, index) => {
+      console.log(`   ${index + 1}. Role: ${role.role}, Ativo: ${role.isActive}, ID: ${role.id}`);
+      if (role.permissions) {
+        console.log(`      Permissões: ${Object.keys(role.permissions).length} páginas`);
+      }
+    });
+
+    // 5. Verificar constraint única
+    console.log('\\n🔒 Verificando constraint única...');
     
-    // Obter permissões padrão baseadas no role
-    const defaultPermissions = getDefaultPermissions(userRole.role)
-    
-    // Mesclar com permissões personalizadas se existirem
-    const customPermissions = userRole.permissions
-    const finalPermissions = customPermissions 
-      ? { ...defaultPermissions, ...customPermissions }
-      : defaultPermissions
-    
-    console.log('✅ Resposta simulada da API:')
-    console.log(JSON.stringify({
-      userId,
-      role: userRole.role,
-      permissions: finalPermissions,
-      customPermissions: customPermissions
-    }, null, 2))
-    
+    const duplicateCheck = await prisma.userRoleAssignment.groupBy({
+      by: ['userId', 'role'],
+      where: {
+        userId: superAdmin.id,
+        isActive: true
+      },
+      _count: {
+        id: true
+      }
+    });
+
+    console.log('📊 Verificação de duplicatas:');
+    duplicateCheck.forEach((group, index) => {
+      console.log(`   ${index + 1}. userId: ${group.userId}, role: ${group.role}, count: ${group._count.id}`);
+      if (group._count.id > 1) {
+        console.log(`      ⚠️  DUPLICATA DETECTADA!`);
+      }
+    });
+
+    console.log('\\n✅ Teste concluído com sucesso!');
+
   } catch (error) {
-    console.error('❌ Erro durante o teste:', error)
+    console.error('❌ Erro durante o teste:', error);
     
-    if (error instanceof Error) {
-      console.error('Erro detalhado:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      })
+    if (error.code === 'P2002') {
+      console.log('\\n🔍 Detalhes do erro de constraint única:');
+      console.log(`   Código: ${error.code}`);
+      console.log(`   Meta: ${JSON.stringify(error.meta)}`);
+      console.log('\\n💡 Solução: Verificar se há registros duplicados na tabela user_roles');
     }
   } finally {
-    await prisma.$disconnect()
+    await prisma.$disconnect();
   }
 }
 
-testUserPermissionsAPI() 
+// Executar o teste
+testUserPermissionsAPI(); 
